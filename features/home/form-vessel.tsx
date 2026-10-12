@@ -42,13 +42,26 @@ export function FormVessel({ first, className = "", fallbacks }: { first: FormId
     const onScroll = () => {
       if (!raf) raf = requestAnimationFrame(pick);
     };
-    pick();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
+    // Only while the vessel is on screen (it is hidden on phones, where each case has its own stage).
+    let listening = false;
+    const listen = (on: boolean) => {
+      if (on === listening) return;
+      listening = on;
+      if (on) {
+        window.addEventListener("scroll", onScroll, { passive: true });
+        window.addEventListener("resize", onScroll);
+        onScroll();
+      } else {
+        window.removeEventListener("scroll", onScroll);
+        window.removeEventListener("resize", onScroll);
+      }
+    };
+    const observer = new IntersectionObserver(([entry]) => listen(entry.isIntersecting));
+    observer.observe(el);
     return () => {
       cancelAnimationFrame(raf);
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
+      observer.disconnect();
+      listen(false);
       unregister();
     };
   }, [first]);

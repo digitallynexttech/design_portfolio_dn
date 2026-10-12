@@ -7,19 +7,53 @@ import type { FormId } from "./shapes";
 export type Anchor = { form: FormId; el: HTMLElement };
 
 const anchors = new Set<Anchor>();
+// Which anchors are on screen at all, kept by an observer, so the shapes only measure those (and
+// can rest when there are none) instead of measuring every anchor on every frame.
+const inView = new Set<Element>();
+const listeners = new Set<() => void>();
+let observer: IntersectionObserver | null = null;
+
+function watch(el: Element) {
+  observer ??= new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (entry.isIntersecting) inView.add(entry.target);
+      else inView.delete(entry.target);
+    }
+    for (const listener of listeners) listener();
+  });
+  observer.observe(el);
+}
 
 export function registerAnchor(anchor: Anchor): () => void {
   anchors.add(anchor);
+  watch(anchor.el);
   return () => {
     anchors.delete(anchor);
+    if (![...anchors].some((a) => a.el === anchor.el)) {
+      observer?.unobserve(anchor.el);
+      inView.delete(anchor.el);
+    }
   };
+}
+
+/** Called whenever an anchor comes on screen or leaves it. */
+export function onAnchorsChange(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+/** Whether any anchor is on screen (even partly). */
+export function anchorsInView(): boolean {
+  return inView.size > 0;
 }
 
 /** The anchor closest to the middle of the viewport, if one is meaningfully on screen. */
 export function activeAnchor(): { form: FormId; rect: DOMRect } | null {
+  if (!inView.size) return null;
   const vh = window.innerHeight;
   let best: { form: FormId; rect: DOMRect; score: number } | null = null;
   for (const anchor of anchors) {
+    if (!inView.has(anchor.el)) continue;
     const rect = anchor.el.getBoundingClientRect();
     // Anchors hidden at this breakpoint have no box.
     if (rect.width < 1 || rect.height < 1) continue;

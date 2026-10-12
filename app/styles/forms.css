@@ -281,16 +281,43 @@ html[data-forms="off"] .form-fallback {
    the hero's last frame, and pinned for that screen while the hero slides off it. The extra screen
    (a spacer: a sticky box only moves inside its container's content, never its padding) is the
    room it pins in, so nothing after it moves. --hero-lift (0 → 1, scrubbed in
-   hero-beats.tsx) lifts the hero's edge and brings the studio up out of the dark. */
+   hero-beats.tsx) lifts the hero's edge and brings the studio up out of the dark.
+   It is set on the track, the hero's sticky frame and the studio section only, and registered as
+   not inherited, so a scroll restyles those boxes and nothing inside them. Everything that moves
+   during the lift is its own compositor layer (the poster, the shadow, the studio and its shade),
+   so the lift repaints nothing: the shadow is drawn once and faded, not redrawn every frame. */
+@property --hero-lift {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
 [data-motion="on"] .hero-track {
+  --hero-lift: 0;
   position: relative;
   z-index: 2;
 }
 [data-motion="on"] .hero-sticky {
+  --hero-lift: 0;
   overflow: hidden;
   border-bottom-left-radius: calc(var(--hero-lift, 0) * 2.75rem);
   border-bottom-right-radius: calc(var(--hero-lift, 0) * 2.75rem);
-  box-shadow: 0 2.5rem 5rem -1.5rem rgb(0 0 0 / calc(var(--hero-lift, 0) * 0.8));
+}
+[data-motion="on"] .hero-poster {
+  will-change: transform;
+}
+/* The hero's shadow, under its last screen (where the sticky frame sits while it lifts). */
+[data-motion="on"] .hero-track::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  z-index: -1;
+  height: 100svh;
+  pointer-events: none;
+  border-bottom-left-radius: 2.75rem;
+  border-bottom-right-radius: 2.75rem;
+  box-shadow: 0 2.5rem 5rem -1.5rem rgb(0 0 0 / 0.8);
+  opacity: var(--hero-lift, 0);
+  will-change: opacity;
 }
 [data-motion="on"] .hero-underlay {
   position: relative;
@@ -303,13 +330,18 @@ html[data-forms="off"] .form-fallback {
   height: 100svh;
 }
 [data-motion="on"] .hero-underlay > section {
+  /* Fully lifted until the script says otherwise. */
+  --hero-lift: 1;
   position: sticky;
   top: 0;
   translate: 0 calc((1 - var(--hero-lift, 1)) * 8svh);
+  will-change: translate;
 }
 /* The studio comes up out of the dark under a shade that lifts with the hero (a shade, not opacity,
    so the text itself always keeps its full contrast). */
 [data-motion="on"] .hero-underlay > section::after {
+  --hero-lift: inherit;
+  will-change: opacity;
   content: "";
   position: absolute;
   inset: 0;
