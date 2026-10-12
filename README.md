@@ -58,7 +58,13 @@ node scripts/world-shot.mjs "http://localhost:3000/world-test?tier=3&time=night&
 
 `/world-test` is a development-only harness (404 in production) that renders the engine bare. Its query string sets `tier` (1–3), `quality` (1–3, which turns auto quality off), `time` (dawn/day/dusk/night), `season`, `weather` (clear/cloudy/rain/storm/mist/snow), `at` (an island id, for fast travel) and `zoom`. Add `?webgl` to any world URL to force the WebGL 2 path. `window.__world.stats()` reports frames per second, CPU time per frame, draw calls and triangles.
 
-**Last run (10 Oct 2026, production build, after the site-wide design pass):**
+**Last run (12 Oct 2026, live, after the optimisation pass):**
+- **Lighthouse mobile:** home 92, SKELMET 93. Accessibility, best practices and SEO are 100.
+- **axe:** 0 violations on 8 pages and inside the world.
+- **Weight:** home first paint 0.47 MB desktop, 0.43 MB phone. The world is 3.1 MB desktop, 2.5 MB phone.
+- **World flows:** desktop and Pixel 7 pass with no console errors.
+
+**Earlier run (10 Oct 2026, production build, after the site-wide design pass):**
 - axe: 0 violations on 25 routes (home, /work, /services, /about, /reel, 404, offline, and chapters across every case study), desktop and phone, and inside the open world.
 - Lighthouse: desktop 99–100 performance on home, /work, a case study and /about; mobile 88–93 (home), 91 (/work), 89 (case study), 88 (/about). Accessibility, best practices and SEO are 100 on every route tested. The home mobile LCP is now the "We are water." headline waiting on its web font.
 - The world: still about 10.5 s from Set sail to sailing; desktop and Pixel 7 flows pass with no console errors.

@@ -54,4 +54,12 @@ Then: merge, production build, measure against the targets, push, check live.
 | No frame over 50 ms at 4× CPU | **Nearly:** long tasks while scrolling home went from 10 to 0; about one 50–70 ms frame remains per run (a GPU first-use cost). |
 | Lighthouse mobile ≥ 95 home, ≥ 90 case studies | **Not met:** 88 on both. Accessibility, best practices and SEO are 100. The lab LCP (3.5–3.8 s) is a simulation; the real LCP is the hero heading at first paint. Total blocking time is 50 ms, layout shift 0. |
 
+**Live (12 Oct, https://design-portfolio-dn.vercel.app, after deploy):**
+- **Lighthouse mobile:** home 92, SKELMET 93. Accessibility, best practices and SEO are 100.
+- **Home first paint:** 0.47 MB desktop, 0.43 MB phone. Each font file downloads once; the earlier "twice" was the browser reusing the preloaded file, not a second download.
+- **World:** 3.1 MB desktop, 2.5 MB phone. Models are brotli-compressed in transit. Sailing p95 is 13 ms with no frame over 50 ms.
+- **Serving:** every page comes from Vercel's cache, link-preview bots included.
+
+**Still slow:** starting the world takes 12–18 s, mostly building shaders, not downloading. That's the next thing to tackle.
+
 Also: the reel video is 2.7 MB (was 6.0); SKELMET's case study is 22% lighter and no longer freezes for a second while its 3D compiles; GSAP and Lenis are gone; the world steps down by itself and stops rendering behind panels.
