@@ -30,6 +30,8 @@ const eslintConfig = defineConfig([
     // Vendored Draco decoder (three.js), served as-is.
     "public/draco/**",
     ".captures/**",
+    // Agent worktrees (isolated checkouts with their own builds).
+    ".claude/**",
   ]),
 ]);
 

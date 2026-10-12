@@ -51,3 +51,6 @@ next-env.d.ts
 # internal DNMS figures. They stay on the local machine only.
 /docs/research-brief.md
 /docs/dnms-findings.md
+
+# Agent worktrees: isolated checkouts used while building in parallel
+/.claude/worktrees/
