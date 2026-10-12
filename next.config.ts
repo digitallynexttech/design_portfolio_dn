@@ -9,7 +9,7 @@ const FOREVER = "public, max-age=31536000, immutable";
 
 // Asset folders under /public. The header rule only matches paths that end in a file
 // extension, so the /work and /services pages themselves are never cached this way.
-const ASSET_DIRS = "world|models|work|services|studio|video|logos|archive|recognition|brand|icons";
+const ASSET_DIRS = "world|models|forms|work|services|studio|video|logos|archive|recognition|brand|icons";
 const ASSET_EXT = "webp|png|jpg|jpeg|svg|glb|gltf|bin|ktx2|mp4|webm|vtt";
 
 const nextConfig: NextConfig = {
@@ -49,6 +49,11 @@ const nextConfig: NextConfig = {
       {
         // Vendored three.js Draco decoder: third-party binaries, never edited in place.
         source: "/draco/:file*",
+        headers: [{ key: "Cache-Control", value: FOREVER }],
+      },
+      {
+        // Self-hosted Stack Sans: each file's name carries a -vN suffix that changes with it.
+        source: "/fonts/:file*",
         headers: [{ key: "Cache-Control", value: FOREVER }],
       },
       {

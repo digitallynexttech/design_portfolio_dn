@@ -65,8 +65,8 @@ function TeamPhoto() {
 
   return (
     <picture className="team-photo relative mt-10 block aspect-[4/5] overflow-hidden bg-ink-2 md:mx-(--gutter) md:mt-14 md:aspect-[16/8] md:rounded-3xl">
-      <source media="(min-width: 768px)" srcSet={wideSet} />
-      <source srcSet={tallSet} />
+      <source media="(min-width: 768px)" srcSet={wideSet} sizes="calc(100vw - 6rem)" />
+      <source srcSet={tallSet} sizes="100vw" />
       {/* eslint-disable-next-line jsx-a11y/alt-text -- getImageProps supplies alt, src, srcSet and sizes */}
       <img
         {...rest}
