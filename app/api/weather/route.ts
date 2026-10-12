@@ -5,6 +5,11 @@
 import { cacheLife } from "next/cache";
 import { STUDIO_PLACE, stateFromSymbol, type LiveWeather } from "@/features/world/weather-logic";
 
+// MET answers in well under a second and the fetch gives up at 3 s; nothing should run longer.
+export const maxDuration = 10;
+
+type Forecast = Pick<LiveWeather, "state" | "tempC" | "windMs" | "source">;
+
 type MetResponse = {
   properties?: {
     timeseries?: {
@@ -17,10 +22,13 @@ type MetResponse = {
   };
 };
 
-async function forecast(lat: number, lon: number): Promise<Pick<LiveWeather, "state" | "tempC" | "windMs" | "source">> {
+/**
+ * One MET call per 10 km cell per half hour, shared by every visitor in that cell. Kept in the
+ * server's memory ("use cache"), which costs nothing; a remote cache would bill every lookup.
+ * A failed call is remembered for two minutes only, so an outage doesn't stick for half an hour.
+ */
+async function forecast(lat: number, lon: number): Promise<Forecast> {
   "use cache";
-  // Weather changes slowly and MET asks callers to cache; one fetch per 10 km cell per half hour.
-  cacheLife({ stale: 600, revalidate: 1800, expire: 7200 });
   try {
     const res = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`, {
       headers: { "User-Agent": "design.digitallynext.com https://design.digitallynext.com" },
@@ -32,8 +40,12 @@ async function forecast(lat: number, lon: number): Promise<Pick<LiveWeather, "st
     const symbol = now?.next_1_hours?.summary?.symbol_code ?? now?.next_6_hours?.summary?.symbol_code ?? "clearsky_day";
     const windMs = now?.instant?.details?.wind_speed ?? null;
     const tempC = now?.instant?.details?.air_temperature ?? null;
+    // Weather changes slowly and MET asks callers to cache: fresh for 30 minutes, then the next
+    // request gets this answer while a new one is fetched; dropped after an hour unused.
+    cacheLife({ revalidate: 1800, expire: 3600 });
     return { state: stateFromSymbol(symbol, windMs), tempC, windMs, source: "met" };
   } catch {
+    cacheLife({ revalidate: 120, expire: 300 });
     return { state: "clear", tempC: null, windMs: null, source: "fallback" };
   }
 }
@@ -61,5 +73,8 @@ export async function GET(request: Request) {
     located,
     lat: qLat,
   };
-  return Response.json(body, { headers: { "Cache-Control": "private, max-age=900" } });
+  // The answer depends on where the visitor is, so only their own browser may keep it (never the
+  // CDN). It matches the server's half hour, so the world asks at most once per visit.
+  const maxAge = weather.source === "met" ? 1800 : 300;
+  return Response.json(body, { headers: { "Cache-Control": `private, max-age=${maxAge}` } });
 }
