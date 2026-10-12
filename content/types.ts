@@ -3,7 +3,7 @@
 // - Plain language for non-developers. Calm, clipped sentences. No hype, no invented facts.
 // - Every number needs a `source` (file path, commit, DNMS task or URL). Sources are never rendered.
 // - Never publish secrets, unfixed weaknesses, attack details, personal data, or internal staffing changes.
-// - Former team members are not credited. Company tenure is "12+ years" only — never a founding year.
+// - Former team members are not credited. Company tenure is "12+ years" only - never a founding year.
 
 export type Img = {
   /** Path under /public, e.g. "/work/skelmet/home-desktop.webp". */
@@ -51,13 +51,40 @@ export type Frame = "browser" | "phone" | "none";
 
 export type Block =
   | { kind: "prose"; heading?: string; paragraphs: string[] }
-  | { kind: "figure"; image: Img; caption?: string; frame?: Frame; wide?: boolean }
-  | { kind: "pair"; images: [Img, Img]; frames?: [Frame, Frame]; caption?: string }
-  | { kind: "palette"; heading?: string; colors: { name: string; hex: string; note?: string }[] }
-  | { kind: "typeface"; families: { name: string; role: string; font: FontKey }[]; sample: string }
-  | { kind: "facts"; heading?: string; items: { label: string; value: string }[] }
+  | {
+      kind: "figure";
+      image: Img;
+      caption?: string;
+      frame?: Frame;
+      wide?: boolean;
+    }
+  | {
+      kind: "pair";
+      images: [Img, Img];
+      frames?: [Frame, Frame];
+      caption?: string;
+    }
+  | {
+      kind: "palette";
+      heading?: string;
+      colors: { name: string; hex: string; note?: string }[];
+    }
+  | {
+      kind: "typeface";
+      families: { name: string; role: string; font: FontKey }[];
+      sample: string;
+    }
+  | {
+      kind: "facts";
+      heading?: string;
+      items: { label: string; value: string }[];
+    }
   | { kind: "list"; heading?: string; items: string[] }
-  | { kind: "timeline"; heading?: string; items: { date: string; label: string }[] }
+  | {
+      kind: "timeline";
+      heading?: string;
+      items: { date: string; label: string }[];
+    }
   | {
       kind: "architecture";
       heading?: string;
@@ -120,9 +147,20 @@ export type Testimonial = {
   approved: null | { by: string; date: string };
 };
 
-export type CreditTeam = "Web" | "Design" | "Video & Motion" | "Accounts" | "Content";
+export type CreditTeam =
+  | "Web"
+  | "Design"
+  | "Video & Motion"
+  | "Accounts"
+  | "Content";
 
-export type Discipline = "Brand site" | "Commerce" | "Platform" | "Product" | "Search & AI" | "3D & Motion";
+export type Discipline =
+  | "Brand site"
+  | "Commerce"
+  | "Platform"
+  | "Product"
+  | "Search & AI"
+  | "3D & Motion";
 
 export type ExhibitKey =
   | "skelmet"
@@ -184,4 +222,12 @@ export type ArchiveEntry = {
 };
 
 /** "systems" is the second hurdles page, used when a study has more than five hurdles. */
-export type ChapterKey = "overview" | "brief" | "design" | "build" | "approach" | "hurdles" | "systems" | "outcome";
+export type ChapterKey =
+  | "overview"
+  | "brief"
+  | "design"
+  | "build"
+  | "approach"
+  | "hurdles"
+  | "systems"
+  | "outcome";

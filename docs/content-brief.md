@@ -5,14 +5,16 @@ You are writing case-study content for **design.digitallynext.com**, the award-t
 **Project root:** `C:\Users\Karan\Desktop\Projects\Digitally next_projects\dn_portfolio`. The other projects live next to it, in `..\<project>`.
 
 ## Read first
-1. `content/types.ts` — the schema; follow it exactly.
-2. `content/work/skelmet.ts` — the **reference**. Match its structure, tone, depth and sourcing.
-3. `content/team.ts` — the only people you may credit, by id.
-4. `docs/research-brief.md` — your project's section.
-5. `docs/dnms-findings.md` — your project's section: tasks, credits, hurdles and dates.
+
+1. `content/types.ts` - the schema; follow it exactly.
+2. `content/work/skelmet.ts` - the **reference**. Match its structure, tone, depth and sourcing.
+3. `content/team.ts` - the only people you may credit, by id.
+4. `docs/research-brief.md` - your project's section.
+5. `docs/dnms-findings.md` - your project's section: tasks, credits, hurdles and dates.
 6. `docs/PLAN.md` §10.3 (hurdle bank) and §12 (exhibit ideas).
 
 ## Write
+
 - **`content/work/<slug>.ts`:** default-export one `CaseStudy`. Use the slug, order, tier, exhibit key and `next` you were given.
 - **`content/exhibits/<slug>.ts`:** only when your instructions ask for exhibit data. Use the exact shape you were given.
 - **Assets:**
@@ -20,11 +22,12 @@ You are writing case-study content for **design.digitallynext.com**, the award-t
   - 3D models go in `public/models/<slug>/`.
 
 ## Content rules
+
 - **Plain language for non-developers.** Calm, clipped sentences in the brand voice, no hype. Use about the same amount of text as skelmet.ts.
 - **Flagship case studies:** fill `brief`, `design`, `build`, `hurdles` (6–9) and `outcome`.
 - **Standard case studies:** keep `brief`, `design` and `build` short; they render together as one "Approach" chapter. Use 3–5 hurdles.
 - **Hurdles** are the core of the content. Find them in three places:
-  1. **The code:** git log (fix, refactor and revert commits), audit reports, docs, CLAUDE.md, and code comments explaining workarounds. You may also infer what *would have been* a hurdle from unusual engineering, such as fallbacks, build scripts or workers. Each hurdle needs a `source`: a commit, file path or DNMS task.
+  1. **The code:** git log (fix, refactor and revert commits), audit reports, docs, CLAUDE.md, and code comments explaining workarounds. You may also infer what _would have been_ a hurdle from unusual engineering, such as fallbacks, build scripts or workers. Each hurdle needs a `source`: a commit, file path or DNMS task.
   2. **DNMS task history:** see `docs/dnms-findings.md`. Use the reasons tasks were put on hold.
   3. **The hurdle bank:** PLAN §10.3.
 - **Hurdle format:** each one gives `hard` (why it was hard), optionally `tried`, then `fix` and `result`.
@@ -41,6 +44,7 @@ You are writing case-study content for **design.digitallynext.com**, the award-t
 - **Theme:** take the client's real colours and fonts from their code. `accent` must reach at least 3:1 contrast on `bg`. Only use fonts available as `FontKey` in types.ts; if the client's font isn't there, pick the closest one and mention the real font in prose.
 
 ## Screenshots of live sites
+
 - Use Playwright from this project, for example `node` with `import { chromium, devices } from "@playwright/test"`. Write any helper scripts into `scratch/<slug>/` inside this project; that folder is gitignored.
 - **Capture:** desktop at a 1440×900 viewport (above the fold, plus 1–2 key sections) and phone at iPhone 13 size.
 - **Before capturing:** wait for network idle plus 2 s, and dismiss cookie bars by clicking any "Accept" button.
@@ -48,14 +52,17 @@ You are writing case-study content for **design.digitallynext.com**, the award-t
 - **If the live site is down or not public:** use images from the project's repo instead.
 
 ## Don't
+
 - Edit files you weren't assigned. That includes the reference, the types, other slugs and app code.
 - Run `next dev` or `next build`. A dev server is already running, and Next allows only one.
 - Commit to git.
 
 ## Verify
+
 Run `pnpm exec tsc --noEmit` in the project root. **Your own files must have zero errors**; ignore errors in files you didn't write.
 
 ## Report back (final message)
+
 - The files you created.
 - Each image, with its dimensions.
 - Facts you couldn't verify and left out.

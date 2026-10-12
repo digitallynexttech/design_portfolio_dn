@@ -1,5 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Geist_Mono, Stack_Sans_Headline, Stack_Sans_Text } from "next/font/google";
+import {
+  Geist_Mono,
+  Stack_Sans_Headline,
+  Stack_Sans_Text,
+} from "next/font/google";
 import { JsonLd } from "@/components/ui/json-ld";
 import { ServiceWorker } from "@/components/ui/service-worker";
 import { SiteFooter } from "@/components/ui/site-footer";
@@ -16,23 +20,40 @@ const headline = Stack_Sans_Headline({
   variable: "--font-headline",
   display: "swap",
   adjustFontFallback: false,
-  fallback: ["Stack Sans Headline Fallback", "Helvetica Neue", "Arial", "system-ui", "sans-serif"],
+  fallback: [
+    "Stack Sans Headline Fallback",
+    "Helvetica Neue",
+    "Arial",
+    "system-ui",
+    "sans-serif",
+  ],
 });
 const text = Stack_Sans_Text({
   subsets: ["latin"],
   variable: "--font-text",
   display: "swap",
   adjustFontFallback: false,
-  fallback: ["Stack Sans Text Fallback", "Helvetica Neue", "Arial", "system-ui", "sans-serif"],
+  fallback: [
+    "Stack Sans Text Fallback",
+    "Helvetica Neue",
+    "Arial",
+    "system-ui",
+    "sans-serif",
+  ],
 });
 // Mono only sets labels, never the first paint's largest text, so it doesn't compete for preload.
-const mono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono", display: "swap", preload: false });
+const mono = Geist_Mono({
+  subsets: ["latin"],
+  variable: "--font-geist-mono",
+  display: "swap",
+  preload: false,
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://design.digitallynext.com"),
   title: {
-    default: "Digitally Next Design — We are water.",
-    template: "%s — Digitally Next Design",
+    default: "Digitally Next Design - We are water.",
+    template: "%s - Digitally Next Design",
   },
   description:
     "The design and development studio at Digitally Next. 12+ years, 50+ brands: websites, platforms, commerce and 3D that take the shape of what each brand needs.",
@@ -84,8 +105,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             name: "Digitally Next Design",
             url: SITE_URL,
             logo: `${SITE_URL}/icons/icon-512.png`,
-            description: "The design and development studio at Digitally Next, New Delhi.",
-            parentOrganization: { "@type": "Organization", name: "Digitally Next", url: MAIN_SITE },
+            description:
+              "The design and development studio at Digitally Next, New Delhi.",
+            parentOrganization: {
+              "@type": "Organization",
+              name: "Digitally Next",
+              url: MAIN_SITE,
+            },
             sameAs: SOCIALS.map((s) => s.href),
           }}
         />

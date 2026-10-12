@@ -65,13 +65,23 @@ function Genee({ onReady }: { onReady: () => void }) {
     }
   });
   return (
-    <group ref={group} position={[-spread, -1.35, 0]} scale={spread < 1 ? 0.8 : 1}>
+    <group
+      ref={group}
+      position={[-spread, -1.35, 0]}
+      scale={spread < 1 ? 0.8 : 1}
+    >
       <primitive object={fitted} />
     </group>
   );
 }
 
-function CrewMember({ crew, signatureKey }: { crew: Crew; signatureKey: number }) {
+function CrewMember({
+  crew,
+  signatureKey,
+}: {
+  crew: Crew;
+  signatureKey: number;
+}) {
   const { scene, animations } = useGLTF(crew.model, DRACO);
   const fitted = useFitted(scene, 2.05);
   const spread = useSpread();
@@ -148,7 +158,11 @@ function Lighting() {
   return (
     <>
       <directionalLight position={[2, 4, 3]} intensity={1.6} />
-      <directionalLight position={[-3, 2, -2]} intensity={0.6} color="#7fe3d6" />
+      <directionalLight
+        position={[-3, 2, -2]}
+        intensity={0.6}
+        color="#7fe3d6"
+      />
     </>
   );
 }
@@ -166,7 +180,14 @@ export default function KygExhibit({ onReady }: ExhibitProps) {
   };
 
   return (
-    <div ref={host} className="absolute inset-0" style={{ background: "radial-gradient(70% 80% at 50% 60%, #ffffff, #FAF6EF 55%, #E6F4F3)" }}>
+    <div
+      ref={host}
+      className="absolute inset-0"
+      style={{
+        background:
+          "radial-gradient(70% 80% at 50% 60%, #ffffff, #FAF6EF 55%, #E6F4F3)",
+      }}
+    >
       <Canvas
         dpr={[1, 1.75]}
         frameloop={inView ? "always" : "never"}
@@ -187,10 +208,17 @@ export default function KygExhibit({ onReady }: ExhibitProps) {
       </Canvas>
 
       <div className="absolute right-(--gutter) bottom-24 left-(--gutter) flex flex-col items-end gap-3 md:bottom-5 md:left-auto">
-        <p className="rounded-full bg-white/80 px-4 py-2 text-sm text-[#0E4D4B] backdrop-blur" aria-live="polite">
-          <strong>{crew.name}</strong> · {crew.family} — tap again: {crew.signature.toLowerCase()}
+        <p
+          className="rounded-full bg-white/80 px-4 py-2 text-sm text-[#0E4D4B] backdrop-blur"
+          aria-live="polite"
+        >
+          <strong>{crew.name}</strong> · {crew.family} - tap again:{" "}
+          {crew.signature.toLowerCase()}
         </p>
-        <ul className="flex flex-wrap justify-end gap-2" aria-label="Choose a mascot">
+        <ul
+          className="flex flex-wrap justify-end gap-2"
+          aria-label="Choose a mascot"
+        >
           {KYG_CREW.map((member, i) => (
             <li key={member.id}>
               <button
@@ -199,7 +227,11 @@ export default function KygExhibit({ onReady }: ExhibitProps) {
                 onClick={() => choose(i)}
                 className="flex items-center gap-2 rounded-full border border-[#0E4D4B]/20 bg-white/85 px-3.5 py-2 text-sm text-[#0E4D4B] backdrop-blur transition-colors aria-pressed:border-[#0E4D4B] aria-pressed:bg-[#0E4D4B] aria-pressed:text-white"
               >
-                <span className="size-2.5 rounded-full" style={{ background: member.color }} aria-hidden />
+                <span
+                  className="size-2.5 rounded-full"
+                  style={{ background: member.color }}
+                  aria-hidden
+                />
                 {member.name}
               </button>
             </li>

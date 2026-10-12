@@ -9,10 +9,21 @@ function WorldPoster() {
   const common = { alt: "", sizes: "100vw" };
   const {
     props: { srcSet: wide },
-  } = getImageProps({ ...common, width: 1920, height: 1080, src: "/world/poster.webp" });
+  } = getImageProps({
+    ...common,
+    width: 1920,
+    height: 1080,
+    src: "/world/poster.webp",
+  });
   const {
     props: { srcSet: tall, ...rest },
-  } = getImageProps({ ...common, width: 900, height: 1600, src: "/world/poster-phone.webp", preload: true });
+  } = getImageProps({
+    ...common,
+    width: 900,
+    height: 1600,
+    src: "/world/poster-phone.webp",
+    preload: true,
+  });
   return (
     <picture className="hero-poster">
       <source media="(min-aspect-ratio: 4/5)" srcSet={wide} />
@@ -38,14 +49,16 @@ export function Hero() {
               Pour us into anything<span className="stop">.</span>
             </p>
             <p data-beat className="hero-beat hero-beat--long">
-              Soft enough to take any shape. Relentless enough to carve canyons<span className="stop">.</span>
+              Soft enough to take any shape. Relentless enough to carve canyons
+              <span className="stop">.</span>
             </p>
           </div>
 
           <div className="hero-foot relative">
             <div className="grid gap-5">
               <p className="max-w-[38ch] text-paper/85">
-                Digitally Next — design, development and 3D, from New Delhi. Our work is a small sea of islands: sail it, or scroll for the work.
+                Digitally Next - design, development and 3D, from New Delhi. Our
+                work is a small sea of islands: sail it, or scroll for the work.
               </p>
               <SailIntro data={worldData()} />
             </div>

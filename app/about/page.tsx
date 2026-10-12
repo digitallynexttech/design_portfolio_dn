@@ -6,7 +6,11 @@ import { Recognition } from "@/components/proof/recognition";
 import { FlowLink } from "@/components/ui/flow-link";
 import { PageFlow } from "@/components/ui/page-flow";
 import { LEADERSHIP, TEAM, creditsFor, type Person } from "@/content/team";
-import { PRINCIPLES, STUDIO_PHOTOS, TEAM_PHOTO_PORTRAIT } from "@/content/studio";
+import {
+  PRINCIPLES,
+  STUDIO_PHOTOS,
+  TEAM_PHOTO_PORTRAIT,
+} from "@/content/studio";
 import { CAREERS_URL, FACTS } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -17,30 +21,60 @@ export const metadata: Metadata = {
 };
 
 const GROUPS: { key: Person["group"]; title: string; note: string }[] = [
-  { key: "VIM", title: "Visual Impact Management", note: "Designers, motion and video" },
+  {
+    key: "VIM",
+    title: "Visual Impact Management",
+    note: "Designers, motion and video",
+  },
   { key: "WEM", title: "Web Essentials Management", note: "Developers" },
-  { key: "Studio", title: "Also in the studio", note: "Accounts, partnerships, PR and people" },
+  {
+    key: "Studio",
+    title: "Also in the studio",
+    note: "Accounts, partnerships, PR and people",
+  },
 ];
 
 /** The team, art-directed: the wide group shot from 768px, the same group in portrait on phones. */
 function TeamPhoto() {
   const [wide] = STUDIO_PHOTOS;
   const tall = TEAM_PHOTO_PORTRAIT;
-  const common = { alt: wide.alt, sizes: "(min-width: 768px) calc(100vw - 6rem), 100vw" };
+  const common = {
+    alt: wide.alt,
+    sizes: "(min-width: 768px) calc(100vw - 6rem), 100vw",
+  };
   const {
     props: { srcSet: wideSet },
-  } = getImageProps({ ...common, src: wide.src, width: wide.width, height: wide.height });
+  } = getImageProps({
+    ...common,
+    src: wide.src,
+    width: wide.width,
+    height: wide.height,
+  });
   const {
     props: { srcSet: tallSet, style, ...rest },
-  } = getImageProps({ ...common, src: tall.src, width: tall.width, height: tall.height });
-  const position = { "--tall": tall.position ?? "50% 50%", "--wide": wide.position ?? "50% 50%" } as CSSProperties;
+  } = getImageProps({
+    ...common,
+    src: tall.src,
+    width: tall.width,
+    height: tall.height,
+  });
+  const position = {
+    "--tall": tall.position ?? "50% 50%",
+    "--wide": wide.position ?? "50% 50%",
+  } as CSSProperties;
 
   return (
     <picture className="team-photo relative mt-10 block aspect-[4/5] overflow-hidden bg-ink-2 md:mx-(--gutter) md:mt-14 md:aspect-[16/8] md:rounded-3xl">
       <source media="(min-width: 768px)" srcSet={wideSet} />
       <source srcSet={tallSet} />
       {/* eslint-disable-next-line jsx-a11y/alt-text -- getImageProps supplies alt, src, srcSet and sizes */}
-      <img {...rest} style={{ ...style, ...position }} fetchPriority="high" loading="eager" className="absolute inset-0 size-full object-cover" />
+      <img
+        {...rest}
+        style={{ ...style, ...position }}
+        fetchPriority="high"
+        loading="eager"
+        className="absolute inset-0 size-full object-cover"
+      />
     </picture>
   );
 }
@@ -61,14 +95,18 @@ export default function AboutPage() {
           <TeamPhoto />
           <div className="mt-12 grid max-w-5xl gap-8 px-(--gutter) text-lg text-paper/75 md:mt-16 lg:grid-cols-2">
             <p>
-              We are the design and development studio inside Digitally Next — {FACTS.years} years and {FACTS.brands} brands in, working
-              from {FACTS.city}. Designers, developers and motion artists in one room, building websites, stores, platforms and 3D for
-              brands in India and beyond.
+              We are the design and development studio inside Digitally Next -{" "}
+              {FACTS.years} years and {FACTS.brands} brands in, working from{" "}
+              {FACTS.city}. Designers, developers and motion artists in one
+              room, building websites, stores, platforms and 3D for brands in
+              India and beyond.
             </p>
             <p>
-              We don&apos;t have a house style. Like water, we take the shape of what each client needs — a garage glow for a helmet
-              brand, an editorial calm for a DNA lab, an operating system for our own company. Digitally Next is led by{" "}
-              {LEADERSHIP.name}, {LEADERSHIP.title}.
+              We don&apos;t have a house style. Like water, we take the shape of
+              what each client needs - a garage glow for a helmet brand, an
+              editorial calm for a DNA lab, an operating system for our own
+              company. Digitally Next is led by {LEADERSHIP.name},{" "}
+              {LEADERSHIP.title}.
             </p>
           </div>
         </header>
@@ -84,14 +122,19 @@ export default function AboutPage() {
                   {principle.title}
                   <span className="stop">.</span>
                 </h3>
-                <p className="mt-4 max-w-[40ch] text-paper/70">{principle.body}</p>
+                <p className="mt-4 max-w-[40ch] text-paper/70">
+                  {principle.body}
+                </p>
               </li>
             ))}
           </ul>
         </section>
 
         <section aria-labelledby="people" className="mt-36 px-(--gutter)">
-          <h2 id="people" className="font-display text-[clamp(2.5rem,6vw,5.5rem)] leading-[0.95] font-semibold tracking-[-0.03em]">
+          <h2
+            id="people"
+            className="font-display text-[clamp(2.5rem,6vw,5.5rem)] leading-[0.95] font-semibold tracking-[-0.03em]"
+          >
             The people<span className="stop">.</span>
           </h2>
           {GROUPS.map((group) => {
@@ -100,28 +143,38 @@ export default function AboutPage() {
             return (
               <div key={group.key} className="mt-16">
                 <h3 className="label">
-                  {makers ? `${group.key} · ${group.title}` : group.title} — {group.note}
+                  {makers ? `${group.key} · ${group.title}` : group.title} -{" "}
+                  {group.note}
                 </h3>
-                <ul className={`people-list mt-6 grid border-t border-paper/10 ${makers ? "" : "md:grid-cols-2 md:gap-x-10"}`}>
+                <ul
+                  className={`people-list mt-6 grid border-t border-paper/10 ${makers ? "" : "md:grid-cols-2 md:gap-x-10"}`}
+                >
                   {people.map((p) => {
                     const shipped = creditsFor(p.id);
                     return (
                       <li
                         key={p.id}
                         className={`grid gap-2 border-b border-paper/10 py-6 ${
-                          makers ? "lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.6fr)] lg:items-baseline lg:gap-6" : ""
+                          makers
+                            ? "lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.6fr)] lg:items-baseline lg:gap-6"
+                            : ""
                         }`}
                       >
                         <p
                           className={`font-display font-semibold tracking-tight ${
-                            makers ? "text-4xl md:text-5xl xl:text-6xl" : "text-2xl md:text-3xl"
+                            makers
+                              ? "text-4xl md:text-5xl xl:text-6xl"
+                              : "text-2xl md:text-3xl"
                           }`}
                         >
                           {p.name}
                         </p>
                         <p className="text-paper/60">{p.title}</p>
                         {shipped.length ? (
-                          <ul className="flex flex-wrap gap-1.5" aria-label={`Projects ${p.name} worked on`}>
+                          <ul
+                            className="flex flex-wrap gap-1.5"
+                            aria-label={`Projects ${p.name} worked on`}
+                          >
                             {shipped.map((study) => (
                               <li key={study.slug}>
                                 <FlowLink
@@ -162,7 +215,9 @@ export default function AboutPage() {
                       style={{ objectPosition: photo.position }}
                     />
                   </div>
-                  <figcaption className="mt-2.5 text-xs text-paper/60 md:text-sm">{photo.alt}</figcaption>
+                  <figcaption className="mt-2.5 text-xs text-paper/60 md:text-sm">
+                    {photo.alt}
+                  </figcaption>
                 </figure>
               </li>
             ))}
@@ -194,7 +249,10 @@ export default function AboutPage() {
 
         <p className="mt-24 px-(--gutter) text-lg text-paper/70">
           We hire designers and developers.{" "}
-          <a href={CAREERS_URL} className="text-paper underline decoration-paper/30 underline-offset-4 transition-colors hover:decoration-teal">
+          <a
+            href={CAREERS_URL}
+            className="text-paper underline decoration-paper/30 underline-offset-4 transition-colors hover:decoration-teal"
+          >
             Open roles on digitallynext.com <span aria-hidden>↗</span>
           </a>
         </p>

@@ -1,8 +1,15 @@
 // Heavy WebGL waits for the visitor to engage (first mouse move, touch, scroll or key press), then for
-// an idle moment. Text and posters — real frames of each scene — paint immediately; the water arrives
+// an idle moment. Text and posters - real frames of each scene - paint immediately; the water arrives
 // the moment someone is actually there. (SKELMET's live site uses the same rule for its 3D hero.)
 
-const EVENTS = ["pointermove", "pointerdown", "touchstart", "scroll", "wheel", "keydown"] as const;
+const EVENTS = [
+  "pointermove",
+  "pointerdown",
+  "touchstart",
+  "scroll",
+  "wheel",
+  "keydown",
+] as const;
 
 type IdleWindow = Window & {
   requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
@@ -18,7 +25,10 @@ export function whenEngaged(start: () => void, idleTimeout = 1200): () => void {
 
   const onIdle = () => {
     if (cancelled) return;
-    if (w.requestIdleCallback) idleId = w.requestIdleCallback(() => !cancelled && start(), { timeout: idleTimeout });
+    if (w.requestIdleCallback)
+      idleId = w.requestIdleCallback(() => !cancelled && start(), {
+        timeout: idleTimeout,
+      });
     else timer = window.setTimeout(() => !cancelled && start(), 300);
   };
 
@@ -26,7 +36,8 @@ export function whenEngaged(start: () => void, idleTimeout = 1200): () => void {
     for (const name of EVENTS) window.removeEventListener(name, engage);
     onIdle();
   };
-  for (const name of EVENTS) window.addEventListener(name, engage, { passive: true });
+  for (const name of EVENTS)
+    window.addEventListener(name, engage, { passive: true });
 
   return () => {
     cancelled = true;

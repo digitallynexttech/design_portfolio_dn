@@ -9,7 +9,7 @@ import { toCard } from "@/content/work/cards";
 export const metadata: Metadata = {
   title: "Services",
   description:
-    "Brand and digital identity, UI/UX and design systems, creative development, e-commerce, platforms and search — each backed by real case studies.",
+    "Brand and digital identity, UI/UX and design systems, creative development, e-commerce, platforms and search - each backed by real case studies.",
   alternates: { canonical: "/services" },
 };
 
@@ -29,8 +29,9 @@ export default function ServicesPage() {
               What we pour into<span className="stop">.</span>
             </h1>
             <p className="mt-8 max-w-[52ch] text-lg text-paper/70">
-              Six kinds of work, one studio. Every service below links to the case studies that prove it — not a list of skills,
-              but the places we have actually done it.
+              Six kinds of work, one studio. Every service below links to the
+              case studies that prove it - not a list of skills, but the places
+              we have actually done it.
             </p>
           </div>
           <nav aria-label="Services" className="services-nav">
@@ -38,13 +39,18 @@ export default function ServicesPage() {
               {SERVICES.map((service, i) => (
                 <li key={service.id} className="shrink-0">
                   <a href={`#${service.id}`} className={NAV_LINK}>
-                    <span className="font-mono text-xs text-teal">{number(i)}</span>
+                    <span className="font-mono text-xs text-teal">
+                      {number(i)}
+                    </span>
                     {service.title}
                   </a>
                 </li>
               ))}
             </ol>
-            <a href="#process" className={`${NAV_LINK} shrink-0 lg:mt-6 lg:w-fit lg:border-b-0 lg:text-sm lg:text-paper/70`}>
+            <a
+              href="#process"
+              className={`${NAV_LINK} shrink-0 lg:mt-6 lg:w-fit lg:border-b-0 lg:text-sm lg:text-paper/70`}
+            >
               How we work <span aria-hidden>↓</span>
             </a>
           </nav>
@@ -52,17 +58,27 @@ export default function ServicesPage() {
 
         <ol className="mt-20 grid grid-cols-1 gap-px overflow-hidden rounded-3xl bg-paper/10 md:mt-24">
           {SERVICES.map((service, i) => {
-            const proof = service.proof.map(getCaseStudy).filter((s) => s !== undefined);
+            const proof = service.proof
+              .map(getCaseStudy)
+              .filter((s) => s !== undefined);
             return (
-              <li key={service.id} id={service.id} className="service-row reveal scroll-mt-28 bg-ink p-6 md:p-12">
+              <li
+                key={service.id}
+                id={service.id}
+                className="service-row reveal scroll-mt-28 bg-ink p-6 md:p-12"
+              >
                 <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] lg:gap-14">
                   <div>
                     <p className="font-mono text-sm text-teal">{number(i)}</p>
-                    <h2 className="mt-3 font-display text-4xl font-semibold tracking-tight md:text-5xl">{service.title}</h2>
+                    <h2 className="mt-3 font-display text-4xl font-semibold tracking-tight md:text-5xl">
+                      {service.title}
+                    </h2>
                     <p className="mt-4 text-xl text-paper/80">{service.line}</p>
                   </div>
                   <div className="grid content-start gap-8 lg:pt-9">
-                    <p className="text-lg leading-relaxed text-paper/70">{service.body}</p>
+                    <p className="text-lg leading-relaxed text-paper/70">
+                      {service.body}
+                    </p>
                     <dl className="grid gap-8 sm:grid-cols-2">
                       <div>
                         <dt className="label">What you get</dt>
@@ -76,7 +92,9 @@ export default function ServicesPage() {
                       </div>
                       <div>
                         <dt className="label">Tools</dt>
-                        <dd className="mt-3 text-paper/70">{service.tools.join(" · ")}</dd>
+                        <dd className="mt-3 text-paper/70">
+                          {service.tools.join(" · ")}
+                        </dd>
                       </div>
                     </dl>
                   </div>
@@ -86,7 +104,10 @@ export default function ServicesPage() {
                     <p id={`${service.id}-proof`} className="label">
                       Proof · {proof.length} case studies
                     </p>
-                    <ul aria-labelledby={`${service.id}-proof`} className="proof-row mt-4">
+                    <ul
+                      aria-labelledby={`${service.id}-proof`}
+                      className="proof-row mt-4"
+                    >
                       {proof.map((study) => (
                         <li key={study.slug}>
                           <WorkCard study={toCard(study)} compact />
@@ -100,16 +121,28 @@ export default function ServicesPage() {
           })}
         </ol>
 
-        <section id="process" aria-labelledby="process-title" className="process-section mt-32 scroll-mt-28">
+        <section
+          id="process"
+          aria-labelledby="process-title"
+          className="process-section mt-32 scroll-mt-28"
+        >
           <p className="label">How we work</p>
-          <h2 id="process-title" className="mt-4 font-display text-[clamp(2.5rem,6vw,5.5rem)] leading-[0.95] font-semibold tracking-[-0.03em]">
+          <h2
+            id="process-title"
+            className="mt-4 font-display text-[clamp(2.5rem,6vw,5.5rem)] leading-[0.95] font-semibold tracking-[-0.03em]"
+          >
             Six steps, every time<span className="stop">.</span>
           </h2>
           <ol className="mt-14 grid gap-x-10 gap-y-14 md:grid-cols-2 lg:grid-cols-3">
             {PROCESS.map((step, i) => (
-              <li key={step.title} className="reveal border-t border-paper/15 pt-6">
+              <li
+                key={step.title}
+                className="reveal border-t border-paper/15 pt-6"
+              >
                 <p className="font-mono text-sm text-teal">{number(i)}</p>
-                <h3 className="mt-2 text-3xl font-semibold tracking-tight">{step.title}</h3>
+                <h3 className="mt-2 text-3xl font-semibold tracking-tight">
+                  {step.title}
+                </h3>
                 <p className="mt-3 text-paper/70">{step.body}</p>
                 <FlowLink
                   href={step.evidence.href}
