@@ -13,8 +13,9 @@ pnpm dev                 # http://localhost:3000
 pnpm build && pnpm start # production
 ```
 
-- **Next.js 16.4** (App Router, Cache Components), with **React 19.3**, **Tailwind 4**, **three.js** with React Three Fiber, and **GSAP**.
+- **Next.js 16.4** (App Router, Cache Components), with **React 19.3** and **Tailwind 4**. The world runs on **three.js** (WebGPU + TSL); the case-study exhibits use React Three Fiber; the home page's water and particles are plain WebGL 2, with no 3D library.
 - **Every page is prerendered:** 100 routes in the build (pages plus share images, icons and SEO files); the sitemap lists 64 addresses. The one dynamic route is `/api/weather`.
+- **Built for Vercel's free plan:** no page runs a function per view; `next/image` is WebP-only at one quality and a short list of widths (about 930 variants in all, against 5,000 a month); files in `/public` are cached for a week, fonts and the Draco decoder for a year. **When a file in `/public` changes, give it a new name** (e.g. `-v2`), or returning visitors may keep the old one. See [docs/optimization-plan.md](docs/optimization-plan.md).
 
 ## Where things live
 
@@ -28,7 +29,7 @@ pnpm build && pnpm start # production
 | `content/world.ts` | The small digest of the content that the world receives, so case-study chapters never ship to it. |
 | `public/world/tex`, `public/world/models` | The world's photo-scanned surfaces (sand, grass, rock, timber, teak, bark, concrete) and props (buoys, markers, lifebuoys, crates, lamps, boulders, fern), all CC0 from Poly Haven. Made by `python -I scripts/world-assets.py`, which downloads, resizes and compresses them (re-running skips finished files). |
 | `app/api/weather/route.ts` | The visitor's approximate weather (Vercel geolocation headers → MET Norway), nothing stored. Falls back to New Delhi. |
-| `features/water/` | The water. `surface/` is the ripple simulation behind every page. `forms/` is the particles that pour into each flagship's shape on the home page. `bus.ts` lets anything drop waves into it. |
+| `features/water/` | The water, in plain WebGL 2 (`gl.ts`). `surface/` is the ripple simulation behind every page. `forms/` is the particles that pour into each flagship's shape on the home page; shapes are built in a worker, and the skull comes from `public/forms/skull-points.bin` (made by `node scripts/bake-skull-points.mjs`). `bus.ts` lets anything drop waves into it. |
 | `features/exhibits/` | The live exhibit at the top of each case study. WebGL ones: SKELMET, Know Your Genes. The rest are DOM or canvas. |
 | `features/stage/` | Device quality tiers (`tier.ts`). The rule that heavy WebGL waits for the visitor's first move, touch or scroll (`engage.ts`). |
 | `components/liquid/` | `LiquidSurface`: every pop-up flows in from an edge like liquid. Built on the native `<dialog>`. |
