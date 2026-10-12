@@ -1,0 +1,418 @@
+import type { CaseStudy } from "../types";
+
+// DNMS: Digitally Next's own operating system. Sources: ..\DNMS (git log, docs/mcp-connector-plan.md,
+// docs/cron-jobs.md, lib/themes.ts, app/globals.css, code comments) and docs/dnms-findings.md.
+// Every screenshot is from the made-up Demo Company used for the Help guides, never from a live instance.
+const dnms: CaseStudy = {
+  slug: "dnms",
+  client: "DNMS",
+  headline: "The system the studio runs on, now answering to Claude as you.",
+  summary:
+    "DNMS is Digitally Next's own operating system: people, attendance, leave, payroll, performance, hiring, projects, clients, SEO monitoring and chat in one place. We design it, build it and run the studio on it every day, and it is built to host several companies at once. Its newest door lets Claude or ChatGPT work inside it as the signed-in person, with exactly that person's permissions and nothing more.",
+  year: 2026,
+  industry: "In-house product · HR & operations",
+  disciplines: ["Product", "Platform", "Search & AI"],
+  platform: "Next.js · Postgres · MCP",
+  liveUrl: "https://dnms.digitallynext.com",
+  tier: "flagship",
+  order: 4,
+  theme: {
+    scheme: "dark",
+    bg: "#131526",
+    surface: "#1B1D32",
+    text: "#EAECF6",
+    muted: "#9FA4BC",
+    accent: "#AB63F2",
+    onAccent: "#131526",
+    display: "inter",
+    body: "inter",
+  },
+  poster: {
+    src: "/work/dnms/poster.webp",
+    alt: "A DNMS dashboard with the Ask DNMS assistant open beside today's work",
+    width: 1600,
+    height: 1000,
+  },
+  exhibit: "dnms",
+  exhibitHint: "Press play and watch Claude answer a manager's question, one DNMS call at a time.",
+  metrics: [
+    {
+      value: "304",
+      label: "API endpoints an AI can use, as you",
+      source: "DNMS docs/mcp-connector-plan.md §2 (3 Oct 2026); features/mcp/server/api-routes.generated.ts",
+    },
+    {
+      value: "746",
+      label: "automated tests passing when the connector shipped",
+      source: "DNMS docs/mcp-connector-plan.md §6 (2 Oct 2026)",
+    },
+    {
+      value: "269",
+      label: "help screenshots, none of a real person",
+      source: "DNMS commit 34b61c5 (7 Oct 2026); DNMS/public/help-shots (269 files)",
+    },
+  ],
+  credits: [
+    { team: "Web", people: ["diwakar-jha", "karan-joshi"] },
+    { team: "Design", people: ["komal-gautam"] },
+  ],
+  testimonial: {
+    quote:
+      "We stopped running the studio across spreadsheets and chat threads the day DNMS went live. Now I ask Claude who's away or what's waiting on me, and the answer comes from the same system my team uses.",
+    name: "Digitally Next leadership",
+    role: "Leadership",
+    company: "Digitally Next",
+    approved: null,
+  },
+
+  brief: [
+    {
+      kind: "facts",
+      items: [
+        { label: "Owner", value: "Digitally Next, in-house" },
+        { label: "Product", value: "DNMS, the studio's operating system" },
+        { label: "Scope", value: "HR, payroll, projects, clients, SEO, chat, AI" },
+        { label: "In use", value: "Every day since June 2026" },
+      ],
+    },
+    {
+      kind: "prose",
+      heading: "One place for the whole studio",
+      paragraphs: [
+        "A studio of designers, developers and marketers runs on small, constant decisions: who is in today, whose leave to approve, which deliverable slipped, which client site went down overnight. Before DNMS, each of those lived in a different tool, or in someone's head.",
+        "So we built our own. Attendance arrives straight from the biometric terminals at the door. Leave, work from home, payroll, reviews and hiring sit beside projects, goals, deliverables, client portals and SEO reports. It is the first thing the studio opens in the morning, and it has to be fast, calm and right.",
+      ],
+    },
+    {
+      kind: "figure",
+      image: {
+        src: "/work/dnms/dashboard-hr.webp",
+        alt: "The HR dashboard: headcount, new joiners, documents, a department ring chart and recent joiners",
+        width: 1400,
+        height: 875,
+      },
+      caption: "The HR view, shown here with the made-up company we use for screenshots.",
+      frame: "browser",
+    },
+    {
+      kind: "timeline",
+      heading: "Built in the open, one module at a time",
+      items: [
+        { date: "Jun 2026", label: "People, attendance and leave" },
+        { date: "Jul 2026", label: "Reviews, hiring, SEO reports and an AI assistant" },
+        { date: "19 Aug", label: "Punch terminals post attendance live" },
+        { date: "24–25 Aug", label: "An interface designed for phones" },
+        { date: "26 Aug", label: "Several companies on one system" },
+        { date: "3 Sep", label: "Clients module and the shared task clock" },
+        { date: "15 Sep", label: "Client portal" },
+        { date: "3–6 Oct", label: "Claude and ChatGPT connector, with downloads" },
+        { date: "7 Oct", label: "56 help guides in English and Hindi" },
+      ],
+    },
+  ],
+
+  design: [
+    {
+      kind: "prose",
+      heading: "A calm, dark room for a busy day",
+      paragraphs: [
+        "People keep DNMS open from the first punch to the last. It is dark by default, quiet in colour and set entirely in Inter, so dense tables and long lists stay easy on the eyes.",
+        "Everyone can tint it. An early version offered 123 generated palettes that differed by a few degrees of hue; nobody could tell them apart. We cut them to eight, one per colour family, so picking one became a choice instead of noise.",
+      ],
+    },
+    {
+      kind: "palette",
+      heading: "Aurora, as tokens",
+      colors: [
+        { name: "Night", hex: "#131526", note: "Page" },
+        { name: "Card", hex: "#1B1D32" },
+        { name: "Rule", hex: "#2A2D47" },
+        { name: "Violet", hex: "#AB63F2", note: "Primary" },
+        { name: "Cyan", hex: "#30D3E8", note: "Second light" },
+        { name: "Mist", hex: "#EAECF6", note: "Text" },
+        { name: "Slate", hex: "#9FA4BC", note: "Muted" },
+      ],
+    },
+    {
+      kind: "typeface",
+      families: [{ name: "Inter", role: "Everything, as one variable font", font: "inter" }],
+      sample: "Who's away next week?",
+    },
+    {
+      kind: "figure",
+      image: {
+        src: "/work/dnms/theme-picker.webp",
+        alt: "The theme picker with eight dark palettes, Aurora among them",
+        width: 1400,
+        height: 542,
+      },
+      caption: "Eight palettes. Aurora is the only one drawn by hand: navy, violet and cyan, with a two-colour glow behind the page.",
+      frame: "none",
+      wide: true,
+    },
+    {
+      kind: "prose",
+      heading: "Light that moves, nothing that jumps",
+      paragraphs: [
+        "On the org chart, each connector is a steady line with one bright highlight running along it, from manager to report. An earlier version shimmered the whole line; a single travelling light reads as flow.",
+        "Aurora's glow drifts slowly behind the page. It only ever slides, never grows, because resizing a blurred layer redraws the blur on every frame and made scrolling stutter. Your palette is applied before the first paint, so the wrong colours never flash on load, and all of it stops for anyone who prefers reduced motion.",
+      ],
+    },
+    {
+      kind: "figure",
+      image: {
+        src: "/work/dnms/org-chart.webp",
+        alt: "The organisation chart of the demo company, from the director down through two levels of reports",
+        width: 1400,
+        height: 875,
+      },
+      frame: "browser",
+    },
+    {
+      kind: "pair",
+      images: [
+        {
+          src: "/work/dnms/phone-dashboard.webp",
+          alt: "The DNMS dashboard on a phone, with a tab bar for Home, Attendance, Tasks, Chat and More",
+          width: 780,
+          height: 1688,
+        },
+        {
+          src: "/work/dnms/attendance-calendar.webp",
+          alt: "A month of attendance as a calendar, each day showing check-in, check-out and hours",
+          width: 1400,
+          height: 875,
+        },
+      ],
+      frames: ["phone", "browser"],
+      caption: "On a phone, home, attendance, tasks and chat sit in a tab bar under the thumb; everything else is one tap away under More.",
+    },
+    {
+      kind: "prose",
+      heading: "AI offers, people choose",
+      paragraphs: [
+        "Where DNMS uses AI to help someone write, such as a leave request or an approval note, it offers three rewrites in different tones instead of one to accept. Nothing is saved for them: they pick one, or keep their own words. The assistant in the top bar says it plainly: it only sees what you are allowed to see.",
+      ],
+    },
+  ],
+
+  build: [
+    {
+      kind: "architecture",
+      heading: "One set of rules, for people and for AI",
+      caption: "The web app, phones and AI apps all go through the same route handlers and the same permission checks.",
+      nodes: [
+        { id: "web", label: "Web app", note: "Next.js 16", lane: 0 },
+        { id: "phone", label: "Phones", note: "Own tab bar", lane: 0 },
+        { id: "ai", label: "Claude · ChatGPT", note: "MCP + OAuth 2.1", lane: 0 },
+        { id: "routes", label: "Route handlers", note: "383", lane: 1 },
+        { id: "rules", label: "Permissions", note: "Role, team, company", lane: 1 },
+        { id: "hr", label: "HR & payroll", lane: 2 },
+        { id: "work", label: "Projects & clients", lane: 2 },
+        { id: "seo", label: "SEO & uptime", lane: 2 },
+        { id: "db", label: "Postgres", note: "148 models", lane: 3 },
+        { id: "doors", label: "Punch terminals", note: "Hikvision", lane: 3 },
+      ],
+      links: [
+        { from: "web", to: "routes" },
+        { from: "phone", to: "routes" },
+        { from: "ai", to: "routes", label: "as the person" },
+        { from: "routes", to: "rules" },
+        { from: "rules", to: "hr" },
+        { from: "rules", to: "work" },
+        { from: "rules", to: "seo" },
+        { from: "hr", to: "db" },
+        { from: "work", to: "db" },
+        { from: "seo", to: "db" },
+        { from: "doors", to: "hr", label: "live punches" },
+      ],
+    },
+    {
+      kind: "prose",
+      heading: "Claude, signed in as you",
+      paragraphs: [
+        "Add the DNMS address in Claude or ChatGPT, log in to DNMS as usual and click Allow. From then on you can ask in plain English: who is away this week, what is waiting for my approval, show the overdue deliverables on a project. The AI calls DNMS live and answers from real data.",
+        "It never gets its own keys to the database or its own rules. Each request runs the same code the web app runs, as you, so it can see and do exactly what you can, and every change it makes is logged under your name. Changes always come back to you for a yes first.",
+      ],
+    },
+    {
+      kind: "figure",
+      image: {
+        src: "/work/dnms/ai-connections.webp",
+        alt: "The AI Connections page: the connector address and steps for Claude, ChatGPT and Claude Code, with one active Claude connection",
+        width: 1400,
+        height: 875,
+      },
+      caption: "Connecting takes three steps. Disconnecting takes effect on the very next request.",
+      frame: "browser",
+    },
+    {
+      kind: "facts",
+      heading: "By the numbers",
+      items: [
+        { label: "Route handlers", value: "383" },
+        { label: "Data models", value: "148" },
+        { label: "Automated tests", value: "746" },
+        { label: "Tools for AI apps", value: "10" },
+        { label: "Help guides", value: "56, in English and Hindi" },
+        { label: "Themes", value: "8" },
+      ],
+    },
+    {
+      kind: "stack",
+      items: [
+        "Next.js 16",
+        "React 19",
+        "Prisma + Postgres",
+        "Auth.js",
+        "MCP TypeScript SDK",
+        "OAuth 2.1",
+        "TanStack Query",
+        "Tailwind CSS 4",
+        "Recharts",
+        "Web Push",
+        "pptxgenjs · docx · pdfkit",
+        "Playwright",
+        "Vitest",
+      ],
+    },
+  ],
+
+  hurdles: [
+    {
+      id: "ai-as-you",
+      title: "An AI exactly as allowed as you",
+      group: "experience",
+      hard: "Letting Claude or ChatGPT into an HR system usually means a separate integration with its own rules. Two rulebooks drift apart, and sooner or later the AI sees something the person can't, or misses something they can.",
+      tried: "An early plan kept the AI read-only and away from salaries. Safe, but it meant a second permission list to maintain forever.",
+      fix: "There is no second rulebook. Every AI request runs through the same route handlers the web app uses, inside a session that stands in for the signed-in person. Every permission check, company boundary and audit entry applies unchanged, and roles are re-read on every call.",
+      result: "A plain employee's AI is refused the same pages the employee is; an HR manager's AI sees what HR sees. A role change or a disconnect applies on the very next request.",
+      solvedBy: ["karan-joshi"],
+      source: "DNMS commit de7525e (3 Oct 2026); docs/mcp-connector-plan.md §2, §6; server/delegated-session.ts; DNMS task 5–6 Oct",
+    },
+    {
+      id: "files-by-link",
+      title: "The AI can't hand you a file",
+      group: "experience",
+      hard: "People ask for things DNMS produces as files: a monthly work report, a deliverables deck, an attendance sheet. But Claude and ChatGPT can't receive a file through the connector.",
+      fix: "DNMS builds the file as the person and gives the AI a short-lived download link to pass on. Any list in DNMS can come back as an Excel or CSV file, and the AI can read the text of PDFs and Word files to summarise them.",
+      result: "\"Make me last month's work report\" ends with a PowerPoint, PDF or Word file one click away. The link stops working the moment the app is disconnected.",
+      solvedBy: ["karan-joshi"],
+      source: "DNMS commit b106e7b (5 Oct 2026); docs/mcp-connector-plan.md §2a",
+    },
+    {
+      id: "shared-clock",
+      title: "Two clocks, one morning",
+      group: "experience",
+      hard: "People work on two things at once, so DNMS lets several task clocks run together. On a Happy Ganga build day, two tasks started seconds apart and the same morning was booked twice.",
+      tried: "A shared clock split each hour between whatever was running, so a day always added up. But a task's hours then depended on unrelated work: start a second task and the first one silently halved.",
+      fix: "We separated the two questions. A task's clock measures how long that task was open, whatever runs beside it. How long a person actually worked comes from attendance, the only thing that can answer it.",
+      result: "Task figures that nothing else can dilute, and working days measured at the door rather than added up from a to-do list.",
+      solvedBy: ["diwakar-jha", "karan-joshi"],
+      source: "DNMS commits c9c11e6 (3 Sep 2026) and 13eeefc (21 Sep 2026); features/projects/server/task-clock.service.ts; dnms-findings Happy Ganga hurdle 4",
+    },
+    {
+      id: "help-without-people",
+      title: "Help guides with nobody real in them",
+      group: "experience",
+      hard: "A help guide needs screenshots, and screenshots of a live HR system show real names, salaries and leave reasons. Taken by hand, they also go stale with every release.",
+      fix: "We built a second, made-up company inside DNMS, with fourteen invented people and three invented clients, and a script that signs in as four of them and photographs every step with numbered highlights. Their email addresses sit on a domain that can never receive mail, so the scheduled jobs that run for every company can't reach them.",
+      result: "56 guides in English and Hindi, 269 screenshots, not one real person. When a screen changes, one command retakes the pictures.",
+      solvedBy: ["diwakar-jha"],
+      source: "DNMS commit 34b61c5 (7 Oct 2026); scripts/help-screenshots.ts; features/help/demo/dataset.ts; lib/demo.ts",
+    },
+    {
+      id: "endpoint-map",
+      title: "Three hundred doors, one map",
+      group: "engineering",
+      hard: "DNMS has hundreds of API endpoints. An AI can't use what it can't find, and a hand-written tool per endpoint would go stale with the next release. ChatGPT even freezes an app's tool list once it is published.",
+      fix: "A build step reads every route's own comments, query parameters and validation rules and writes a catalogue. The AI gets one tool to search it and two to call it. Machine-only and sign-in routes are left out on purpose.",
+      result: "The catalogue is rebuilt with every release: 304 endpoints at launch, 308 at its peak, 306 today, without a single change to the AI's tools.",
+      solvedBy: ["karan-joshi"],
+      source: "DNMS scripts/generate-mcp-api-map.ts; api-routes.generated.ts header at de7525e (304, 3 Oct), 8536567 (308, 6 Oct), 8b8ca9e (306, 7 Oct 2026)",
+    },
+    {
+      id: "punch-terminal",
+      title: "A punch machine the cloud can't reach",
+      group: "engineering",
+      hard: "Attendance comes from Hikvision biometric terminals on the office network. A hosted DNMS can't reach into that network, and the terminals change address whenever the router hands out a new one.",
+      fix: "We turned the direction round: the terminal now calls DNMS the moment someone punches, over the kind of outbound connection every office network already allows. The older sync stays for backfills, and it recognises each terminal by its serial number, not its address, so a device that has moved is found again.",
+      result: "Attendance lands as people walk in, not when somebody remembers to press Sync.",
+      solvedBy: ["diwakar-jha", "karan-joshi"],
+      source: "DNMS features/attendance/server/punch-hook.ts, device-resolver.ts; commits df81f5f (19 Aug 2026), 8b37d99 (10 Jul 2026)",
+    },
+    {
+      id: "many-companies",
+      title: "One system, many companies",
+      group: "engineering",
+      hard: "DNMS began as one studio's tool. Hosting a second company meant every query, everywhere, had to stay inside its own company. One forgotten filter would show one company's people to another.",
+      fix: "Every company-owned record now carries its company, and a guard adds that company to every database read and write automatically, across 106 kinds of record. The list is read from the database schema itself, so a new table is covered the moment it exists.",
+      result: "The studio and a made-up demo company run side by side on one codebase and one database.",
+      solvedBy: ["diwakar-jha"],
+      source: "DNMS commit 5af1d79 (25 Aug 2026); DNMS task 26 Aug; server/tenant-guard.ts (106 tenant-scoped models)",
+    },
+    {
+      id: "double-push",
+      title: "Every notification, twice",
+      group: "engineering",
+      hard: "Notifications started arriving two at a time. Nothing in the live app sent twice: the second copy came from a development copy that a browser had registered with, which kept waking up long after it was closed.",
+      fix: "Each browser registration now records which site created it, and a development copy can only ever reach itself. The rule is written so that a missing setting makes notifications noisy rather than silent: a company never loses them.",
+      result: "One notification, once, with tests that hold the rule in place.",
+      solvedBy: ["diwakar-jha"],
+      source: "DNMS commit 3a97508 (15 Sep 2026); lib/push-targets.ts; lib/push-targets.test.ts",
+    },
+    {
+      id: "build-memory",
+      title: "Too big to check itself",
+      group: "engineering",
+      hard: "In mid-September the production build began dying halfway through. DNMS had grown so large that checking its code for type errors needs about four times the memory the build gives that step.",
+      fix: "The type check now runs as its own step, with the memory it needs, before every deploy; the build no longer repeats it. A comment in the config explains why, so nobody tidies it back.",
+      result: "Builds finish again, and every deploy is still type-checked first.",
+      solvedBy: ["diwakar-jha"],
+      source: "DNMS commit 1d0aec7 (14 Sep 2026); next.config.mjs comment (8,192 MB check vs ~2,048 MB worker)",
+    },
+  ],
+
+  outcome: [
+    {
+      kind: "facts",
+      items: [
+        { label: "In use", value: "Every working day since June 2026" },
+        { label: "Modules", value: "HR to SEO, in one system" },
+        { label: "AI", value: "Claude and ChatGPT, as the signed-in person" },
+        { label: "Help", value: "56 guides, English and Hindi" },
+      ],
+    },
+    {
+      kind: "prose",
+      heading: "A system that answers back",
+      paragraphs: [
+        "DNMS started as the studio's way to stop losing track. It is now where attendance arrives from the door, where projects are planned and delivered, where client sites are watched overnight and where the team talks.",
+        "The connector changed how people use it. A manager can ask Claude who is away next week, and the answer comes from the same data, under the same rules, as the screen in front of them. Nothing new to trust: just a new way to ask.",
+      ],
+    },
+    {
+      kind: "pair",
+      images: [
+        {
+          src: "/work/dnms/monitoring.webp",
+          alt: "A project's monitoring tab: one site up, one staging site down for 49 minutes with an 'I'm on it' button",
+          width: 1400,
+          height: 875,
+        },
+        {
+          src: "/work/dnms/seo-setup.webp",
+          alt: "The SEO tab for a client website: a step-by-step setup with Search Console connected",
+          width: 1400,
+          height: 875,
+        },
+      ],
+      frames: ["browser", "browser"],
+      caption: "Client sites are watched every five minutes, and every SEO report starts with a guided setup.",
+    },
+  ],
+
+  next: "happy-ganga",
+};
+
+export default dnms;

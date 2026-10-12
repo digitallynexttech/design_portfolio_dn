@@ -1,0 +1,360 @@
+/* pages styles. Plain CSS (no @apply); imported from app/globals.css. Unlayered, so these rules win over
+   Tailwind utilities on the same element. */
+
+/* ---------- Services ---------- */
+
+/* The index in the header: a chip scroller on phones, wrapping chips on tablets, a numbered list on desktop. */
+.services-nav {
+  display: flex;
+  gap: 0.5rem;
+  margin-inline: calc(var(--gutter) * -1);
+  padding-inline: var(--gutter);
+  scroll-padding-inline: var(--gutter);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.services-nav::-webkit-scrollbar {
+  display: none;
+}
+@media (min-width: 768px) {
+  .services-nav {
+    flex-wrap: wrap;
+    margin-inline: 0;
+    padding-inline: 0;
+    overflow: visible;
+  }
+  .services-nav > ol {
+    flex-wrap: wrap;
+  }
+}
+@media (min-width: 1024px) {
+  .services-nav {
+    display: block;
+  }
+}
+
+/* Proof under each service: a snap row on phones, one row of equal cards from tablets (three slots, so cards
+   keep the same size from service to service). */
+.proof-row {
+  display: flex;
+  gap: 0.75rem;
+  margin-inline: -1.5rem;
+  padding-inline: 1.5rem;
+  scroll-padding-inline: 1.5rem;
+  scroll-snap-type: x mandatory;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.proof-row::-webkit-scrollbar {
+  display: none;
+}
+.proof-row > li {
+  flex: 0 0 min(78%, 20rem);
+  min-width: 0;
+  scroll-snap-align: start;
+}
+@media (min-width: 768px) {
+  .proof-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.25rem;
+    margin-inline: 0;
+    padding-inline: 0;
+    overflow: visible;
+  }
+}
+@media (min-width: 1024px) {
+  .proof-row {
+    gap: 1.75rem;
+  }
+}
+
+/* Arriving from the index (or from home's "Proof inside"): a teal bar pours down the row's inside edge. */
+.service-row,
+.process-section {
+  position: relative;
+}
+.service-row::before,
+.process-section::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: var(--teal);
+  transform: scaleY(0);
+  transform-origin: top;
+  pointer-events: none;
+}
+.process-section::before {
+  left: calc(var(--gutter) * -0.5);
+}
+.service-row:target::before,
+.process-section:target::before {
+  transform: scaleY(1);
+  animation: target-pour 900ms var(--ease-flow) both;
+}
+@keyframes target-pour {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+/* ---------- About ---------- */
+
+/* Phones see the portrait shot, so each source keeps its own crop. */
+.team-photo img {
+  object-position: var(--tall);
+}
+@media (min-width: 768px) {
+  .team-photo img {
+    object-position: var(--wide);
+  }
+}
+
+/* Hovering a person spotlights them; names are not links, so nothing pretends to be one. */
+@media (hover: hover) {
+  .people-list > li {
+    transition: opacity 400ms var(--ease-flow);
+  }
+  .people-list:hover > li:not(:hover),
+  .people-list:has(:focus-visible) > li:not(:focus-within) {
+    opacity: 0.4;
+  }
+}
+
+/* ---------- Reel (/reel and the home pop-up) ---------- */
+
+/* One column: the title, the video and the chapters share its edges. The video is sized by the screen's height.
+   The "Now" pill sits under the video on phones and at the end of the title row above. */
+.reel {
+  width: 100%;
+  margin-inline: auto;
+}
+.reel-page .reel {
+  max-width: max(20rem, calc((100svh - 16rem) * 16 / 9));
+}
+.reel--popup {
+  max-width: max(20rem, calc((100svh - 11rem) * 16 / 9));
+}
+.reel__top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "head" "stage" "now";
+  scroll-margin-top: 4.5rem;
+}
+.reel__head {
+  grid-area: head;
+}
+.reel__stage {
+  grid-area: stage;
+  margin-top: 2rem;
+}
+.reel--popup .reel__stage {
+  margin-top: 1rem;
+}
+@media (min-width: 640px) {
+  .reel__top {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "head now" "stage stage";
+    align-items: end;
+    column-gap: 1.5rem;
+  }
+}
+@media (min-width: 768px) {
+  .reel--popup .reel__top {
+    align-content: center;
+    min-height: calc(100svh - 7rem);
+  }
+}
+.reel__frame {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 1.5rem;
+  background: var(--ink-2);
+}
+.reel__video {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* "Now: client · Case study →" in the client's colour; the text rises in as each site begins. */
+.reel__now {
+  grid-area: now;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  margin-top: 0.75rem;
+  padding-inline: 1rem;
+  overflow: hidden;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--on-now);
+  background: var(--now);
+  transition:
+    background-color 600ms var(--ease-flow),
+    color 600ms var(--ease-flow);
+}
+@media (min-width: 640px) {
+  .reel__now {
+    margin-top: 0;
+  }
+}
+.reel__now-text {
+  display: inline-block;
+  animation: reel-now 600ms var(--ease-flow) both;
+}
+@keyframes reel-now {
+  from {
+    transform: translateY(120%);
+  }
+}
+
+/* The end card fills the frame from the bottom, its surface curved like water rising. */
+.reel__end {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: rgb(8 10 12 / 0.88);
+  backdrop-filter: blur(10px);
+  animation: reel-fill 900ms var(--ease-flow) both;
+}
+@keyframes reel-fill {
+  from {
+    clip-path: ellipse(140% 0% at 50% 100%);
+  }
+  to {
+    clip-path: ellipse(140% 170% at 50% 100%);
+  }
+}
+/* Chapters: the text alternative to a silent reel, and a way to jump to any site. */
+.reel__list {
+  margin-top: 3rem;
+}
+.reel--popup .reel__list {
+  margin-top: 2.5rem;
+}
+.reel__chapter {
+  display: grid;
+  grid-template-columns: 4.25rem minmax(0, 1fr);
+  align-items: center;
+  column-gap: 1rem;
+  row-gap: 0.125rem;
+  padding-block: 0.625rem;
+  border-bottom: 1px solid rgb(250 250 248 / 0.1);
+}
+@media (min-width: 640px) {
+  .reel__chapter {
+    grid-template-columns: 4.25rem minmax(0, 1fr) auto;
+  }
+}
+.reel__time {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  border-radius: 999px;
+  border: 1px solid rgb(250 250 248 / 0.2);
+  font-family: var(--font-geist-mono);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  transition:
+    background-color 400ms var(--ease-flow),
+    border-color 400ms var(--ease-flow),
+    color 400ms var(--ease-flow);
+}
+.reel__time:hover {
+  border-color: var(--teal);
+}
+.reel__chapter[aria-current="true"] .reel__time {
+  color: var(--ink);
+  background: var(--teal);
+  border-color: var(--teal);
+}
+.reel__client {
+  font-weight: 600;
+  color: var(--paper);
+}
+.reel__client::before {
+  content: "";
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-right: 0.5rem;
+  border-radius: 50%;
+  background: var(--dot);
+  box-shadow: 0 0 0 1px rgb(250 250 248 / 0.3);
+  vertical-align: 0.08em;
+}
+.reel__study {
+  grid-column: 2;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.75rem;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  color: rgb(250 250 248 / 0.7);
+  transition: color 0.2s;
+}
+.reel__study:hover {
+  color: var(--teal);
+}
+@media (min-width: 640px) {
+  .reel__study {
+    grid-column: auto;
+  }
+}
+
+/* Short landscape (phones on their side): the title and the pill move beside the video so the reel gets the
+   height. Same on the page and in the pop-up. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .reel-page {
+    padding-top: 4.5rem;
+  }
+  .reel-page .reel,
+  .reel--popup {
+    max-width: none;
+  }
+  .reel-page .reel__top,
+  .reel--popup .reel__top {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "head stage" "now stage";
+    grid-template-rows: auto 1fr;
+    align-items: start;
+    align-content: start;
+    min-height: 0;
+    column-gap: 1.5rem;
+  }
+  .reel-page .reel__now,
+  .reel--popup .reel__now {
+    margin-top: 1rem;
+    padding-block: 0.5rem;
+    white-space: normal;
+  }
+  .reel-page .reel__head h1 {
+    font-size: 1.75rem;
+  }
+  .reel-page .reel__stage,
+  .reel--popup .reel__stage {
+    width: max(16rem, calc((100svh - 6rem) * 16 / 9));
+    margin-top: 0;
+  }
+  .reel--popup .reel__stage {
+    width: max(16rem, calc((100svh - 6.5rem) * 16 / 9));
+  }
+}

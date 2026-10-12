@@ -1,0 +1,31 @@
+import type { Metadata } from "next";
+import { FlowLink } from "@/components/ui/flow-link";
+import { PageFlow } from "@/components/ui/page-flow";
+import { RetryButton } from "./retry-button";
+
+export const metadata: Metadata = { title: "Offline", robots: { index: false } };
+
+export default function Offline() {
+  return (
+    <PageFlow>
+      <main id="main" className="grid min-h-svh content-center px-(--gutter)">
+        <p className="label">Offline</p>
+        <h1 className="mt-4 font-display text-d1 font-semibold">
+          The tide is out<span className="stop">.</span>
+        </h1>
+        <p className="mt-6 max-w-[40ch] text-lg text-paper/70">You&apos;re not connected right now. This page will load when the signal&apos;s back.</p>
+        <div className="mt-10 flex flex-wrap items-center gap-3">
+          <RetryButton className="btn btn--solid" />
+          <FlowLink
+            href="/"
+            direction="back"
+            prefetch={false}
+            className="btn"
+          >
+            Home <span aria-hidden>←</span>
+          </FlowLink>
+        </div>
+      </main>
+    </PageFlow>
+  );
+}

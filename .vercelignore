@@ -1,0 +1,11 @@
+# Only the app goes to Vercel: no local build output, screenshots, scratch work or secrets.
+node_modules
+.next
+.captures
+scratch
+.env*
+*.pem
+*.tsbuildinfo
+.vercel
+docs
+scripts

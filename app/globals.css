@@ -1,0 +1,964 @@
+@import "tailwindcss";
+/* Area stylesheets, one owner each: the particle forms and hero, home sections, work and case
+   studies, and the other pages. Site-wide tokens and rules stay in this file. */
+@import "./styles/forms.css";
+@import "./styles/home.css";
+@import "./styles/work.css";
+@import "./styles/pages.css";
+
+/* Brand tokens. One red, one teal; water is tinted teal, red marks energy and calls to action. */
+:root {
+  --ink: #0a0a0a;
+  --ink-2: #111214;
+  --paper: #fafaf8;
+  --red: #e21f26;
+  --teal: #0ec8c5;
+  --mute: #8a8f98;
+  --line: rgb(250 250 248 / 0.14);
+
+  /* Text roles over the water: body copy never drops below 72% (contrast holds on the brightest
+     caustics). Use as text-(--text-2). */
+  --text-1: var(--paper);
+  --text-2: color-mix(in oklab, var(--paper) 84%, transparent);
+  --text-3: color-mix(in oklab, var(--paper) 72%, transparent);
+
+  /* Motion tokens (PLAN §4.2). Flow fills fast and settles; drain starts slow and leaves fast;
+     tide is the even swell for things that go both ways. */
+  --ease-flow: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-1: 120ms;
+  --dur-2: 200ms;
+  --dur-3: 320ms;
+  --dur-4: 520ms;
+  --dur-5: 900ms;
+  --dur-flow-in: 600ms;
+  --dur-flow-out: 350ms;
+  --dur-ripple: 900ms;
+
+  /* Landscape phones put the notch in the gutter; the gutter grows to clear it. */
+  --gutter: max(clamp(1rem, 4vw, 3rem), env(safe-area-inset-left), env(safe-area-inset-right));
+  /* The fixed header's height. Sticky bars sit under it while html[data-header="shown"]. */
+  --header-h: 3.625rem;
+
+  /* Page transitions blur only where a fine pointer suggests a screen that can afford it. */
+  --vt-blur: 0px;
+}
+@media (pointer: fine) {
+  :root {
+    --vt-blur: 4px;
+  }
+}
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-paper: var(--paper);
+  --color-red: var(--red);
+  --color-teal: var(--teal);
+  --color-mute: var(--mute);
+  --font-display: var(--font-headline);
+  --font-sans: var(--font-text);
+  --font-mono: var(--font-geist-mono);
+  --ease-flow: var(--ease-flow);
+}
+
+/* The design system's scales, as Tailwind utilities (text-d2, py-section, rounded-card, ease-drain)
+   and as plain variables for the area stylesheets. `static` keeps every variable in :root. */
+@theme static {
+  /* Type: hero beats, page titles, section titles, sub-sections, card titles, intros, small print,
+     mono labels, micro captions. */
+  --text-hero: clamp(3.25rem, 12.5vw, 12.5rem);
+  --text-hero--line-height: 0.92;
+  --text-hero--letter-spacing: -0.035em;
+  --text-d1: clamp(3.25rem, 10vw, 9rem);
+  --text-d1--line-height: 0.9;
+  --text-d1--letter-spacing: -0.035em;
+  --text-d2: clamp(2.25rem, 5vw, 4.5rem);
+  --text-d2--line-height: 0.98;
+  --text-d2--letter-spacing: -0.03em;
+  --text-d3: clamp(1.625rem, 3.4vw, 3rem);
+  --text-d3--line-height: 1.05;
+  --text-d3--letter-spacing: -0.02em;
+  --text-h3: clamp(1.25rem, 2vw, 1.75rem);
+  --text-h3--line-height: 1.15;
+  --text-h3--letter-spacing: -0.015em;
+  --text-lead: clamp(1.125rem, 1.5vw, 1.375rem);
+  --text-lead--line-height: 1.5;
+  --text-lead--letter-spacing: -0.005em;
+  --text-small: 0.875rem;
+  --text-small--line-height: 1.5;
+  --text-label: 0.75rem;
+  --text-label--line-height: 1.35;
+  --text-label--letter-spacing: 0.18em;
+  --text-micro: 0.6875rem;
+  --text-micro--line-height: 1.35;
+  --text-micro--letter-spacing: 0.14em;
+
+  /* Rhythm: between sections, between blocks inside a section, and from the top of a page to its
+     first line (clears the header). */
+  --spacing-section: clamp(6rem, 12vw, 10rem);
+  /* Not "block": Tailwind 4 reads `inline-block` as inline-size: var(--spacing-block). */
+  --spacing-stack: clamp(3rem, 6vw, 5rem);
+  --spacing-page-top: clamp(7.5rem, 12vw, 9rem);
+
+  --radius-pill: 999px;
+  --radius-card: 1.5rem;
+  --radius-inner: 1rem;
+  --radius-sheet: 1.75rem;
+
+  --ease-drain: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-tide: cubic-bezier(0.65, 0, 0.35, 1);
+
+  --default-transition-duration: 250ms;
+  --default-transition-timing-function: var(--ease-flow);
+}
+
+/* Metric-matched fallbacks: until Stack Sans arrives, Arial (Roboto on Android) is scaled to the
+   same widths, so text keeps its line breaks when the web font swaps in. Measured in Chrome against
+   the real files: the regular face is fitted to the hero intro (the phone LCP) at 360–1440 px; the
+   bold face covers the semibold (600) headings. Stack Sans: ascent 1000, descent 300, gap 0 /1000. */
+@font-face {
+  font-family: "Stack Sans Text Fallback";
+  src: local("Arial"), local("ArialMT"), local("Roboto"), local("Roboto-Regular");
+  font-weight: 1 549;
+  size-adjust: 106%;
+  ascent-override: 94.34%;
+  descent-override: 28.3%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "Stack Sans Text Fallback";
+  src: local("Arial Bold"), local("Arial-BoldMT"), local("Roboto Bold"), local("Roboto-Bold");
+  font-weight: 550 1000;
+  size-adjust: 102.7%;
+  ascent-override: 97.37%;
+  descent-override: 29.21%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "Stack Sans Headline Fallback";
+  src: local("Arial"), local("ArialMT"), local("Roboto"), local("Roboto-Regular");
+  font-weight: 1 549;
+  size-adjust: 101%;
+  ascent-override: 99.01%;
+  descent-override: 29.7%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "Stack Sans Headline Fallback";
+  src: local("Arial Bold"), local("Arial-BoldMT"), local("Roboto Bold"), local("Roboto-Bold");
+  font-weight: 550 1000;
+  size-adjust: 98.5%;
+  ascent-override: 101.52%;
+  descent-override: 30.46%;
+  line-gap-override: 0%;
+}
+
+html {
+  background: var(--ink);
+  color: var(--paper);
+  color-scheme: dark;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  /* In-page anchors land below the header. */
+  scroll-padding-top: var(--header-h);
+}
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+body {
+  font-family: var(--font-text), system-ui, sans-serif;
+  background: transparent;
+  min-height: 100svh;
+}
+
+::selection {
+  background: var(--teal);
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 3px;
+  /* Outlines appear at once; a transitioning outline colour reads as a flash. */
+  transition: none;
+}
+
+/* The first stop for keyboard users; hidden above the viewport until focused. */
+.skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: var(--gutter);
+  z-index: 100;
+  padding: 0.75rem 1.1rem;
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 600;
+  translate: 0 calc(-100% - 1.5rem);
+}
+.skip-link:focus {
+  translate: none;
+}
+
+/* Headings end with a teal full stop (brand rule). */
+.stop {
+  color: var(--teal);
+}
+
+/* Without the water canvas (no WebGL, reduced motion, save-data) the page keeps a quiet backdrop.
+   Sized to the large viewport, like the canvas, so a phone's toolbar never resizes it. */
+.water-fallback {
+  position: fixed;
+  inset: 0 0 auto;
+  height: 100lvh;
+  z-index: -1;
+  background:
+    radial-gradient(120% 70% at 50% 110%, rgb(14 200 197 / 0.22), transparent 60%),
+    radial-gradient(80% 50% at 15% 0%, rgb(14 200 197 / 0.08), transparent 70%),
+    var(--ink);
+}
+
+/* ---------- Buttons ---------- */
+
+/* One button for the whole site. Ghost by default; on hover a fill rises from the bottom like
+   water filling a glass, its leading edge curved like a meniscus. Variants set the colours through
+   --btn-fill (the rising water) and --btn-on-fill (the label once filled). */
+@layer components {
+  .btn {
+    --btn-fill: color-mix(in oklab, currentColor 14%, transparent);
+    --btn-on-fill: currentColor;
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.875rem;
+    padding: 0 1.25rem;
+    border: 1px solid color-mix(in oklab, currentColor 28%, transparent);
+    border-radius: var(--radius-pill);
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+    text-decoration: none;
+    cursor: pointer;
+    transition:
+      color var(--dur-3) var(--ease-flow),
+      border-color var(--dur-3) var(--ease-flow),
+      scale var(--dur-2) var(--ease-flow);
+  }
+  .btn::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    top: 100%;
+    left: -10%;
+    width: 120%;
+    height: 170%;
+    border-radius: 50% 50% 0 0 / 30% 30% 0 0;
+    background: var(--btn-fill);
+    pointer-events: none;
+    transition: translate var(--dur-4) var(--ease-flow);
+  }
+  @media (hover: hover) {
+    .btn:hover {
+      color: var(--btn-on-fill);
+      border-color: color-mix(in oklab, currentColor 55%, transparent);
+    }
+    .btn:hover::before {
+      translate: 0 -100%;
+    }
+  }
+  .btn:focus-visible {
+    color: var(--btn-on-fill);
+  }
+  .btn:focus-visible::before {
+    translate: 0 -100%;
+  }
+  .btn:active {
+    scale: 0.97;
+  }
+  .btn:disabled,
+  .btn[aria-disabled="true"] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn--primary {
+    --btn-fill: color-mix(in oklab, var(--red), var(--ink) 24%);
+    --btn-on-fill: var(--paper);
+    background: var(--red);
+    border-color: transparent;
+    color: var(--paper);
+  }
+  .btn--solid {
+    --btn-fill: var(--teal);
+    --btn-on-fill: var(--ink);
+    background: var(--paper);
+    border-color: transparent;
+    color: var(--ink);
+  }
+  /* Case studies: the client's accent and the colour that reads on it. */
+  .btn--accent {
+    --btn-fill: color-mix(in oklab, var(--c-accent), var(--c-on-accent) 18%);
+    --btn-on-fill: var(--c-on-accent);
+    background: var(--c-accent);
+    border-color: transparent;
+    color: var(--c-on-accent);
+  }
+  @media (hover: hover) {
+    .btn--primary:hover,
+    .btn--solid:hover,
+    .btn--accent:hover {
+      border-color: transparent;
+    }
+  }
+  .btn--lg {
+    min-height: 3.375rem;
+    padding: 0 1.75rem;
+    font-size: 1rem;
+  }
+}
+
+/* ---------- Page flow (view transitions follow the direction of travel) ---------- */
+
+/* Clicks pass through to the live page while a transition plays. */
+::view-transition {
+  pointer-events: none;
+}
+
+/* The old page drains away (slow start, quick finish); the new one flows in once the old is mostly
+   gone (quick start, long settle). Forward travels right to left, back left to right, deeper rises. */
+::view-transition-old(.nav-forward),
+::view-transition-old(.nav-back),
+::view-transition-old(.nav-deeper),
+::view-transition-old(.nav-fade) {
+  animation: 240ms var(--ease-drain) both flow-out;
+}
+::view-transition-new(.nav-forward),
+::view-transition-new(.nav-back),
+::view-transition-new(.nav-deeper),
+::view-transition-new(.nav-fade) {
+  animation: 520ms var(--ease-flow) 180ms both flow-in;
+}
+::view-transition-old(.nav-forward) {
+  --flow-x: -48px;
+}
+::view-transition-new(.nav-forward) {
+  --flow-x: 48px;
+}
+::view-transition-old(.nav-back) {
+  --flow-x: 48px;
+}
+::view-transition-new(.nav-back) {
+  --flow-x: -48px;
+}
+::view-transition-old(.nav-deeper) {
+  --flow-y: -32px;
+}
+::view-transition-new(.nav-deeper) {
+  --flow-y: 32px;
+}
+
+@keyframes flow-out {
+  to {
+    opacity: 0;
+    transform: translate(var(--flow-x, 0), var(--flow-y, 0));
+    filter: blur(var(--vt-blur));
+  }
+}
+@keyframes flow-in {
+  from {
+    opacity: 0;
+    transform: translate(var(--flow-x, 0), var(--flow-y, 0));
+    filter: blur(var(--vt-blur));
+  }
+}
+
+/* The header is the fixed point: it never moves or blinks while the page changes under it. */
+::view-transition-group(site-header) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-old(site-header) {
+  display: none;
+}
+::view-transition-new(site-header) {
+  animation: none;
+}
+
+/* ---------- Scroll reveals (CSS only; content is visible where unsupported) ---------- */
+
+@supports (animation-timeline: view()) {
+  [data-motion="on"] .reveal {
+    animation: reveal linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 55%;
+  }
+}
+/* Movement only, never opacity: text keeps full contrast at every moment of the reveal. */
+@keyframes reveal {
+  from {
+    transform: translateY(2.5rem);
+  }
+}
+
+/* Mono section labels: "(01) Selected work". 84% keeps 4.5:1 over the brightest water. */
+.label {
+  font-family: var(--font-geist-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, currentColor 84%, transparent);
+}
+
+/* ---------- Liquid surfaces (all pop-ups) ---------- */
+
+.liquid {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--paper);
+  overflow: hidden;
+}
+/* The backdrop seeps in with the surface and clears as it drains (data-closing). */
+.liquid::backdrop {
+  background: rgb(5 6 8 / 0.45);
+  backdrop-filter: blur(2px);
+  opacity: 1;
+  transition: opacity var(--dur-3) var(--ease-flow);
+}
+@starting-style {
+  .liquid[open]::backdrop {
+    opacity: 0;
+  }
+}
+.liquid[data-closing]::backdrop {
+  opacity: 0;
+  transition-duration: var(--dur-2);
+}
+.liquid__panel {
+  position: absolute;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background:
+    linear-gradient(160deg, rgb(14 200 197 / 0.12), transparent 45%),
+    rgb(12 14 16 / 0.86);
+  /* Unprefixed only: Lightning CSS adds -webkit- for Safari itself, and given both it keeps only
+     the prefixed one, which Chrome ignores. */
+  backdrop-filter: blur(22px) saturate(160%);
+  box-shadow: inset 0 0 0 1px rgb(250 250 248 / 0.1);
+}
+/* Cinema: near-opaque, for film. Nothing behind it should compete, so no blur to pay for either. */
+.liquid--cinema .liquid__panel {
+  background: rgb(8 9 10 / 0.94);
+  backdrop-filter: none;
+}
+.liquid--right .liquid__panel {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(34rem, 92vw);
+}
+.liquid--left .liquid__panel {
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: min(34rem, 92vw);
+}
+.liquid--bottom .liquid__panel {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 88svh;
+}
+.liquid--bottom.liquid--sheet .liquid__panel {
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+}
+.liquid--full .liquid__panel {
+  inset: 0;
+  width: auto;
+  max-height: none;
+}
+.liquid__content {
+  position: relative;
+  padding: 4.5rem var(--gutter) 2.5rem;
+  min-height: 100%;
+}
+/* Bottom sheets clear the home indicator. */
+.liquid--bottom .liquid__content {
+  padding-bottom: calc(2.5rem + env(safe-area-inset-bottom));
+}
+.liquid__close {
+  position: absolute;
+  top: 1.1rem;
+  right: var(--gutter);
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 999px;
+  border: 1px solid rgb(250 250 248 / 0.2);
+  font-size: 1.5rem;
+  line-height: 1;
+  color: inherit;
+}
+.liquid__close:hover {
+  border-color: var(--teal);
+}
+
+/* ---------- Header ---------- */
+
+/* The header follows the page's scheme on light case studies. */
+.site-header {
+  color: var(--paper);
+}
+body:has(.study[data-scheme="light"]) {
+  --chrome-auto: var(--paper);
+}
+body:has(.study[data-scheme="light"]) .site-header {
+  color: var(--ink);
+}
+/* A permanent scrim, so the links read over any water, poster or client page. Pages may set
+   --chrome-bg to their own background colour. */
+.site-header::before {
+  --scrim: var(--chrome-bg, var(--chrome-auto, var(--ink)));
+  content: "";
+  position: absolute;
+  inset: 0 0 -1.75rem;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--scrim) 80%, transparent),
+    color-mix(in oklab, var(--scrim) 45%, transparent) 55%,
+    transparent
+  );
+}
+.site-header__cta {
+  --btn-fill: var(--red);
+  --btn-on-fill: var(--paper);
+  min-height: 2.375rem;
+  padding: 0 1rem;
+}
+@media (hover: hover) {
+  .site-header__cta:hover {
+    border-color: var(--red);
+  }
+}
+.logo-on-light {
+  display: none;
+}
+body:has(.study[data-scheme="light"]) .site-header .logo-on-dark {
+  display: none;
+}
+body:has(.study[data-scheme="light"]) .site-header .logo-on-light {
+  display: block;
+}
+
+/* ---------- Reduced motion ---------- */
+
+/* Everything still happens, briefly and once: loops play a single short pass and stop. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 150ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 150ms !important;
+    scroll-behavior: auto !important;
+  }
+  .sail-button__wake {
+    display: none;
+  }
+  /* Pages swap with a short crossfade: no travel, no blur. The header stays put. */
+  ::view-transition-group(*) {
+    animation: none !important;
+  }
+  ::view-transition-old(*) {
+    animation: 150ms ease both vt-fade-out !important;
+  }
+  ::view-transition-new(*) {
+    animation: 150ms ease both vt-fade-in !important;
+  }
+  ::view-transition-new(site-header) {
+    animation: none !important;
+  }
+}
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ---------- Draft 2: the archipelago ---------- */
+
+html.world-open {
+  overflow: hidden;
+}
+
+.world {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: #06121b;
+  color: var(--paper);
+  overflow: hidden;
+  /* Long-press menus and text selection break the spell on phones. */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: none;
+}
+.world::backdrop {
+  background: #06121b;
+}
+.world :is(input, a, button) {
+  -webkit-touch-callout: none;
+}
+.world-stage {
+  position: absolute;
+  inset: 0;
+  outline: none;
+}
+.world-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+}
+
+.world-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  transition:
+    opacity 900ms var(--ease-flow),
+    visibility 0s linear 900ms;
+}
+.world-loading[data-done="true"] {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.world-loading__veil {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgb(6 18 27 / 0.35), rgb(6 18 27 / 0.85));
+}
+.world-progress {
+  width: min(18rem, 70vw);
+  height: 3px;
+  margin-inline: auto;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgb(250 250 248 / 0.2);
+}
+.world-progress span {
+  display: block;
+  height: 100%;
+  background: var(--teal);
+  transform-origin: left;
+  transition: transform 500ms var(--ease-flow);
+}
+
+.world-hud {
+  position: absolute;
+  inset-inline: 0;
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 1rem var(--gutter);
+  pointer-events: none;
+}
+.world-hud > * {
+  pointer-events: auto;
+}
+.world-hud--top {
+  top: 0;
+}
+
+.world-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  padding: 0.6rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--paper);
+  background: rgb(10 12 14 / 0.66);
+  border: 1px solid rgb(250 250 248 / 0.18);
+  backdrop-filter: blur(14px) saturate(150%);
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
+}
+.world-chip:hover,
+.world-chip[aria-pressed="true"] {
+  border-color: var(--teal);
+}
+@media (max-width: 767px) {
+  .world-hud .world-chip {
+    padding: 0.55rem 0.8rem;
+    font-size: 0.8rem;
+  }
+}
+
+.world kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 0.1em 0.45em;
+  border-radius: 0.4em;
+  font-family: var(--font-geist-mono);
+  font-size: 0.78em;
+  text-align: center;
+  background: rgb(250 250 248 / 0.14);
+  border: 1px solid rgb(250 250 248 / 0.22);
+}
+
+.world-hint {
+  position: absolute;
+  bottom: 1.25rem;
+  left: 50%;
+  z-index: 3;
+  transform: translateX(-50%);
+  padding: 0.7rem 1.1rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  color: var(--paper);
+  background: rgb(10 12 14 / 0.66);
+  backdrop-filter: blur(14px);
+  transition: opacity 1.2s var(--ease-flow);
+}
+.world-hint[data-gone="true"] {
+  opacity: 0;
+}
+
+.world-prompt {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.65rem 1.15rem 0.65rem 0.7rem;
+  border-radius: 999px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--ink);
+  background: var(--paper);
+  box-shadow: 0 12px 30px rgb(0 0 0 / 0.3);
+  transition: opacity 0.25s;
+  will-change: transform;
+}
+.world-prompt kbd {
+  color: var(--paper);
+  background: var(--ink);
+  border-color: var(--ink);
+}
+@media (pointer: coarse) {
+  .world-prompt {
+    padding: 0.85rem 1.3rem;
+  }
+}
+
+.world-toast {
+  position: absolute;
+  top: 4.75rem;
+  left: 50%;
+  z-index: 4;
+  width: max-content;
+  max-width: min(36rem, calc(100vw - 2 * var(--gutter)));
+  transform: translateX(-50%);
+  padding: 0.75rem 1.2rem;
+  border-radius: 1.25rem;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--paper);
+  background: rgb(10 12 14 / 0.72);
+  border: 1px solid rgb(14 200 197 / 0.4);
+  backdrop-filter: blur(14px);
+  animation: toast-in 0.6s var(--ease-flow) both;
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -0.6rem);
+  }
+}
+
+.world-touch {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+.world-stick {
+  position: absolute;
+  width: 112px;
+  height: 112px;
+  margin: -56px 0 0 -56px;
+  border-radius: 50%;
+  border: 2px solid rgb(250 250 248 / 0.5);
+  background: rgb(10 12 14 / 0.25);
+  pointer-events: none;
+}
+.world-stick__knob {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 48px;
+  height: 48px;
+  margin: -24px;
+  border-radius: 50%;
+  background: rgb(250 250 248 / 0.88);
+}
+.world-pad {
+  width: 4.6rem;
+  height: 4.6rem;
+  border-radius: 50%;
+  font-weight: 600;
+  color: var(--paper);
+  background: rgb(10 12 14 / 0.6);
+  border: 1px solid rgb(250 250 248 / 0.25);
+  backdrop-filter: blur(12px);
+  touch-action: none;
+}
+.world-pad--boost {
+  background: var(--red);
+  border-color: transparent;
+}
+
+.world-radio span {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 0.5rem 0.95rem;
+  font-size: 0.9rem;
+  border: 1px solid rgb(250 250 248 / 0.22);
+  cursor: pointer;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+.world-radio input:checked + span {
+  color: var(--ink);
+  background: var(--paper);
+  border-color: var(--paper);
+}
+.world-radio input:focus-visible + span {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+/* ---------- The world's chart (map overlay) ---------- */
+
+/* Square, and never taller than the screen leaves room for: the whole chart is always in view. */
+.world-map__frame {
+  width: 100%;
+  border-radius: 2rem;
+  overflow: hidden;
+  background: #0a2433;
+  box-shadow: inset 0 0 0 1px rgb(250 250 248 / 0.1);
+}
+.world-map__halo {
+  paint-order: stroke;
+  stroke: #0a2433;
+  stroke-linejoin: round;
+}
+.world-map__label {
+  transition: fill 150ms ease;
+}
+.world-map__pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: map-pulse 2.4s ease-out infinite;
+}
+@keyframes map-pulse {
+  from {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(3.4);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .world-map__pulse {
+    animation: none;
+  }
+}
+.world-map__card {
+  position: absolute;
+  left: 1rem;
+  bottom: 1rem;
+  display: grid;
+  gap: 0.15rem;
+  max-width: min(22rem, calc(100% - 2rem));
+  padding: 0.7rem 1rem;
+  border-radius: 1rem;
+  background: rgb(10 14 18 / 0.74);
+  backdrop-filter: blur(10px);
+  box-shadow: inset 0 0 0 1px rgb(250 250 248 / 0.1);
+  font-size: 0.875rem;
+  line-height: 1.35;
+  pointer-events: none;
+}
+/* Phones: the card sits under the chart rather than over it. */
+@media (max-width: 1023px) {
+  .world-map__card {
+    position: static;
+    max-width: none;
+    margin-top: 0.75rem;
+  }
+}
+/* Desktop: the chart takes the height; the heading and the list sit beside it, the list scrolling
+   on its own. */
+@media (min-width: 1024px) {
+  .world-map__frame {
+    width: min(100%, max(24rem, calc(100svh - 10rem)));
+  }
+  .world-map__side {
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100svh - 7rem);
+  }
+  .world-map__list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 0.25rem;
+  }
+}

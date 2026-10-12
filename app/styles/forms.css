@@ -1,0 +1,320 @@
+/* forms styles. Plain CSS (no @apply); imported from app/globals.css. */
+
+/* ---------- (02) Selected work: one vessel on wide screens, a stage per case on phones ---------- */
+
+.form-fallback {
+  display: none;
+  position: absolute;
+  inset: 0;
+}
+html[data-forms="off"] .form-fallback {
+  display: block;
+}
+
+.sw-vessel-col {
+  display: none;
+}
+.sw-case {
+  position: relative;
+  margin-bottom: 2.5rem;
+}
+/* Phones: the shape holds at the top while its card slides over it. */
+.sw-stage {
+  position: sticky;
+  top: 3.5rem;
+  height: 52svh;
+}
+.sw-card {
+  position: relative;
+  z-index: 1;
+  margin-top: -9svh;
+  padding: 1.75rem 1.25rem 2.25rem;
+  border-radius: 1.75rem;
+  background: rgb(10 10 10 / 0.8);
+  backdrop-filter: blur(14px);
+  /* A water line along the top edge. */
+  box-shadow:
+    inset 0 1px 0 rgb(14 200 197 / 0.5),
+    0 -24px 48px -24px rgb(14 200 197 / 0.18);
+}
+
+@media (min-width: 768px) {
+  .sw-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 4rem;
+  }
+  .sw-vessel-col {
+    display: block;
+  }
+  .sw-vessel-sticky {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    display: grid;
+    place-items: center;
+  }
+  .sw-vessel {
+    width: min(100%, 78svh);
+    aspect-ratio: 1;
+  }
+  .sw-stage {
+    display: none;
+  }
+  .sw-case {
+    display: flex;
+    align-items: center;
+    min-height: 92svh;
+    margin: 0;
+    padding: 4rem 0;
+  }
+  .sw-card {
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+}
+
+/* Moved from globals.css (10 Oct 2026): the hero and the Set sail button. */
+
+/* ---------- Hero ---------- */
+
+.hero-sticky {
+  min-height: 100svh;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 2.5rem;
+  padding: 7.5rem var(--gutter) 2.5rem;
+}
+/* Phones keep the bottom strip clear for the thumb-zone Menu pill. */
+@media (max-width: 767px) {
+  .hero-sticky {
+    padding-bottom: 6.5rem;
+  }
+}
+
+.hero-beats {
+  align-self: center;
+  display: grid;
+  gap: 1.25rem;
+}
+
+.hero-beat {
+  font-family: var(--font-headline);
+  font-weight: 600;
+  line-height: 0.92;
+  letter-spacing: -0.035em;
+  font-size: clamp(3.25rem, 12.5vw, 12.5rem);
+  text-wrap: balance;
+}
+
+.hero-beat--long {
+  font-size: clamp(2.25rem, 6.4vw, 6.75rem);
+  line-height: 0.98;
+  max-width: 10.5em;
+}
+
+.hero-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+
+/* With motion on, the beats share one slot and play in sequence through a tall sticky track. */
+[data-motion="on"] .hero-track {
+  height: 280svh;
+}
+
+[data-motion="on"] .hero-sticky {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+}
+
+[data-motion="on"] .hero-beats > * {
+  grid-area: 1 / 1;
+  align-self: center;
+}
+
+[data-motion="on"] .hero-beats > :not(:first-child) {
+  opacity: 0;
+}
+
+
+
+.hero-sticky {
+  isolation: isolate;
+}
+.hero-poster {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+}
+.hero-poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.hero-poster::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgb(10 10 10 / 0.62) 0%, rgb(10 10 10 / 0.2) 34%, rgb(10 10 10 / 0.42) 66%, rgb(10 10 10 / 0.74) 100%),
+    linear-gradient(90deg, rgb(10 10 10 / 0.6), transparent 62%);
+}
+
+.sail-button {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  background: var(--red);
+  color: #fff;
+  padding: 0.9rem 1.6rem;
+  font-weight: 600;
+  box-shadow: 0 12px 34px rgb(226 31 38 / 0.35);
+}
+.sail-button__wake {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.32), transparent);
+  transform: translateX(-100%);
+  animation: sail-wake 3.2s var(--ease-flow) infinite;
+}
+@keyframes sail-wake {
+  60%,
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* ---------- Hero, refined (10 Oct 2026) ---------- */
+
+/* Phones get their own scale: the first two beats fill the width, the long one stays readable. */
+@media (max-width: 767px) {
+  .hero-beat {
+    font-size: clamp(3.25rem, 18vw, 6rem);
+  }
+  .hero-beat--long {
+    font-size: clamp(2rem, 10vw, 3.25rem);
+  }
+}
+
+.hero-foot__aside {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1.25rem;
+}
+
+/* "See the work" is a quiet way down, not a second button competing with Set sail. */
+.hero-scroll {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding-inline: 0.25rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--paper);
+  text-decoration: underline;
+  text-decoration-color: rgb(250 250 248 / 0.35);
+  text-underline-offset: 0.35em;
+  transition: text-decoration-color 250ms var(--ease-flow);
+}
+.hero-scroll:hover {
+  text-decoration-color: var(--teal);
+}
+.hero-scroll span {
+  transition: transform 400ms var(--ease-flow);
+}
+.hero-scroll:hover span {
+  transform: translateY(3px);
+}
+
+.sail-sound {
+  display: grid;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 999px;
+  color: rgb(250 250 248 / 0.75);
+  background: rgb(10 10 10 / 0.35);
+  box-shadow: inset 0 0 0 1px rgb(250 250 248 / 0.28);
+  backdrop-filter: blur(10px);
+  transition:
+    color 250ms var(--ease-flow),
+    box-shadow 250ms var(--ease-flow);
+}
+.sail-sound:hover,
+.sail-sound[aria-pressed="true"] {
+  color: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--teal);
+}
+.sail-sound[aria-pressed="true"] {
+  color: var(--teal);
+}
+
+/* Phones: Set sail is the one big button; the rest sit beside it. */
+@media (max-width: 767px) {
+  .hero-foot {
+    gap: 1rem;
+  }
+  .hero-foot .sail-button {
+    flex: 1;
+    justify-content: center;
+    min-height: 3.5rem;
+  }
+}
+
+/* ---------- The hero lifts off like a sheet (10 Oct 2026) ---------- */
+
+/* With motion on, the studio section waits under the hero: pulled up one screen so it sits behind
+   the hero's last frame, and pinned for that screen while the hero slides off it. The extra screen
+   (a spacer: a sticky box only moves inside its container's content, never its padding) is the
+   room it pins in, so nothing after it moves. --hero-lift (0 → 1, scrubbed in
+   hero-beats.tsx) lifts the hero's edge and brings the studio up out of the dark. */
+[data-motion="on"] .hero-track {
+  position: relative;
+  z-index: 2;
+}
+[data-motion="on"] .hero-sticky {
+  overflow: hidden;
+  border-bottom-left-radius: calc(var(--hero-lift, 0) * 2.75rem);
+  border-bottom-right-radius: calc(var(--hero-lift, 0) * 2.75rem);
+  box-shadow: 0 2.5rem 5rem -1.5rem rgb(0 0 0 / calc(var(--hero-lift, 0) * 0.8));
+}
+[data-motion="on"] .hero-underlay {
+  position: relative;
+  z-index: 1;
+  margin-top: -100svh;
+}
+[data-motion="on"] .hero-underlay::after {
+  content: "";
+  display: block;
+  height: 100svh;
+}
+[data-motion="on"] .hero-underlay > section {
+  position: sticky;
+  top: 0;
+  translate: 0 calc((1 - var(--hero-lift, 1)) * 8svh);
+}
+/* The studio comes up out of the dark under a shade that lifts with the hero (a shade, not opacity,
+   so the text itself always keeps its full contrast). */
+[data-motion="on"] .hero-underlay > section::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: var(--ink);
+  opacity: calc((1 - var(--hero-lift, 1)) * 0.65);
+}

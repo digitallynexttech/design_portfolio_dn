@@ -1,0 +1,336 @@
+/* work styles. Plain CSS (no @apply); imported from app/globals.css. */
+/* This file loads before the rest of globals.css, so a rule here that must beat a global rule of
+   equal specificity is prefixed with .study (or otherwise made more specific). */
+
+/* Moved from globals.css (10 Oct 2026): the case-study takeover and its exhibits. */
+
+/* ---------- Case studies (theme takeover) ---------- */
+
+.study {
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: var(--c-body);
+  min-height: 100svh;
+}
+.study-wrap {
+  max-width: 76rem;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+/* Wide figures break out of the reading column, up to 92rem. */
+.study-wide {
+  margin-inline: calc((100% - min(100vw - 2 * var(--gutter), 92rem)) / 2);
+}
+.study-h1 {
+  font-family: var(--c-display);
+  font-size: clamp(3rem, 9vw, 8rem);
+  line-height: 0.92;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+.study-h2 {
+  font-family: var(--c-display);
+  font-size: clamp(2rem, 4.6vw, 3.75rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.study-h3 {
+  font-family: var(--c-display);
+  font-size: clamp(1.5rem, 2.6vw, 2.1rem);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+/* Focus wears the client's colour (the site teal can vanish on a light theme). */
+.study :focus-visible {
+  outline-color: var(--c-accent);
+}
+/* Titles take focus after a navigation so screen readers start there; they aren't controls, so no ring. */
+main h1[tabindex="-1"]:focus,
+main h1[tabindex="-1"]:focus-visible {
+  outline: none;
+}
+
+/* ---------- Chapter bar and the site header ---------- */
+
+/* The header (fixed, 3.625rem) sets html[data-header]. While it shows, the bar sits right under it;
+   when it hides on the way down, the bar takes the top. A missing attribute counts as shown, so the
+   first paint is right before any script runs. */
+.chapter-nav {
+  top: 0;
+  /* Moves with the header: same duration and curve as its slide. */
+  transition: transform var(--dur-4, 520ms) var(--ease-flow, cubic-bezier(0.16, 1, 0.3, 1));
+}
+html:not([data-header="hidden"]) .chapter-nav {
+  transform: translateY(var(--header-h, 3.625rem));
+}
+/* The bar's slot in the flow plus the header above it: content starts below both. */
+.chapter-nav + main {
+  margin-top: var(--header-h, 3.625rem);
+}
+/* The /work filter bar sits mid-page, so it moves by its sticky offset (a transform would shift it
+   even before it sticks). */
+.work-filter {
+  top: 0;
+  transition: top var(--dur-4, 520ms) var(--ease-flow, cubic-bezier(0.16, 1, 0.3, 1));
+}
+html:not([data-header="hidden"]) .work-filter {
+  top: var(--header-h, 3.625rem);
+}
+/* Chapters past the edge of a narrow bar fade out rather than being cut. */
+.chapter-nav__list[data-fade="end"] {
+  mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent);
+}
+.chapter-nav__list[data-fade="start"] {
+  mask-image: linear-gradient(to left, #000 calc(100% - 3rem), transparent);
+}
+.chapter-nav__list[data-fade="both"] {
+  mask-image: linear-gradient(to right, transparent, #000 3rem, #000 calc(100% - 3rem), transparent);
+}
+
+/* ---------- View transitions on /work and the case studies ---------- */
+
+/* The chapter bar holds still while chapters flow past underneath it. */
+::view-transition-group(chapter-nav) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-old(chapter-nav) {
+  display: none;
+}
+::view-transition-new(chapter-nav) {
+  animation: none;
+}
+
+/* A card's poster (or the next-project teaser) becomes the study's exhibit. */
+::view-transition-group(.poster-morph) {
+  z-index: 50;
+  animation-duration: var(--dur-flow-in, 600ms);
+  animation-timing-function: var(--ease-flow, cubic-bezier(0.16, 1, 0.3, 1));
+}
+::view-transition-image-pair(.poster-morph) {
+  overflow: hidden;
+}
+::view-transition-old(.poster-morph),
+::view-transition-new(.poster-morph) {
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Filtering /work: cards flow to their new places. */
+::view-transition-group(.work-reflow) {
+  animation-duration: 520ms;
+  animation-timing-function: var(--ease-flow, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(.poster-morph),
+  ::view-transition-old(.poster-morph),
+  ::view-transition-new(.poster-morph),
+  ::view-transition-group(.work-reflow),
+  ::view-transition-old(.work-reflow),
+  ::view-transition-new(.work-reflow) {
+    animation-duration: 0s !important;
+  }
+  .chapter-nav,
+  .work-filter {
+    transition: none;
+  }
+}
+
+/* ---------- Pop-ups wear the client's theme ---------- */
+
+.study .liquid {
+  color: var(--c-text);
+}
+.study .liquid::backdrop {
+  background: color-mix(in oklab, var(--c-bg, #050608) 55%, transparent);
+}
+.study .liquid__panel {
+  background:
+    linear-gradient(160deg, color-mix(in oklab, var(--c-accent) 16%, transparent), transparent 45%),
+    color-mix(in oklab, var(--c-bg) 88%, transparent);
+  box-shadow: inset 0 0 0 1px var(--c-line);
+}
+.study .liquid__close {
+  border-color: var(--c-line);
+}
+.study .liquid__close:hover {
+  border-color: var(--c-accent);
+}
+
+/* ---------- Editorial prose ---------- */
+
+/* Phones: one column. From 768px: a 12-column grid with the heading held in columns 1–4 while the
+   paragraphs read in 6–12. */
+.study-prose {
+  max-width: 62ch;
+  margin-block: 3.5rem;
+}
+.study-prose__body > p {
+  font-size: 1.125rem;
+  line-height: 1.7;
+  margin-top: 1rem;
+}
+.study-prose .study-h3 + .study-prose__body > :first-child {
+  margin-top: 1.25rem;
+}
+@media (min-width: 768px) {
+  .study-prose {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: clamp(1.25rem, 2.5vw, 2.5rem);
+    max-width: none;
+    margin-block: 4.5rem;
+  }
+  .study-prose > .study-h3 {
+    grid-column: 1 / span 4;
+    align-self: start;
+    position: sticky;
+    top: calc(var(--header-h, 3.625rem) + 5rem);
+  }
+  .study-prose__body {
+    grid-column: 6 / -1;
+    max-width: 62ch;
+  }
+  .study-prose .study-prose__body > :first-child,
+  .study-prose .study-h3 + .study-prose__body > :first-child {
+    margin-top: 0.2em;
+  }
+}
+.study-list {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.6rem;
+}
+.study-list li {
+  padding-left: 1.4rem;
+  position: relative;
+  line-height: 1.6;
+}
+.study-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.7em;
+  width: 0.55rem;
+  height: 2px;
+  background: var(--c-accent);
+}
+
+/* ---------- Exhibits ---------- */
+
+/* A 2px line runs along the foot of the exhibit while the live version loads over its poster. */
+.exhibit__loading {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 11;
+  height: 2px;
+  overflow: hidden;
+  background: color-mix(in oklab, var(--c-accent) 25%, transparent);
+}
+.exhibit__loading::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 40%;
+  background: var(--c-accent);
+  animation: exhibit-load 1.4s var(--ease-flow, ease-in-out) infinite;
+}
+@keyframes exhibit-load {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+/* Architecture diagrams draw their links as they scroll into view. */
+.arch__node {
+  fill: var(--c-surface);
+  stroke: var(--c-line);
+}
+.arch__label {
+  fill: var(--c-text);
+  font-size: 17px;
+  font-weight: 600;
+}
+.arch__note {
+  fill: var(--c-muted);
+  font-size: 13px;
+}
+.arch__link {
+  fill: none;
+  stroke: var(--c-accent);
+  stroke-width: 1.6;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+.arch__arrow {
+  fill: var(--c-accent);
+}
+.arch__link-label {
+  fill: var(--c-muted);
+  font-size: 12px;
+  /* A halo in the page colour keeps a label readable where links cross under it. */
+  paint-order: stroke;
+  stroke: var(--c-bg);
+  stroke-width: 5px;
+  stroke-linejoin: round;
+}
+@supports (animation-timeline: view()) {
+  [data-motion="on"] .arch__link {
+    animation: draw linear both;
+    animation-timeline: view();
+    animation-range: entry 10% cover 45%;
+  }
+}
+@keyframes draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+/* Phones: lanes stack, joined by a short accent connector. */
+.arch-stack__join {
+  position: relative;
+  display: block;
+  width: 1px;
+  height: 1.75rem;
+  margin: 0.4rem auto 0.6rem;
+  background: var(--c-accent);
+}
+.arch-stack__join::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 1px solid var(--c-accent);
+  border-bottom: 1px solid var(--c-accent);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+/* Happy Ganga exhibit: water flowing along the river path. */
+.hg-flow {
+  stroke-dasharray: 18 42;
+  animation: hg-flow 2.4s linear infinite;
+}
+@keyframes hg-flow {
+  to {
+    stroke-dashoffset: -60;
+  }
+}
+
+/* ---------- The takeover runs to the end of each chapter ---------- */
+
+/* The footer's call to action belongs to the end of the story: chapters before the outcome hand off
+   to the next chapter instead. */
+body:has(main[data-chapter]:not([data-chapter="outcome"])) .footer-cta {
+  display: none;
+}
