@@ -1,13 +1,12 @@
 "use client";
 
-import "@/features/stage/quiet-three";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useEffect, useMemo, useRef, useState } from "react";
-import * as THREE from "three";
+import { useEffect, useRef } from "react";
 import type { Tier } from "@/features/stage/tier";
 import { emitDrop, onWaterVisibility } from "../bus";
-import { activeAnchor } from "./anchors";
-import { buildShape, type FormId, type Shape } from "./shapes";
+import { type GL, Program, sizeCanvas, whenCompiled } from "../gl";
+import { activeAnchor, anchorsInView, onAnchorsChange } from "./anchors";
+import { createShapeBuilder } from "./shape-builder";
+import type { FormId, Shape } from "./shapes";
 
 const COUNTS: Record<Exclude<Tier, 0>, number> = { 1: 9000, 2: 24000, 3: 48000 };
 const DPR: Record<Exclude<Tier, 0>, number> = { 1: 1.25, 2: 1.5, 3: 1.75 };
@@ -26,9 +25,13 @@ const MOTION: Record<FormId, { kind: "sway" | "spin"; base: number; amp: number 
   pool: { kind: "sway", base: 0, amp: 0.2 },
 };
 // The water's own colour, which every shape passes through between clients (sRGB).
-const WATER = new THREE.Color().setRGB(14 / 255, 200 / 255, 197 / 255);
+const WATER = [14 / 255, 200 / 255, 197 / 255] as const;
+const ATTRIBUTES = ["aFrom", "aTo", "aColorFrom", "aColorTo", "aNormFrom", "aNormTo", "aSeed"] as const;
 
 const vertex = /* glsl */ `
+  uniform mat4 modelMatrix;
+  uniform mat4 viewMatrix;
+  uniform mat4 projectionMatrix;
   attribute vec3 aFrom;
   attribute vec3 aTo;
   attribute vec3 aColorFrom;
@@ -153,67 +156,162 @@ const fragment = /* glsl */ `
 
 type Props = { tier: Exclude<Tier, 0>; still?: boolean };
 
-/** Where a point is mid-pour, worked out on the CPU exactly as the shader does, so a retarget never jumps. */
-function pourState(
-  mix: number,
-  i: number,
-  seeds: Float32Array,
-  f: Float32Array,
-  t: Float32Array,
-  cf: Float32Array,
-  ct: Float32Array,
-  nf: Float32Array,
-  nt: Float32Array,
-  out: { p: number[]; c: number[]; n: number[] },
-) {
-  const fx = f[i * 3];
-  const fy = f[i * 3 + 1];
-  const fz = f[i * 3 + 2];
-  const floorY = -1 + seeds[i * 4 + 3] * 0.04;
-  const floorX = fx * 1.1;
-  const floorZ = fz * 0.6;
-  const W = [WATER.r, WATER.g, WATER.b];
-  if (mix < DRAIN) {
-    const drainT = Math.min(1, Math.max(0, mix / DRAIN));
-    const start = ((1.15 - fy) / 2.3) * 0.7 + seeds[i * 4] * 0.05;
-    const k = Math.min(1, Math.max(0, (drainT - start) / 0.25));
-    out.p[0] = fx + (floorX - fx) * k;
-    out.p[1] = fy + (floorY + floorZ * TILT - fy) * k * k;
-    out.p[2] = fz + (floorZ - fz) * k;
-    for (let c = 0; c < 3; c++) {
-      out.c[c] = cf[i * 3 + c] + (W[c] - cf[i * 3 + c]) * k;
-      out.n[c] = nf[i * 3 + c] + ((c === 1 ? 1 : 0) - nf[i * 3 + c]) * k;
-    }
-  } else {
-    const fillT = Math.min(1, Math.max(0, (mix - DRAIN) / (1 - DRAIN)));
-    const level = -1.15 + 2.3 * fillT;
-    const g = Math.min(1, fillT / 0.28);
-    const gather = g * g * (3 - 2 * g);
-    const ty = t[i * 3 + 1];
-    const z = floorZ + (t[i * 3 + 2] - floorZ) * gather;
+/** Where points come from or go to: positions, colours and normals, three floats each. */
+type PointSet = { position: Float32Array; color: Float32Array; normal: Float32Array };
+
+/**
+ * Where points start..end of a pour that is filling are right now, worked out on the CPU exactly as
+ * the shader does, so retargeting it never jumps: that state becomes the next pour's starting shape.
+ */
+function freezeFill(mix: number, start: number, end: number, seeds: Float32Array, from: PointSet, to: PointSet, out: PointSet) {
+  const fillT = Math.min(1, Math.max(0, (mix - DRAIN) / (1 - DRAIN)));
+  const level = -1.15 + 2.3 * fillT;
+  const g = Math.min(1, fillT / 0.28);
+  const gather = g * g * (3 - 2 * g);
+  const [wr, wg, wb] = WATER;
+  const { position: fp } = from;
+  const { position: tp, color: tc, normal: tn } = to;
+  const { position: op, color: oc, normal: on } = out;
+  for (let i = start; i < end; i++) {
+    const j = i * 3;
+    const floorY = -1 + seeds[i * 4 + 3] * 0.04;
+    const floorX = fp[j] * 1.1;
+    const floorZ = fp[j + 2] * 0.6;
+    const ty = tp[j + 1];
+    const z = floorZ + (tp[j + 2] - floorZ) * gather;
     const surf = Math.max(floorY, level) + z * TILT;
-    out.p[0] = floorX + (t[i * 3] - floorX) * gather;
-    out.p[1] = Math.min(ty, surf);
-    out.p[2] = z;
+    op[j] = floorX + (tp[j] - floorX) * gather;
+    op[j + 1] = Math.min(ty, surf);
+    op[j + 2] = z;
     const e = Math.min(1, Math.max(0, (surf - (ty - 0.06)) / 0.08));
     const settled = e * e * (3 - 2 * e);
-    for (let c = 0; c < 3; c++) {
-      out.c[c] = W[c] + (ct[i * 3 + c] - W[c]) * settled;
-      out.n[c] = (c === 1 ? 1 : 0) + (nt[i * 3 + c] - (c === 1 ? 1 : 0)) * settled;
-    }
+    oc[j] = wr + (tc[j] - wr) * settled;
+    oc[j + 1] = wg + (tc[j + 1] - wg) * settled;
+    oc[j + 2] = wb + (tc[j + 2] - wb) * settled;
+    on[j] = tn[j] * settled;
+    on[j + 1] = 1 + (tn[j + 1] - 1) * settled;
+    on[j + 2] = tn[j + 2] * settled;
   }
 }
 
-function Particles({ tier, still = false }: Props) {
+/**
+ * Shapes the cases need, asked for one per idle moment after the pool. They are built in a worker;
+ * where none can start they are built here, and the pacing keeps that from being one long task.
+ */
+const PREPARE: FormId[] = ["skull", "helix", "drop", "screens"];
+
+type IdleWindow = Window & {
+  requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+  cancelIdleCallback?: (id: number) => void;
+};
+
+/** A column-major translation matrix (the points' model and the camera's view). */
+function translation(out: Float32Array, x: number, y: number, z: number): Float32Array {
+  out.fill(0);
+  out[0] = out[5] = out[10] = out[15] = 1;
+  out[12] = x;
+  out[13] = y;
+  out[14] = z;
+  return out;
+}
+
+/** An orthographic projection one world unit per CSS pixel, centred, as three.js builds it. */
+function orthographic(out: Float32Array, width: number, height: number, near: number, far: number): Float32Array {
+  out.fill(0);
+  out[0] = 2 / width;
+  out[5] = 2 / height;
+  out[10] = -2 / (far - near);
+  out[14] = -(far + near) / (far - near);
+  out[15] = 1;
+  return out;
+}
+
+/** Builds the canvas's GL state and frame loop; returns how to tear it down. */
+function start(canvas: HTMLCanvasElement, tier: Exclude<Tier, 0>, still: boolean): (() => void) | undefined {
+  const root = document.documentElement;
+  const gl = canvas.getContext("webgl2", {
+    antialias: false,
+    alpha: true,
+    premultipliedAlpha: true,
+    depth: false,
+    stencil: false,
+    powerPreference: "high-performance",
+  }) as GL | null;
+  if (!gl) {
+    root.dataset.forms = "off";
+    return;
+  }
   const count = COUNTS[tier];
-  const size = useThree((state) => state.size);
-  const dpr = useThree((state) => state.viewport.dpr);
-  const invalidate = useThree((state) => state.invalidate);
-  const points = useRef<THREE.Points>(null);
-  const material = useRef<THREE.ShaderMaterial>(null);
-  const cache = useRef(new Map<FormId, Shape>());
-  const pending = useRef(new Set<FormId>());
-  const state = useRef({
+  const pixelRatio = Math.min(Math.max(1, window.devicePixelRatio || 1), DPR[tier]);
+  // The window's size for now (reading the canvas's would force a layout); the observer corrects it.
+  let width = window.innerWidth;
+  let height = window.innerHeight;
+  sizeCanvas(canvas, width, height, pixelRatio);
+
+  const program = new Program(gl, vertex, fragment, [...ATTRIBUTES]);
+  let compiled = false;
+  let disposed = false;
+
+  // Where every point comes from and goes to, in two sets that trade places as the water pours from
+  // one shape into the next. The CPU keeps a copy so a pour can be retargeted.
+  const makeSet = (): PointSet => ({ position: new Float32Array(count * 3), color: new Float32Array(count * 3), normal: new Float32Array(count * 3) });
+  const KINDS = ["position", "color", "normal"] as const;
+  const sets: [PointSet, PointSet] = [makeSet(), makeSet()];
+  const seeds = new Float32Array(count * 4);
+  for (let i = 0; i < count; i++) {
+    seeds[i * 4] = Math.random();
+    seeds[i * 4 + 1] = 0.7 + Math.random() * 0.6;
+    seeds[i * 4 + 2] = Math.random();
+    seeds[i * 4 + 3] = Math.random();
+  }
+  const newBuffer = (data: Float32Array | number, usage: number) => {
+    const buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    if (typeof data === "number") gl.bufferData(gl.ARRAY_BUFFER, data, usage);
+    else gl.bufferData(gl.ARRAY_BUFFER, data, usage);
+    return buffer;
+  };
+  // Sized now, filled when the resting pool is ready.
+  const gpu = sets.map(() => KINDS.map(() => newBuffer(count * 3 * 4, gl.DYNAMIC_DRAW)));
+  const seedBuffer = newBuffer(seeds, gl.STATIC_DRAW);
+  // vaos[k] pours from set k into set 1 - k (attribute locations follow ATTRIBUTES).
+  const vaos = [0, 1].map((k) => {
+    const vao = gl.createVertexArray();
+    gl.bindVertexArray(vao);
+    const bind = (buffer: WebGLBuffer, location: number, size: number) => {
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+      gl.enableVertexAttribArray(location);
+      gl.vertexAttribPointer(location, size, gl.FLOAT, false, 0, 0);
+    };
+    KINDS.forEach((_, i) => {
+      bind(gpu[k][i], i * 2, 3);
+      bind(gpu[1 - k][i], i * 2 + 1, 3);
+    });
+    bind(seedBuffer, 6, 4);
+    gl.bindVertexArray(null);
+    return vao;
+  });
+  gl.bindBuffer(gl.ARRAY_BUFFER, null);
+  let from = 0; // the set the points pour from
+  const upload = (k: number) => {
+    KINDS.forEach((kind, i) => {
+      gl.bindBuffer(gl.ARRAY_BUFFER, gpu[k][i]);
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, sets[k][kind]);
+    });
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+  };
+  const write = (k: number, shape: Shape) => {
+    sets[k].position.set(shape.positions);
+    sets[k].color.set(shape.colors);
+    sets[k].normal.set(shape.normals);
+    upload(k);
+  };
+
+  const model = new Float32Array(16);
+  const view = translation(new Float32Array(16), 0, 0, -500);
+  const projection = orthographic(new Float32Array(16), width, height, 0.1, 2000);
+
+  const s = {
     current: "pool" as FormId,
     target: "pool" as FormId,
     mix: 1,
@@ -223,176 +321,195 @@ function Particles({ tier, still = false }: Props) {
     scale: 120,
     rot: 0,
     placed: false,
-    pointer: new THREE.Vector2(-9999, -9999),
+    pointer: [-9999, -9999],
     force: 0,
     scrollV: 0,
-    lastScroll: 0,
+    lastScroll: window.scrollY,
     fade: 0,
-    gravity: new THREE.Vector2(),
-  });
-
-  const geometryRef = useRef<THREE.BufferGeometry | null>(null);
-  const seedsRef = useRef<Float32Array>(new Float32Array(0));
-
-  const uniforms = useMemo(
-    () => ({
-      uMix: { value: 1 },
-      uTime: { value: 0 },
-      uScale: { value: 120 },
-      uRotY: { value: 0 },
-      uTurbulence: { value: 0 },
-      uPointer: { value: new THREE.Vector2(-9999, -9999) },
-      uPointerForce: { value: 0 },
-      uGravity: { value: new THREE.Vector2() },
-      uSize: { value: 3 },
-      uPixelRatio: { value: 1 },
-      // Fewer points each carry more light, so every tier reads at the same brightness.
-      uAlpha: { value: 0.2 * Math.sqrt(24000 / count) },
-      uStill: { value: still ? 1 : 0 },
-      // The water shows itself only where a case is on screen; between cases it sinks away.
-      uFade: { value: 0 },
-      uWater: { value: new THREE.Vector3(WATER.r, WATER.g, WATER.b) },
-    }),
-    [count, still],
-  );
-
-  // Shapes are built lazily the first time they are needed, then cached.
-  const ensure = (id: FormId) => {
-    if (cache.current.has(id) || pending.current.has(id)) return;
-    pending.current.add(id);
-    buildShape(id, count)
-      .then((shape) => cache.current.set(id, shape))
-      .catch(() => cache.current.set(id, cache.current.get("pool")!))
-      .finally(() => {
-        pending.current.delete(id);
-        invalidate();
-      });
+    gravity: [0, 0],
   };
 
-  /** Start a pour from wherever the particles are right now, so retargeting mid-pour never jumps. */
-  const morphTo = (id: FormId) => {
-    const target = cache.current.get(id);
-    const geometry = geometryRef.current;
-    if (!target || !geometry) return;
-    const seeds = seedsRef.current;
-    const s = state.current;
-    const attr = (name: string) => geometry.getAttribute(name) as THREE.BufferAttribute;
-    const arr = (name: string) => attr(name).array as Float32Array;
-    const f = arr("aFrom");
-    const t = arr("aTo");
-    const cf = arr("aColorFrom");
-    const ct = arr("aColorTo");
-    const nf = arr("aNormFrom");
-    const nt = arr("aNormTo");
-    const out = { p: [0, 0, 0], c: [0, 0, 0], n: [0, 0, 0] };
-    const settledAll = s.mix >= 1;
-    for (let i = 0; i < count; i++) {
-      if (settledAll) {
-        for (let k = 0; k < 3; k++) {
-          f[i * 3 + k] = t[i * 3 + k];
-          cf[i * 3 + k] = ct[i * 3 + k];
-          nf[i * 3 + k] = nt[i * 3 + k];
+  // Shapes are built lazily, off the main thread: the pool first, the one on screen at once, the
+  // others one per idle moment, then cached.
+  const builder = createShapeBuilder();
+  const cache = new Map<FormId, Shape>();
+  const pending = new Set<FormId>();
+  const ensure = (id: FormId) => {
+    if (cache.has(id) || pending.has(id)) return;
+    pending.add(id);
+    builder
+      .build(id, count)
+      .then((shape) => {
+        cache.set(id, shape);
+        // The resting pool is where every point starts.
+        if (id === "pool") {
+          write(0, shape);
+          write(1, shape);
         }
-      } else {
-        pourState(s.mix, i, seeds, f, t, cf, ct, nf, nt, out);
-        for (let k = 0; k < 3; k++) {
-          f[i * 3 + k] = out.p[k];
-          cf[i * 3 + k] = out.c[k];
-          nf[i * 3 + k] = out.n[k];
-        }
-      }
-      for (let k = 0; k < 3; k++) {
-        t[i * 3 + k] = target.positions[i * 3 + k];
-        ct[i * 3 + k] = target.colors[i * 3 + k];
-        nt[i * 3 + k] = target.normals[i * 3 + k];
-      }
-    }
-    for (const name of ["aFrom", "aTo", "aColorFrom", "aColorTo", "aNormFrom", "aNormTo"]) attr(name).needsUpdate = true;
+      })
+      .catch(() => {
+        if (id !== "pool") cache.set(id, cache.get("pool")!);
+      })
+      .finally(() => {
+        pending.delete(id);
+        if (!disposed) wake();
+      });
+  };
+  const w = window as IdleWindow;
+  let idleId = 0;
+  let idleTimer = 0;
+  const prepareNext = () => {
+    idleId = idleTimer = 0;
+    if (disposed) return;
+    const next = (["pool", ...PREPARE] as FormId[]).find((id) => !cache.has(id) && !pending.has(id));
+    if (!next) return;
+    ensure(next);
+    if (w.requestIdleCallback) idleId = w.requestIdleCallback(prepareNext, { timeout: 1500 });
+    else idleTimer = window.setTimeout(prepareNext, 200);
+  };
+  if (w.requestIdleCallback) idleId = w.requestIdleCallback(prepareNext, { timeout: 500 });
+  else idleTimer = window.setTimeout(prepareNext, 50);
+
+  // Retargeting, so it never jumps and no frame pays for all of it. While a pour drains it reads
+  // only where the points come from, so a new target simply takes the old one's place; once it
+  // has settled, the old target becomes where they come from. Mid-fill, the pour holds still for a
+  // few frames while the CPU works out exactly where every point is, a slice per frame, then
+  // drains from there. A new target is written into the "to" set a frame later, while it drains.
+  const SLICES = 3;
+  let frozen = makeSet();
+  let freezing = -1; // the next point to freeze, or -1
+  let due: FormId | null = null;
+  const startPour = (id: FormId) => {
     s.current = id;
     s.mix = still ? 1 : 0;
     s.poured = still;
   };
-
-  useEffect(() => {
-    const geometry = new THREE.BufferGeometry();
-    const seeds = new Float32Array(count * 4);
-    for (let i = 0; i < count; i++) {
-      seeds[i * 4] = Math.random();
-      seeds[i * 4 + 1] = 0.7 + Math.random() * 0.6;
-      seeds[i * 4 + 2] = Math.random();
-      seeds[i * 4 + 3] = Math.random();
+  /** Moves any retarget along; true while the pour is held. */
+  const pour = (): boolean => {
+    if (due) {
+      write(1 - from, cache.get(due)!);
+      due = null;
     }
-    for (const name of ["position", "aFrom", "aTo", "aColorFrom", "aColorTo", "aNormFrom", "aNormTo"]) {
-      geometry.setAttribute(name, new THREE.BufferAttribute(new Float32Array(count * 3), 3));
+    if (freezing >= 0) {
+      // Back to the shape it was already filling: carry on.
+      if (s.target === s.current) {
+        freezing = -1;
+        return false;
+      }
+      const end = Math.min(count, freezing + Math.ceil(count / SLICES));
+      freezeFill(s.mix, freezing, end, seeds, sets[from], sets[1 - from], frozen);
+      freezing = end;
+      if (end < count) return true;
+      freezing = -1;
+      [sets[from], frozen] = [frozen, sets[from]];
+      upload(from);
+      const id = cache.has(s.target) ? s.target : s.current;
+      startPour(id);
+      due = id;
+      return false;
     }
-    geometry.setAttribute("aSeed", new THREE.BufferAttribute(seeds, 4));
-    geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
-    geometryRef.current = geometry;
-    seedsRef.current = seeds;
-    if (points.current) points.current.geometry = geometry;
+    const id = s.target;
+    if (id === s.current || !cache.has(id)) return false;
+    if (!still && s.mix < DRAIN) {
+      write(1 - from, cache.get(id)!);
+      s.current = id;
+      s.poured = false;
+      return false;
+    }
+    if (s.mix >= 1) {
+      from = 1 - from;
+      startPour(id);
+      // Drawn whole at once without motion, it is needed now; otherwise from the next frame.
+      if (still) write(1 - from, cache.get(id)!);
+      else due = id;
+      return false;
+    }
+    freezing = 0;
+    return pour();
+  };
 
-    // Start as a resting pool, already formed.
-    buildShape("pool", count).then((shape) => {
-      cache.current.set("pool", shape);
-      for (const name of ["aFrom", "aTo"]) (geometry.getAttribute(name).array as Float32Array).set(shape.positions);
-      for (const name of ["aColorFrom", "aColorTo"]) (geometry.getAttribute(name).array as Float32Array).set(shape.colors);
-      for (const name of ["aNormFrom", "aNormTo"]) (geometry.getAttribute(name).array as Float32Array).set(shape.normals);
-      for (const name of ["aFrom", "aTo", "aColorFrom", "aColorTo", "aNormFrom", "aNormTo"]) geometry.getAttribute(name).needsUpdate = true;
-      invalidate();
-    });
-    for (const id of ["helix", "screens", "drop"] as FormId[]) ensure(id);
-    // The skull needs its 0.7 MB print file; fetch it once the page has settled, before it's needed.
-    const skullTimer = window.setTimeout(() => ensure("skull"), 2500);
-    const onMove = (event: PointerEvent) => {
-      if (event.pointerType !== "mouse") return;
-      const s = state.current;
-      s.pointer.set(event.clientX - window.innerWidth / 2, window.innerHeight / 2 - event.clientY);
-      s.force = 1;
-    };
-    const onLeave = () => (state.current.force = 0);
-    const onScroll = () => invalidate();
-    window.addEventListener("pointermove", onMove, { passive: true });
-    document.addEventListener("pointerleave", onLeave);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
-    return () => {
-      window.clearTimeout(skullTimer);
-      window.removeEventListener("pointermove", onMove);
-      document.removeEventListener("pointerleave", onLeave);
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
-      geometry.dispose();
-      geometryRef.current = null;
-    };
-    // ensure and invalidate are stable for the lifetime of the canvas.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [count]);
+  // The frame loop runs only while it has something to show.
+  let visible = document.visibilityState === "visible";
+  let near = false;
+  let water = true;
+  let raf = 0;
+  let last = 0;
+  let time = 0;
+  let shown = false; // whether the canvas holds a drawn frame
 
-  useFrame((frame, delta) => {
-    const s = state.current;
-    const m = material.current;
-    if (!m) return;
+  const clear = () => {
+    if (!shown) return;
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    shown = false;
+  };
+
+  const draw = () => {
+    const u = (name: string) => program.uniform(name);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    // Light is added straight onto what's there; the canvas's own alpha stays as it was.
+    gl.disable(gl.DEPTH_TEST);
+    gl.enable(gl.BLEND);
+    gl.blendEquation(gl.FUNC_ADD);
+    gl.blendFuncSeparate(gl.ONE, gl.ONE, gl.ZERO, gl.ONE);
+    program.use();
+    gl.uniformMatrix4fv(u("modelMatrix"), false, translation(model, s.x, s.y, 0));
+    gl.uniformMatrix4fv(u("viewMatrix"), false, view);
+    gl.uniformMatrix4fv(u("projectionMatrix"), false, projection);
+    gl.uniform1f(u("uMix"), s.mix);
+    gl.uniform1f(u("uTime"), time);
+    gl.uniform1f(u("uScale"), s.scale);
+    gl.uniform1f(u("uRotY"), s.rot);
+    gl.uniform1f(u("uTurbulence"), s.scrollV);
+    gl.uniform2f(u("uPointer"), s.pointer[0], s.pointer[1]);
+    gl.uniform1f(u("uPointerForce"), s.force);
+    gl.uniform2f(u("uGravity"), s.gravity[0], s.gravity[1]);
+    gl.uniform1f(u("uSize"), Math.max(1.6, Math.min(3.6, s.scale / 90)));
+    gl.uniform1f(u("uPixelRatio"), pixelRatio);
+    // Fewer points each carry more light, so every tier reads at the same brightness.
+    gl.uniform1f(u("uAlpha"), 0.2 * Math.sqrt(24000 / count));
+    gl.uniform1f(u("uStill"), still ? 1 : 0);
+    // The water shows itself only where a case is on screen; between cases it sinks away.
+    gl.uniform1f(u("uFade"), s.fade);
+    gl.uniform3f(u("uWater"), WATER[0], WATER[1], WATER[2]);
+    gl.bindVertexArray(vaos[from]);
+    gl.drawArrays(gl.POINTS, 0, count);
+    gl.bindVertexArray(null);
+    shown = true;
+  };
+
+  const frame = (now: number) => {
+    raf = 0;
+    if (!visible || !near || !water || !compiled || !cache.has("pool")) {
+      clear();
+      return;
+    }
+    const delta = last ? Math.min(0.1, (now - last) / 1000) : 1 / 60;
+    last = now;
+    time += delta;
 
     const active = activeAnchor();
     const wanted: FormId = active?.form ?? "pool";
-    if (wanted === "skull") ensure("skull");
+    if (wanted !== "pool") ensure(wanted);
     if (wanted !== s.target) s.target = wanted;
-    if (s.target !== s.current && cache.current.has(s.target)) morphTo(s.target);
-    s.mix = Math.min(1, s.mix + delta / MORPH_SECONDS);
+    if (!pour()) s.mix = Math.min(1, s.mix + delta / MORPH_SECONDS);
     // As the new shape starts to fill, the water under it stirs.
     if (!s.poured && s.mix > DRAIN + 0.05 && active) {
       s.poured = true;
-      emitDrop((active.rect.left + active.rect.width / 2) / size.width, (active.rect.top + active.rect.height * 0.85) / size.height, 0.5, 0.08);
+      emitDrop((active.rect.left + active.rect.width / 2) / width, (active.rect.top + active.rect.height * 0.85) / height, 0.5, 0.08);
     }
 
     // Glide toward the anchor's box; at rest, sink below the bottom of the screen.
     const goal = active
       ? {
-          x: active.rect.left + active.rect.width / 2 - size.width / 2,
-          y: size.height / 2 - (active.rect.top + active.rect.height / 2),
+          x: active.rect.left + active.rect.width / 2 - width / 2,
+          y: height / 2 - (active.rect.top + active.rect.height / 2),
           scale: Math.min(active.rect.width, active.rect.height) * 0.46,
         }
-      : { x: 0, y: -size.height * 0.62, scale: Math.min(size.width, size.height) * 0.4 };
+      : { x: 0, y: -height * 0.62, scale: Math.min(width, height) * 0.4 };
     const k = still || !s.placed ? 1 : 1 - Math.pow(0.002, delta);
     s.placed = true;
     s.x += (goal.x - s.x) * k;
@@ -400,7 +517,6 @@ function Particles({ tier, still = false }: Props) {
     s.scale += (goal.scale - s.scale) * k;
 
     const motion = MOTION[s.current];
-    const time = frame.clock.elapsedTime;
     if (still) s.rot = motion.base;
     else if (motion.kind === "spin") s.rot += delta * 0.32;
     else s.rot = motion.base + Math.sin(time * 0.4) * motion.amp;
@@ -409,86 +525,149 @@ function Particles({ tier, still = false }: Props) {
     s.scrollV += (Math.min(1, Math.abs(scrollY - s.lastScroll) / 40) - s.scrollV) * 0.1;
     s.lastScroll = scrollY;
     s.force *= Math.pow(0.4, delta);
-
     const fadeGoal = active ? 1 : 0;
     s.fade = still ? fadeGoal : s.fade + (fadeGoal - s.fade) * (1 - Math.exp(-(active ? 3 : 2) * delta));
-    if (points.current) points.current.position.set(s.x, s.y, 0);
-    const u = m.uniforms;
-    u.uMix.value = s.mix;
-    u.uFade.value = s.fade;
-    u.uTime.value = time;
-    u.uScale.value = s.scale;
-    u.uRotY.value = s.rot;
-    u.uTurbulence.value = s.scrollV;
-    (u.uPointer.value as THREE.Vector2).copy(s.pointer);
-    u.uPointerForce.value = s.force;
-    (u.uGravity.value as THREE.Vector2).copy(s.gravity);
-    u.uPixelRatio.value = dpr;
-    u.uSize.value = Math.max(1.6, Math.min(3.6, s.scale / 90));
-  });
 
-  return (
-    <points ref={points} frustumCulled={false}>
-      <shaderMaterial
-        ref={material}
-        vertexShader={vertex}
-        fragmentShader={fragment}
-        uniforms={uniforms}
-        transparent
-        depthWrite={false}
-        depthTest={false}
-        blending={THREE.CustomBlending}
-        blendEquation={THREE.AddEquation}
-        blendSrc={THREE.OneFactor}
-        blendDst={THREE.OneFactor}
-        blendSrcAlpha={THREE.ZeroFactor}
-        blendDstAlpha={THREE.OneFactor}
-      />
-    </points>
+    // Nothing on screen and the water has sunk away: clear, and rest until a case comes into view.
+    if (!active && !anchorsInView() && s.fade < 0.004 && s.mix >= 1) {
+      clear();
+      return;
+    }
+    draw();
+    // Still: one frame per change. Otherwise, keep going.
+    if (!still) raf = requestAnimationFrame(frame);
+  };
+  function wake() {
+    if (!raf && !disposed) raf = requestAnimationFrame(frame);
+  }
+
+  whenCompiled(gl, [program]).then(
+    () => {
+      compiled = true;
+      wake();
+    },
+    () => {
+      if (!disposed) root.dataset.forms = "off";
+    },
   );
+
+  const onLost = (event: Event) => {
+    event.preventDefault();
+    disposed = true;
+    cancelAnimationFrame(raf);
+    // The real pictures take the shapes' place.
+    root.dataset.forms = "off";
+  };
+  canvas.addEventListener("webglcontextlost", onLost);
+
+  const onMove = (event: PointerEvent) => {
+    if (event.pointerType !== "mouse") return;
+    s.pointer[0] = event.clientX - width / 2;
+    s.pointer[1] = height / 2 - event.clientY;
+    s.force = 1;
+  };
+  const onLeave = () => (s.force = 0);
+  // Still frames follow the page as it scrolls.
+  const onScroll = () => {
+    if (still) wake();
+  };
+  const onVisibility = () => {
+    visible = document.visibilityState === "visible";
+    last = 0;
+    wake();
+  };
+  const resizeObserver = new ResizeObserver(() => {
+    const cw = canvas.clientWidth;
+    const ch = canvas.clientHeight;
+    if (!cw || !ch || (cw === width && ch === height)) return;
+    width = cw;
+    height = ch;
+    sizeCanvas(canvas, width, height, pixelRatio);
+    orthographic(projection, width, height, 0.1, 2000);
+    shown = true; // resizing clears the canvas; draw (or clear) again
+    wake();
+  });
+  resizeObserver.observe(canvas);
+  // Whatever covers the water (the 3D world, a full-screen surface) covers the shapes too.
+  const offWater = onWaterVisibility((value) => {
+    water = value;
+    last = 0;
+    wake();
+  });
+  const offAnchors = onAnchorsChange(wake);
+  // The selected work, with room to spare: the canvas rests outright (cleared) when it's far away.
+  const work = document.getElementById("work");
+  const nearObserver = new IntersectionObserver(
+    ([entry]) => {
+      near = entry.isIntersecting;
+      last = 0;
+      wake();
+    },
+    { rootMargin: "60% 0px" },
+  );
+  if (work) nearObserver.observe(work);
+  else near = true;
+
+  window.addEventListener("pointermove", onMove, { passive: true });
+  document.addEventListener("pointerleave", onLeave);
+  window.addEventListener("scroll", onScroll, { passive: true });
+  document.addEventListener("visibilitychange", onVisibility);
+
+  return () => {
+    disposed = true;
+    cancelAnimationFrame(raf);
+    if (idleId) w.cancelIdleCallback?.(idleId);
+    window.clearTimeout(idleTimer);
+    resizeObserver.disconnect();
+    nearObserver.disconnect();
+    offWater();
+    offAnchors();
+    canvas.removeEventListener("webglcontextlost", onLost);
+    window.removeEventListener("pointermove", onMove);
+    document.removeEventListener("pointerleave", onLeave);
+    window.removeEventListener("scroll", onScroll);
+    document.removeEventListener("visibilitychange", onVisibility);
+    for (const buffer of [...gpu.flat(), seedBuffer]) gl.deleteBuffer(buffer);
+    for (const vao of vaos) gl.deleteVertexArray(vao);
+    program.dispose();
+    builder.dispose();
+    // Browsers cap live WebGL contexts; give this one back now rather than at garbage collection.
+    gl.getExtension("WEBGL_lose_context")?.loseContext();
+    delete root.dataset.forms;
+  };
 }
 
 /**
  * The water's shapes on the home page: a layer of light added over the water surface, under the
- * text. It only draws while the selected work is near the screen, and, for visitors who prefer
- * less motion, only when something changes (each shape appears whole, without the pour).
+ * text, on its own WebGL2 canvas. Its shader compiles and its shapes are built in the background as
+ * the selected work approaches. It draws only while a case is on screen or the water is still
+ * settling, and rests (cleared) the rest of the time; for visitors who prefer less motion it draws
+ * only when something changes (each shape appears whole, without the pour).
  */
 export default function FormsCanvas({ tier, still = false }: Props) {
-  const [visible, setVisible] = useState(true);
-  const [near, setNear] = useState(true);
-  const [water, setWater] = useState(true);
-  useEffect(() => {
-    const update = () => setVisible(document.visibilityState === "visible");
-    document.addEventListener("visibilitychange", update);
-    // Whatever covers the water (the 3D world, a full-screen surface) covers the shapes too.
-    const offWater = onWaterVisibility(setWater);
-    const work = document.getElementById("work");
-    let observer: IntersectionObserver | undefined;
-    if (work) {
-      observer = new IntersectionObserver(([entry]) => setNear(entry.isIntersecting), { rootMargin: "60% 0px" });
-      observer.observe(work);
-    }
-    document.documentElement.dataset.forms = "live";
-    return () => {
-      document.removeEventListener("visibilitychange", update);
-      offWater();
-      observer?.disconnect();
-      delete document.documentElement.dataset.forms;
-    };
-  }, []);
+  const ref = useRef<HTMLCanvasElement>(null);
 
-  const frameloop = !visible || !near || !water ? "never" : still ? "demand" : "always";
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    // Set up in an idle moment, not inside the commit that mounted the canvas.
+    const w = window as IdleWindow;
+    let stop: (() => void) | undefined;
+    let cancelled = false;
+    const begin = () => {
+      if (!cancelled) stop = start(canvas, tier, still);
+    };
+    const hasIdle = typeof w.requestIdleCallback === "function";
+    const idle = hasIdle ? w.requestIdleCallback!(begin, { timeout: 400 }) : window.setTimeout(begin, 30);
+    return () => {
+      cancelled = true;
+      if (hasIdle) w.cancelIdleCallback?.(idle);
+      else window.clearTimeout(idle);
+      stop?.();
+    };
+  }, [tier, still]);
+
   return (
-    <Canvas
-      aria-hidden
-      orthographic
-      camera={{ position: [0, 0, 500], near: 0.1, far: 2000, zoom: 1 }}
-      dpr={[1, DPR[tier]]}
-      frameloop={frameloop}
-      gl={{ antialias: false, alpha: true, premultipliedAlpha: true, powerPreference: "high-performance" }}
-      style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}
-    >
-      <Particles tier={tier} still={still} />
-    </Canvas>
+    <canvas ref={ref} aria-hidden style={{ position: "fixed", inset: 0, display: "block", width: "100%", height: "100%", zIndex: 0, pointerEvents: "none" }} />
   );
 }

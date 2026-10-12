@@ -212,7 +212,12 @@ export default function Home() {
           </h2>
           <div className={`${CONTENT} grid gap-12 lg:grid-cols-[1.3fr_1fr] lg:items-center lg:gap-16`}>
             <div className="reveal-fill relative aspect-[16/10] overflow-hidden rounded-3xl">
-              <Image src={STUDIO_PHOTOS[0].src} alt={STUDIO_PHOTOS[0].alt} fill sizes="(min-width: 1024px) 56vw, 100vw" className="object-cover" />
+              {/* The water rises through the frame while the picture inside it holds still. */}
+              <div className="reveal-fill__water absolute inset-0 overflow-hidden">
+                <div className="reveal-fill__still absolute inset-0">
+                  <Image src={STUDIO_PHOTOS[0].src} alt={STUDIO_PHOTOS[0].alt} fill sizes="(min-width: 1024px) 56vw, 100vw" className="object-cover" />
+                </div>
+              </div>
             </div>
             <div>
               <ul className="border-t border-paper/10">

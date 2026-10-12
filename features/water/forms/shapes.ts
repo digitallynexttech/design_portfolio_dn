@@ -1,15 +1,33 @@
 // Target shapes the water can take. Each returns N points inside a [-1, 1] box, with a colour and a
 // surface normal per point, so any shape can pour into any other and every shape can be lit.
 // Colours are stored as sRGB: the particles are added straight onto the page, which is sRGB too.
-import * as THREE from "three";
+// They are mixed in linear light first, exactly as three.js's Color did (same transfer functions),
+// so the shapes look as they always have without the page loading a 3D library to build them.
 
 export type FormId = "x" | "skull" | "helix" | "screens" | "drop" | "pool";
 export type Shape = { positions: Float32Array; colors: Float32Array; normals: Float32Array };
 
-const hex = (value: string) => new THREE.Color(value);
+/** A colour in linear light. */
+type RGB = readonly [number, number, number];
+const toLinear = (c: number) => (c < 0.04045 ? c * 0.0773993808 : Math.pow(c * 0.9478672986 + 0.0521327014, 2.4));
+const toSRGB = (c: number) => (c < 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 0.41666) - 0.055);
+function hex(value: string): RGB {
+  const n = Number.parseInt(value.slice(1), 16);
+  return [toLinear(((n >> 16) & 255) / 255), toLinear(((n >> 8) & 255) / 255), toLinear((n & 255) / 255)];
+}
+// Mixing writes into one scratch colour: every mix is used by the very next put().
+const scratch: [number, number, number] = [0, 0, 0];
+function mix(a: RGB, b: RGB, t: number): RGB {
+  for (let k = 0; k < 3; k++) scratch[k] = a[k] + (b[k] - a[k]) * t;
+  return scratch;
+}
+function scaled(a: RGB, s: number): RGB {
+  for (let k = 0; k < 3; k++) scratch[k] = a[k] * s;
+  return scratch;
+}
 const TEAL = hex("#0ec8c5");
 const RED = hex("#e21f26");
-const srgb = { r: 0, g: 0, b: 0 };
+const WHITE = hex("#ffffff");
 
 function rand(seed: number) {
   // Deterministic so a shape looks the same every visit.
@@ -27,14 +45,13 @@ function alloc(n: number): Shape {
   return { positions: new Float32Array(n * 3), colors: new Float32Array(n * 3), normals: new Float32Array(n * 3) };
 }
 
-function put(shape: Shape, i: number, x: number, y: number, z: number, c: THREE.Color, nx = 0, ny = 0, nz = 1) {
+function put(shape: Shape, i: number, x: number, y: number, z: number, c: RGB, nx = 0, ny = 0, nz = 1) {
   shape.positions[i * 3] = x;
   shape.positions[i * 3 + 1] = y;
   shape.positions[i * 3 + 2] = z;
-  c.getRGB(srgb, THREE.SRGBColorSpace);
-  shape.colors[i * 3] = srgb.r;
-  shape.colors[i * 3 + 1] = srgb.g;
-  shape.colors[i * 3 + 2] = srgb.b;
+  shape.colors[i * 3] = toSRGB(c[0]);
+  shape.colors[i * 3 + 1] = toSRGB(c[1]);
+  shape.colors[i * 3 + 2] = toSRGB(c[2]);
   const len = Math.hypot(nx, ny, nz) || 1;
   shape.normals[i * 3] = nx / len;
   shape.normals[i * 3 + 1] = ny / len;
@@ -86,98 +103,91 @@ export async function xMark(n: number): Promise<Shape> {
     const p = pixels[Math.floor(r() * pixels.length)];
     const x = ((p.x - start + r()) / span) * 2 - (end - start) / span;
     const y = -(((p.y + r()) / span) * 2 - height / span);
-    const c = p.red ? RED : TEAL.clone().lerp(hex("#ffffff"), r() * 0.25);
+    const c = p.red ? RED : mix(TEAL, WHITE, r() * 0.25);
     put(shape, i, x, y, (r() - 0.5) * 0.18, c, (r() - 0.5) * 0.4, (r() - 0.5) * 0.4, 1);
   }
   return shape;
 }
 
+/** Unpacks one octahedral normal (two signed bytes) into `out`, normalised. */
+function octDecode(a: number, b: number, out: number[]) {
+  let x = a / 127;
+  let y = b / 127;
+  const z = 1 - Math.abs(x) - Math.abs(y);
+  if (z < 0) {
+    const px = x;
+    x = (1 - Math.abs(y)) * (px >= 0 ? 1 : -1);
+    y = (1 - Math.abs(px)) * (y >= 0 ? 1 : -1);
+  }
+  const len = Math.hypot(x, y, z) || 1;
+  out[0] = x / len;
+  out[1] = y / len;
+  out[2] = z / len;
+}
+
 /**
- * SKELMET's real print file, sampled across its surface. The file is quantised (16-bit positions
- * with the scale on the node), so the attributes are read back as plain floats before the node's
- * transform is applied; the face gets more of the points than the back of the head.
+ * SKELMET's real print file, sampled across its surface: the face gets more of the points than the
+ * back of the head. The sampling is baked ahead of time (scripts/bake-skull-points.mjs), so this
+ * reads 140 KB of points instead of the 0.7 MB model. The file holds the second tier's 24k points;
+ * the first tier takes a prefix (any prefix is an even sample), and the top tier adds a point beside
+ * each stored one, a random step across the surface, the way a denser sampling would fall.
  */
 export async function skull(n: number): Promise<Shape> {
-  const [{ GLTFLoader }, { MeshoptDecoder }, { MeshSurfaceSampler }] = await Promise.all([
-    import("three/examples/jsm/loaders/GLTFLoader.js"),
-    import("three/examples/jsm/libs/meshopt_decoder.module.js"),
-    import("three/examples/jsm/math/MeshSurfaceSampler.js"),
-  ]);
-  const loader = new GLTFLoader();
-  loader.setMeshoptDecoder(MeshoptDecoder);
-  const gltf = await loader.loadAsync("/models/skelmet/skull.glb");
-  let mesh: THREE.Mesh | null = null;
-  gltf.scene.updateMatrixWorld(true);
-  gltf.scene.traverse((child) => {
-    if (!mesh && (child as THREE.Mesh).isMesh) mesh = child as THREE.Mesh;
-  });
-  if (!mesh) throw new Error("skull mesh missing");
-  const found = mesh as THREE.Mesh;
-  const src = found.geometry;
-  const pos = src.getAttribute("position");
-  const nor = src.getAttribute("normal");
-  const count = pos.count;
-  const positions = new Float32Array(count * 3);
-  const normals = new Float32Array(count * 3);
-  for (let i = 0; i < count; i++) {
-    positions[i * 3] = pos.getX(i);
-    positions[i * 3 + 1] = pos.getY(i);
-    positions[i * 3 + 2] = pos.getZ(i);
-    if (nor) {
-      normals[i * 3] = nor.getX(i);
-      normals[i * 3 + 1] = nor.getY(i);
-      normals[i * 3 + 2] = nor.getZ(i);
-    }
-  }
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-  if (nor) geometry.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
-  if (src.index) geometry.setIndex(Array.from(src.index.array as ArrayLike<number>));
-  geometry.applyMatrix4(found.matrixWorld);
-  if (!nor) geometry.computeVertexNormals();
-  geometry.computeBoundingBox();
-  const box = geometry.boundingBox!;
-  const center = box.getCenter(new THREE.Vector3());
-  const size = box.getSize(new THREE.Vector3());
-  const scale = 2 / Math.max(size.x, size.y, size.z);
+  const response = await fetch("/forms/skull-points.bin");
+  if (!response.ok) throw new Error(`skull points: ${response.status}`);
+  const buffer = await response.arrayBuffer();
+  const view = new DataView(buffer);
+  if (view.getUint32(0, true) !== 0x31504b53) throw new Error("skull points: bad file"); // "SKP1"
+  const stored = view.getUint32(4, true);
+  const lo = [0, 1, 2].map((c) => view.getFloat32(8 + c * 4, true));
+  const span = [0, 1, 2].map((c) => view.getFloat32(20 + c * 4, true) - lo[c]);
+  const density = view.getFloat32(32, true);
+  const HEADER = 36;
+  const packed = new Uint32Array(buffer, HEADER, stored);
+  const oct = new Int8Array(buffer, HEADER + stored * 4, stored * 2);
 
-  // Weight the face (normals toward the viewer) over the back and the mount underneath.
-  const n3 = geometry.getAttribute("normal");
-  const weights = new Float32Array(n3.count);
-  for (let i = 0; i < n3.count; i++) weights[i] = n3.getZ(i) > 0 ? 1.6 : 0.6;
-  geometry.setAttribute("weight", new THREE.BufferAttribute(weights, 1));
-
-  const sampler = new MeshSurfaceSampler(new THREE.Mesh(geometry)).setWeightAttribute("weight").build();
-  const point = new THREE.Vector3();
-  const normal = new THREE.Vector3();
-  const out = new THREE.Vector3();
   const blaze = hex("#ff5a1f");
   const ember = hex("#ffc24d");
-  const light = new THREE.Vector3(-0.5, 0.6, 0.6).normalize();
+  const ll = Math.hypot(-0.5, 0.6, 0.6);
+  const light = { x: -0.5 / ll, y: 0.6 / ll, z: 0.6 / ll };
+  const r = rand(53);
   const shape = alloc(n);
-  let i = 0;
-  let guard = 0;
-  while (i < n && guard < n * 4) {
-    guard++;
-    sampler.sample(point, normal);
-    out.copy(point).sub(center);
-    // The mount's inner walls face inward: skip them, they only cloud the silhouette.
-    if (out.lengthSq() > 1e-6 && out.normalize().dot(normal) < -0.15) continue;
-    point.sub(center).multiplyScalar(scale);
-    const lit = Math.max(0, normal.dot(light));
-    put(shape, i, point.x, point.y, point.z, blaze.clone().lerp(ember, lit * 0.55), normal.x, normal.y, normal.z);
-    i++;
-  }
-  // If the guard ran out, repeat the points already placed.
-  for (let j = i; j < n; j++) {
-    const k = j % Math.max(1, i);
-    for (let c = 0; c < 3; c++) {
-      shape.positions[j * 3 + c] = shape.positions[k * 3 + c];
-      shape.colors[j * 3 + c] = shape.colors[k * 3 + c];
-      shape.normals[j * 3 + c] = shape.normals[k * 3 + c];
+  const normal = [0, 0, 0];
+  for (let i = 0; i < n; i++) {
+    const k = i % stored;
+    const word = packed[k];
+    let x = lo[0] + ((word >>> 22) / 1023) * span[0];
+    let y = lo[1] + (((word >>> 11) & 2047) / 2047) * span[1];
+    let z = lo[2] + ((word & 2047) / 2047) * span[2];
+    octDecode(oct[k * 2], oct[k * 2 + 1], normal);
+    const [nx, ny, nz] = normal;
+    if (i >= stored) {
+      // Step across the surface (the tangent plane) within this point's share of it. The sampler
+      // gave the face 1.6 against 0.6 for the back (×3 vertices), so face points sit closer.
+      const reach = Math.sqrt(density / (nz > 0 ? 4.8 : 1.8)) * 0.56 * Math.sqrt(r());
+      const angle = r() * Math.PI * 2;
+      // Any vector not parallel to the normal gives a tangent basis.
+      const ax = Math.abs(nx) < 0.9 ? 1 : 0;
+      const ay = 1 - ax;
+      let tx = ay * nz;
+      let ty = -ax * nz;
+      let tz = ax * ny - ay * nx;
+      const tl = Math.hypot(tx, ty, tz) || 1;
+      tx /= tl;
+      ty /= tl;
+      tz /= tl;
+      const bx = ny * tz - nz * ty;
+      const by = nz * tx - nx * tz;
+      const bz = nx * ty - ny * tx;
+      const c = Math.cos(angle) * reach;
+      const s = Math.sin(angle) * reach;
+      x += tx * c + bx * s;
+      y += ty * c + by * s;
+      z += tz * c + bz * s;
     }
+    const lit = Math.max(0, nx * light.x + ny * light.y + nz * light.z);
+    put(shape, i, x, y, z, mix(blaze, ember, lit * 0.55), nx, ny, nz);
   }
-  geometry.dispose();
   return shape;
 }
 
@@ -201,7 +211,7 @@ export function helix(n: number): Shape {
     let z: number;
     let nx: number;
     let nz: number;
-    let c: THREE.Color;
+    let c: RGB;
     if (rung) {
       // Rungs at fixed heights, each half in its own strand's colour, like base pairs.
       const t = (Math.floor(r() * RUNGS) + 0.5) / RUNGS;
@@ -222,7 +232,7 @@ export function helix(n: number): Shape {
       y = t * 2 - 1 + gauss();
       nx = Math.cos(angle);
       nz = Math.sin(angle);
-      c = (strand ? java : eden).clone().lerp(hex("#ffffff"), r() * 0.12);
+      c = mix(strand ? java : eden, WHITE, r() * 0.12);
     }
     // Lean the whole helix so it reads as a molecule, not a spring.
     put(shape, i, x * ct - y * st * 0.9, (x * st + y * ct) * 0.98, z, c, nx * ct, nx * st, nz);
@@ -320,7 +330,7 @@ export function screens(n: number): Shape {
     const [x, y, front] = part.g();
     const onPhone = front !== undefined;
     const z = onPhone ? front : curve(x) + (r() - 0.5) * 0.012;
-    const c = onPhone ? cyan.clone().lerp(hex("#ffffff"), 0.2) : violet.clone().lerp(cyan, (x + 1) / 2);
+    const c = onPhone ? mix(cyan, WHITE, 0.2) : mix(violet, cyan, (x + 1) / 2);
     put(shape, i, x, y * 1.05, z, c, onPhone ? 0 : 0.5 * x, 0, 1);
   }
   return shape;
@@ -347,7 +357,7 @@ export function drop(n: number): Shape {
     x *= pinch * 0.62;
     z *= pinch * 0.62;
     y = y > 0 ? y * 1.15 : y * 0.62;
-    put(shape, i, x, y - 0.1, z, deep.clone().lerp(clear, (y + 1) / 2), nx, ny, nz);
+    put(shape, i, x, y - 0.1, z, mix(deep, clear, (y + 1) / 2), nx, ny, nz);
   }
   return shape;
 }
@@ -361,7 +371,7 @@ export function pool(n: number): Shape {
     const d = Math.sqrt(r());
     // Leaning toward the viewer like the pour's pool, and dim: at rest it is just water.
     const z = Math.sin(a) * d * 0.6;
-    put(shape, i, Math.cos(a) * d * 1.4, -0.85 + z * 0.18 + (r() - 0.5) * 0.03, z, TEAL.clone().multiplyScalar(0.3 + r() * 0.15), 0, 1, 0.3);
+    put(shape, i, Math.cos(a) * d * 1.4, -0.85 + z * 0.18 + (r() - 0.5) * 0.03, z, scaled(TEAL, 0.3 + r() * 0.15), 0, 1, 0.3);
   }
   return shape;
 }

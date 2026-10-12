@@ -1,12 +1,13 @@
-// GLSL for the water surface. three.js compiles these as GLSL ES 3.0 on WebGL2 and supplies the
-// varying/texture2D/gl_FragColor compatibility defines, so they are written in the classic dialect.
+// GLSL for the water surface, in the classic dialect: ../gl.ts compiles it as GLSL ES 3.0 on WebGL2
+// with the varying/texture2D/gl_FragColor compatibility defines.
 
 /** One oversized triangle that covers clip space; uv runs 0→1 across the visible area. */
 export const fullscreenVert = /* glsl */ `
+  attribute vec2 position;
   varying vec2 vUv;
   void main() {
-    vUv = position.xy * 0.5 + 0.5;
-    gl_Position = vec4(position.xy, 0.0, 1.0);
+    vUv = position * 0.5 + 0.5;
+    gl_Position = vec4(position, 0.0, 1.0);
   }
 `;
 

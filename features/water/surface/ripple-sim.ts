@@ -1,91 +1,51 @@
-import * as THREE from "three";
 import type { Drop } from "../bus";
+import { type GL, Program, Target } from "../gl";
 import { dropFrag, fullscreenVert, updateFrag } from "./shaders";
 
 const MAX_DROPS_PER_FRAME = 10;
 
-function createTarget(cols: number, rows: number): THREE.WebGLRenderTarget {
-  return new THREE.WebGLRenderTarget(cols, rows, {
-    type: THREE.HalfFloatType,
-    format: THREE.RGBAFormat,
-    minFilter: THREE.LinearFilter,
-    magFilter: THREE.LinearFilter,
-    wrapS: THREE.ClampToEdgeWrapping,
-    wrapT: THREE.ClampToEdgeWrapping,
-    depthBuffer: false,
-    stencilBuffer: false,
-  });
-}
-
-export function createFullscreenTriangle(): THREE.BufferGeometry {
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.Float32BufferAttribute([-1, -1, 0, 3, -1, 0, -1, 3, 0], 3));
-  return geometry;
-}
-
 /** Ping-pong wave simulation on a height field. Owns its GPU resources; call dispose(). */
 export class RippleSim {
-  private read: THREE.WebGLRenderTarget;
-  private write: THREE.WebGLRenderTarget;
-  private readonly scene = new THREE.Scene();
-  private readonly camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-  private readonly quad: THREE.Mesh;
-  private readonly updateMaterial: THREE.ShaderMaterial;
-  private readonly dropMaterial: THREE.ShaderMaterial;
+  private read: Target;
+  private write: Target;
+  readonly programs: Program[];
+  private readonly update: Program;
+  private readonly drop: Program;
   private readonly pending: Drop[] = [];
   private aspect: number;
+  readonly texel: [number, number];
 
   constructor(
-    private readonly renderer: THREE.WebGLRenderer,
+    private readonly gl: GL,
+    private readonly triangle: WebGLVertexArrayObject,
     cols: number,
     rows: number,
   ) {
     this.aspect = cols / rows;
-    this.read = createTarget(cols, rows);
-    this.write = createTarget(cols, rows);
-
-    const texel = new THREE.Vector2(1 / cols, 1 / rows);
-    this.updateMaterial = new THREE.ShaderMaterial({
-      vertexShader: fullscreenVert,
-      fragmentShader: updateFrag,
-      uniforms: { uState: { value: null }, uTexel: { value: texel }, uDamping: { value: 0.985 } },
-      depthTest: false,
-      depthWrite: false,
-    });
-    this.dropMaterial = new THREE.ShaderMaterial({
-      vertexShader: fullscreenVert,
-      fragmentShader: dropFrag,
-      uniforms: {
-        uState: { value: null },
-        uCenter: { value: new THREE.Vector2() },
-        uRadius: { value: 0.05 },
-        uStrength: { value: 0 },
-        uAspect: { value: this.aspect },
-      },
-      depthTest: false,
-      depthWrite: false,
-    });
-
-    this.quad = new THREE.Mesh(createFullscreenTriangle(), this.updateMaterial);
-    this.quad.frustumCulled = false;
-    this.scene.add(this.quad);
+    this.texel = [1 / cols, 1 / rows];
+    this.read = new Target(gl, cols, rows);
+    this.write = new Target(gl, cols, rows);
+    this.update = new Program(gl, fullscreenVert, updateFrag, ["position"]);
+    this.drop = new Program(gl, fullscreenVert, dropFrag, ["position"]);
+    this.programs = [this.update, this.drop];
     this.clear();
   }
 
-  get texture(): THREE.Texture {
+  get texture(): WebGLTexture {
     return this.read.texture;
   }
 
-  get texel(): THREE.Vector2 {
-    return this.updateMaterial.uniforms.uTexel.value as THREE.Vector2;
+  /** Whether this GPU can render into half-float targets at all. */
+  supported(): boolean {
+    return this.read.complete() && this.write.complete();
   }
 
   resize(cols: number, rows: number): void {
     this.read.setSize(cols, rows);
     this.write.setSize(cols, rows);
     this.aspect = cols / rows;
-    this.texel.set(1 / cols, 1 / rows);
-    this.dropMaterial.uniforms.uAspect.value = this.aspect;
+    this.texel[0] = 1 / cols;
+    this.texel[1] = 1 / rows;
     this.clear();
   }
 
@@ -95,50 +55,51 @@ export class RippleSim {
   }
 
   step(substeps: number): void {
-    const previous = this.renderer.getRenderTarget();
+    const { gl } = this;
+    gl.bindVertexArray(this.triangle);
+    gl.viewport(0, 0, this.read.width, this.read.height);
 
-    this.quad.material = this.dropMaterial;
-    for (const drop of this.pending.splice(0, MAX_DROPS_PER_FRAME)) {
-      const u = this.dropMaterial.uniforms;
-      u.uCenter.value.set(drop.x, 1 - drop.y);
-      u.uRadius.value = drop.radius;
-      u.uStrength.value = drop.strength;
-      this.pass();
+    if (this.pending.length) {
+      this.drop.use();
+      gl.uniform1f(this.drop.uniform("uAspect"), this.aspect);
+      for (const drop of this.pending.splice(0, MAX_DROPS_PER_FRAME)) {
+        gl.uniform2f(this.drop.uniform("uCenter"), drop.x, 1 - drop.y);
+        gl.uniform1f(this.drop.uniform("uRadius"), drop.radius);
+        gl.uniform1f(this.drop.uniform("uStrength"), drop.strength);
+        this.pass(this.drop);
+      }
     }
 
-    this.quad.material = this.updateMaterial;
-    for (let i = 0; i < substeps; i++) this.pass();
-
-    this.renderer.setRenderTarget(previous);
+    this.update.use();
+    gl.uniform2f(this.update.uniform("uTexel"), this.texel[0], this.texel[1]);
+    gl.uniform1f(this.update.uniform("uDamping"), 0.985);
+    for (let i = 0; i < substeps; i++) this.pass(this.update);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
 
   dispose(): void {
     this.read.dispose();
     this.write.dispose();
-    this.updateMaterial.dispose();
-    this.dropMaterial.dispose();
-    this.quad.geometry.dispose();
+    for (const program of this.programs) program.dispose();
   }
 
-  private pass(): void {
-    const material = this.quad.material as THREE.ShaderMaterial;
-    material.uniforms.uState.value = this.read.texture;
-    this.renderer.setRenderTarget(this.write);
-    this.renderer.render(this.scene, this.camera);
+  private pass(program: Program): void {
+    const { gl } = this;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.write.framebuffer);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.read.texture);
+    gl.uniform1i(program.uniform("uState"), 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
     [this.read, this.write] = [this.write, this.read];
   }
 
   private clear(): void {
-    const previous = this.renderer.getRenderTarget();
-    const clearColor = new THREE.Color();
-    this.renderer.getClearColor(clearColor);
-    const clearAlpha = this.renderer.getClearAlpha();
-    this.renderer.setClearColor(0x000000, 0);
+    const { gl } = this;
+    gl.clearColor(0, 0, 0, 0);
     for (const target of [this.read, this.write]) {
-      this.renderer.setRenderTarget(target);
-      this.renderer.clear(true, false, false);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, target.framebuffer);
+      gl.clear(gl.COLOR_BUFFER_BIT);
     }
-    this.renderer.setClearColor(clearColor, clearAlpha);
-    this.renderer.setRenderTarget(previous);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
 }

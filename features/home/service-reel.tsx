@@ -7,7 +7,8 @@ import { FlowLink } from "@/components/ui/flow-link";
 export type ReelService = { id: string; title: string; line: string; proof: string[]; image: string };
 
 // The ribbon's feel (CSS px and seconds).
-const STRIP = 5; // width of each slice the images are cut into
+const STRIP = 4; // narrowest slice the images are cut into (at speed)
+const STEP = 0.25; // the most a straight slice may stray from the wave; wider slices while it's flat
 const AUTOPLAY = 34; // px/s drift when nobody is touching it
 const SETTLE = 2.6; // how fast a flick slows back to the drift
 const SCROLL_PULL = 0.55; // how far the page's scroll carries the ribbon
@@ -55,7 +56,7 @@ export function ServiceReel({ services }: { services: ReelService[] }) {
       raw.decode().then(
         () => {
           sources[i] = raw;
-          kick();
+          prepare(i);
         },
         () => undefined,
       );
@@ -90,6 +91,7 @@ export function ServiceReel({ services }: { services: ReelService[] }) {
       cv.style.height = `${imgH + pad * 2}px`;
       cv.style.top = `${-pad}px`;
       list.style.height = `${Math.max(...cards.map((c) => c.offsetHeight))}px`;
+      for (let i = 0; i < n; i++) prepare(i);
     };
 
     // Motion state: offset is how far the ribbon has travelled; speed is measured from it.
@@ -115,9 +117,79 @@ export function ServiceReel({ services }: { services: ReelService[] }) {
       return x + lead > W + pitch * 0.5 ? x - total : x;
     };
 
+    // Each picture is cover-fitted into its card and its corners rounded once, at the screen's
+    // resolution, outside the frame loop: the browser crops and scales it off the main thread, then
+    // it is clipped round in one copy. Every frame only copies slices of it. A slice carries its piece
+    // of the rounded corner with it, so the corners still ride the wave with the picture.
+    const plates: (HTMLCanvasElement | null)[] = images.map(() => null);
+    const preparing: (string | null)[] = images.map(() => null);
+    let disposed = false;
+    const prepare = (i: number) => {
+      const img = sources[i];
+      if (!img || !cardW || !imgH) return;
+      const w = Math.round(cardW * dpr);
+      const h = Math.round(imgH * dpr);
+      const key = `${w}x${h} ${img.src}`;
+      if (plates[i]?.dataset.key === key || preparing[i] === key) return;
+      preparing[i] = key;
+      const iw = img.naturalWidth;
+      const ih = img.naturalHeight;
+      const scale = Math.max(w / iw, h / ih);
+      const sw = w / scale;
+      const sh = h / scale;
+      const sx = (iw - sw) / 2;
+      const sy = (ih - sh) / 2;
+      const cropped: Promise<ImageBitmap | null> =
+        typeof createImageBitmap === "function"
+          ? createImageBitmap(img, sx, sy, sw, sh, { resizeWidth: w, resizeHeight: h, resizeQuality: "high" }).catch(() => null)
+          : Promise.resolve(null);
+      void cropped.then((bitmap) => {
+        if (disposed || preparing[i] !== key) {
+          bitmap?.close();
+          return;
+        }
+        preparing[i] = null;
+        const c = plates[i] ?? document.createElement("canvas");
+        c.width = w;
+        c.height = h;
+        c.dataset.key = key;
+        const p = c.getContext("2d");
+        if (!p) return;
+        p.save();
+        p.beginPath();
+        const r = RADIUS * dpr;
+        // roundRect is recent (2023); older engines get the same path from arcs.
+        const roundRect = (p as Partial<Pick<CanvasRenderingContext2D, "roundRect">>).roundRect;
+        if (roundRect) roundRect.call(p, 0, 0, w, h, r);
+        else {
+          p.moveTo(r, 0);
+          p.arcTo(w, 0, w, h, r);
+          p.arcTo(w, h, 0, h, r);
+          p.arcTo(0, h, 0, 0, r);
+          p.arcTo(0, 0, w, 0, r);
+          p.closePath();
+        }
+        p.clip();
+        // Sized to fit even where the browser ignored the resize, or couldn't crop at all.
+        if (bitmap) p.drawImage(bitmap, 0, 0, w, h);
+        else p.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
+        p.restore();
+        bitmap?.close();
+        plates[i] = c;
+        kick();
+      });
+    };
+    // The faded margins are erased in one pass each, after the slices are drawn.
+    let fadeLeft: CanvasGradient | null = null;
+    let fadeRight: CanvasGradient | null = null;
+    let fadeW = 0;
+    const translates = cards.map(() => "");
+    let index = -1;
+
     const draw = (dt: number) => {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, W, imgH + pad * 2);
+      const H = imgH + pad * 2;
+      ctx.clearRect(0, 0, W, H);
       const still = reduced.matches;
       const goal = still ? 0 : Math.max(-pad * 0.82, Math.min(pad * 0.82, speed * WAVE_GAIN));
       amp += (goal - amp) * (1 - Math.exp(-6 * dt));
@@ -127,55 +199,68 @@ export function ServiceReel({ services }: { services: ReelService[] }) {
       const smear = still ? 0 : Math.min(26, Math.abs(speed) * 0.018);
       const dir = Math.sign(speed) || 1;
       const L = lead;
+      const a = Math.abs(amp);
+      // The wave, flaring toward the edges of the stage.
+      const wave = (x: number) => {
+        const e = 1 - Math.min(1, Math.max(0, Math.min(x, W - x) / zone));
+        return amp * Math.sin(x * freq + phase + offset * 0.0016) * (1 + EDGE_FLARE * e * e);
+      };
 
       for (let i = 0; i < n; i++) {
-        const img = sources[i];
         const x0 = L + xOf(i);
-        cards[i].style.translate = `${x0.toFixed(2)}px 0`;
-        if (!img || x0 > W || x0 + cardW < 0) continue;
-        const iw = img.naturalWidth;
-        const ih = img.naturalHeight;
-        // Cover-fit the picture into the card's frame.
-        const scale = Math.max(cardW / iw, imgH / ih);
-        const sw = cardW / scale;
-        const sh = imgH / scale;
-        const sx0 = (iw - sw) / 2;
-        const sy0 = (ih - sh) / 2;
-        const from = Math.max(0, Math.floor(-x0 / STRIP) * STRIP);
+        const t = `${x0.toFixed(2)}px 0`;
+        if (translates[i] !== t) cards[i].style.translate = translates[i] = t;
+        if (x0 > W || x0 + cardW < 0) continue;
+        // A plate from before a resize still draws (scaled) while its replacement is made.
+        const src = plates[i];
+        prepare(i);
+        if (!src) continue;
+        const k = src.width / cardW;
+        const from = Math.max(0, -x0);
         const to = Math.min(cardW, W - x0);
+        let yL = wave(x0 + from);
         for (let s = from; s < to; ) {
-          // Thin slices at the rounded corners keep their curve smooth.
-          const corner = s < RADIUS || s > cardW - RADIUS - STRIP;
-          const w = Math.min(corner ? 1 : STRIP, cardW - s);
-          const cx = x0 + s + w / 2;
-          const edgeDist = Math.min(cx, W - cx);
-          const edge = 1 - Math.min(1, Math.max(0, edgeDist / zone));
-          const fade = Math.min(1, Math.max(0, edgeDist / (zone * 0.35)));
-          if (fade <= 0) {
-            s += w;
-            continue;
-          }
-          const y = amp * Math.sin(cx * freq + phase + offset * 0.0016) * (1 + EDGE_FLARE * edge * edge);
-          // Rounded corners, cut per strip so they ride the wave with the picture.
-          const fromEdge = Math.min(s + w / 2, cardW - s - w / 2);
-          const inset = fromEdge < RADIUS ? RADIUS - Math.sqrt(Math.max(0, RADIUS * RADIUS - (RADIUS - fromEdge) ** 2)) : 0;
-          const srcX = sx0 + (s / cardW) * sw;
-          const srcW = (w / cardW) * sw;
-          const srcY = sy0 + (inset / imgH) * sh;
-          const srcH = sh - (2 * inset / imgH) * sh;
-          const dy = pad + y + inset;
-          const dh = imgH - 2 * inset;
-          ctx.globalAlpha = fade;
-          ctx.drawImage(img, srcX, srcY, srcW, srcH, x0 + s, dy, w + 0.6, dh);
+          const cx = x0 + s;
+          // Each slice is sheared to follow the wave from its left edge to its right, so neighbours
+          // meet exactly. A straight slice strays from the curve by about bend × width² / 8, so it
+          // is as wide as that allows: as fine as ever at speed, a few broad slices while it lies flat.
+          const e = 1 - Math.min(1, Math.max(0, (Math.min(cx, W - cx) - 40) / zone));
+          const bend = a * (freq * freq * (1 + EDGE_FLARE * e * e) + (e > 0 ? (4 * EDGE_FLARE * e * freq) / zone + (2 * EDGE_FLARE) / (zone * zone) : 0));
+          const w = Math.min(Math.max(STRIP, bend > 0 ? Math.sqrt((8 * STEP) / bend) : Infinity), to - s);
+          const yR = wave(cx + w);
+          const shear = (yR - yL) / w;
+          ctx.setTransform(dpr, dpr * shear, 0, dpr, dpr * cx, dpr * (pad + yL));
+          ctx.drawImage(src, s * k, 0, w * k, src.height, 0, 0, w + 0.6, imgH);
           // At speed, a faint smear trails each strip.
           if (smear > 2) {
-            ctx.globalAlpha = fade * 0.16;
-            ctx.drawImage(img, srcX, srcY, srcW, srcH, x0 + s - dir * smear, dy, w + 0.6, dh);
+            ctx.globalAlpha = 0.16;
+            ctx.setTransform(dpr, dpr * shear, 0, dpr, dpr * (cx - dir * smear), dpr * (pad + yL));
+            ctx.drawImage(src, s * k, 0, w * k, src.height, 0, 0, w + 0.6, imgH);
+            ctx.globalAlpha = 1;
           }
           s += w;
+          yL = yR;
         }
       }
-      ctx.globalAlpha = 1;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      // The ribbon fades out over the outer part of each margin.
+      const fw = zone * 0.35;
+      if (!fadeLeft || !fadeRight || fadeW !== W) {
+        fadeW = W;
+        fadeLeft = ctx.createLinearGradient(0, 0, fw, 0);
+        fadeLeft.addColorStop(0, "rgba(0,0,0,1)");
+        fadeLeft.addColorStop(1, "rgba(0,0,0,0)");
+        fadeRight = ctx.createLinearGradient(W - fw, 0, W, 0);
+        fadeRight.addColorStop(0, "rgba(0,0,0,0)");
+        fadeRight.addColorStop(1, "rgba(0,0,0,1)");
+      }
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.fillStyle = fadeLeft;
+      ctx.fillRect(0, 0, fw, H);
+      ctx.fillStyle = fadeRight;
+      ctx.fillRect(W - fw, 0, fw, H);
+      ctx.globalCompositeOperation = "source-over";
     };
 
     const frame = (now: number) => {
@@ -210,7 +295,7 @@ export function ServiceReel({ services }: { services: ReelService[] }) {
           best = i;
         }
       }
-      setCurrent((c) => (c === best ? c : best));
+      if (best !== index) setCurrent((index = best));
       const settled = Math.abs(speed) < 0.5 && Math.abs(amp) < 0.05 && target === null && !dragging && Math.abs(velocity) < 0.5;
       if (visible && !(settled && (still || hover || focusHold))) raf = requestAnimationFrame(frame);
       else last = 0;
@@ -270,9 +355,11 @@ export function ServiceReel({ services }: { services: ReelService[] }) {
     };
     // The page's own scroll carries the ribbon a little, so it ripples as you read past it.
     let lastScroll = window.scrollY;
+    // Off screen it isn't read at all (the observer resets lastScroll as it comes back).
     const onScroll = () => {
+      if (!visible) return;
       const y = window.scrollY;
-      if (visible && !dragging && target === null) {
+      if (!dragging && target === null) {
         offset += (y - lastScroll) * SCROLL_PULL;
         kick();
       }
@@ -349,6 +436,7 @@ export function ServiceReel({ services }: { services: ReelService[] }) {
     window.addEventListener("scroll", onScroll, { passive: true });
     reduced.addEventListener("change", kick);
     return () => {
+      disposed = true;
       cancelAnimationFrame(raf);
       ro.disconnect();
       io.disconnect();
