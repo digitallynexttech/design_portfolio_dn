@@ -31,6 +31,28 @@ export function loadGLTF(url: string): Promise<GLTF> {
   return p;
 }
 
+/**
+ * Photos shown on in-world screens and billboards, at the size a 3 m screen can show
+ * (scripts/world-assets.py makes them from the originals). Anything not listed loads as is.
+ */
+const SCREEN_COPIES: Record<string, string> = {
+  "/studio/team.webp": "/world/img/studio-team.webp",
+  "/studio/c1.webp": "/world/img/studio-c1.webp",
+  "/studio/workhere.webp": "/world/img/studio-workhere.webp",
+  "/work/dnms/dashboard-hr.webp": "/world/img/dnms-dashboard-hr.webp",
+  "/work/dnms/analytics.webp": "/world/img/dnms-analytics.webp",
+  "/work/dnms/project-goals.webp": "/world/img/dnms-project-goals.webp",
+  "/work/dnms/ai-connections.webp": "/world/img/dnms-ai-connections.webp",
+  "/video/reel-poster.webp": "/world/img/reel-poster.webp",
+};
+// The archive's floating screens (9 m wide).
+const ARCHIVE = ["advent-global", "imet-global", "khaleej", "house-of-nandini", "mauli", "gajna-overseas", "sanjivani-edge", "opinova-foundation", "neotech-world-lab", "neet-playbook"];
+for (const name of ARCHIVE) SCREEN_COPIES[`/archive/${name}.webp`] = `/world/img/archive-${name}.webp`;
+
+export function screenImage(src: string): string {
+  return SCREEN_COPIES[src] ?? src;
+}
+
 /** Resolves once every model requested so far has arrived (or failed). */
 export async function modelsSettled() {
   while (pending.size) await Promise.allSettled([...pending]);

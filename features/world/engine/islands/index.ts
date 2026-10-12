@@ -81,6 +81,10 @@ export async function createIslands(base: Omit<IslandCtx, "props">) {
     update(dt: number, t: number, night: number, boat: Body) {
       for (const p of parts) p.update?.(dt, t, night, boat);
     },
+    /** Grass density 0–1 (auto quality). */
+    setGrass(k: number) {
+      flora.setGrass(k);
+    },
     dispose() {
       for (const p of parts) p.dispose?.();
       flora.dispose();

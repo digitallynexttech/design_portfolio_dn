@@ -74,7 +74,8 @@ export function maskTexture(mask: SeaMask): THREE.DataTexture {
 
 export type Water = ReturnType<typeof createWater>;
 
-export function createWater(scene: THREE.Scene, shared: Shared, maskTex: THREE.DataTexture, ripple: Ripple, tier: 1 | 2 | 3, envTexture: THREE.Texture, camera: THREE.Camera) {
+/** @param withMirror mirror the islands in the sea (the full tier on desktops); else the sky only. */
+export function createWater(scene: THREE.Scene, shared: Shared, maskTex: THREE.DataTexture, ripple: Ripple, tier: 1 | 2 | 3, envTexture: THREE.Texture, camera: THREE.Camera, withMirror: boolean) {
   const { u } = shared;
   const origin = uniform(new THREE.Vector3());
   const normalsTex = rippleNormals(tier === 1 ? 128 : 256);
@@ -183,14 +184,14 @@ export function createWater(scene: THREE.Scene, shared: Shared, maskTex: THREE.D
     body = mix(body, mix(soft, chalk, hard), inside.mul(0.78));
   }
 
-  // Reflection: the real scene mirrored on the full tier, the sky's environment elsewhere.
+  // Reflection: the real scene mirrored on the full tier (desktops), the sky's environment elsewhere.
   const refl = reflect(view.negate(), normal);
   const reflDir = vec3(refl.x, max(refl.y, 0.01), refl.z);
   // Slightly rough, more so with distance: many small waves average a cloud into a soft streak.
   let reflection: N = pmremTexture(envTexture, reflDir, float(0.1).add(smoothstep(20, 400, dist).mul(0.14))).rgb;
   let mirror: ReturnType<typeof reflector> | null = null;
   const mirrorMix = uniform(0.92);
-  if (tier === 3) {
+  if (withMirror) {
     mirror = reflector({ resolutionScale: 0.5, bounces: false });
     mirror.target.rotateX(-Math.PI / 2);
     // The mirror renders the big shapes only (layer 0); detail stays out of reflections.
@@ -262,6 +263,7 @@ export function createWater(scene: THREE.Scene, shared: Shared, maskTex: THREE.D
       mesh.position.set(sx, 0, sz);
       origin.value.set(sx, 0, sz);
     },
+    hasMirror: !!mirror,
     /** Switch the mirrored scene off (auto quality): the sea falls back to the sky's reflection. */
     setMirror(on: boolean) {
       if (!mirror) return;

@@ -22,11 +22,12 @@ import { createShared } from "./shared";
 import { createTerrain } from "./terrain";
 import { createTextures } from "./textures";
 import { createPost } from "./post";
+import { FrameWatch, isLiteDevice, LADDER, levelOf, lighten, preset, type Knobs, type Tier } from "./quality";
 import { createWater, maskTexture } from "./water";
 import { createWeather } from "./weather";
 import { createWeatherFx } from "./weather-fx";
 
-export type Tier = 1 | 2 | 3;
+export type { Tier } from "./quality";
 
 const STEP = 1 / 60;
 
@@ -34,7 +35,22 @@ function nextFrame() {
   return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 }
 
-export async function createWorld(canvas: HTMLCanvasElement, data: WorldData, options: { tier: Tier; forceWebGL: boolean; sound: boolean; reduced: boolean; signal?: AbortSignal }): Promise<EngineHandle> {
+/** Auto quality runs until the visitor picks a quality in Options (Auto itself keeps adapting). */
+function adaptive() {
+  const v = world.get();
+  return !v.chosen || v.quality === "auto";
+}
+
+/**
+ * @param options.tier what to build: 3 Full, 2 Balanced, 1 Light.
+ * @param options.lite phone-scale assets and pixels; detected when left out (touch-first screens,
+ * 4 GB or less, or no WebGPU).
+ */
+export async function createWorld(
+  canvas: HTMLCanvasElement,
+  data: WorldData,
+  options: { tier: Tier; forceWebGL: boolean; sound: boolean; reduced: boolean; signal?: AbortSignal; lite?: boolean },
+): Promise<EngineHandle> {
   const { tier, reduced } = options;
   const { signal } = options;
   const progress = (value: number, message: string) => {
@@ -78,8 +94,11 @@ export async function createWorld(canvas: HTMLCanvasElement, data: WorldData, op
   }
   const rich = maxTextures >= 24;
   world.set({ backend });
-  const dprCap = tier === 3 ? 2 : tier === 2 ? 1.5 : 1;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, dprCap));
+  const lite = options.lite ?? isLiteDevice(backend);
+  // What this tier builds; auto quality and Options lighten it from here (see quality.ts).
+  const built = preset(tier, lite);
+  let knobs: Knobs = built;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, knobs.pixelRatio));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 0.82;
   // Clear to transparent: the sea's mirror uses alpha to tell reflected objects from open sky.
@@ -89,7 +108,7 @@ export async function createWorld(canvas: HTMLCanvasElement, data: WorldData, op
 
   const scene = new THREE.Scene();
   const shared = createShared();
-  const textures = createTextures(tier, tier === 3 ? 8 : 4);
+  const textures = createTextures({ tier, lite, anisotropy: tier === 3 ? 8 : 4 });
   const follow = createCamera();
   const camera = follow.camera;
 
@@ -105,7 +124,12 @@ export async function createWorld(canvas: HTMLCanvasElement, data: WorldData, op
   alive();
   progress(0.3, "Raising the islands");
   const atmosphere = createAtmosphere(scene, shared, tier, renderer);
-  const water = createWater(scene, shared, maskTex, ripple, tier, atmosphere.envTexture, camera);
+  // The sun's shadow map is rendered when the frame asks (once a frame, or every other frame when
+  // lightened). Left to itself it renders once per camera, so the sea's mirror drew it twice.
+  const sun = atmosphere.sun;
+  const shadows = sun.castShadow;
+  if (shadows) sun.shadow.autoUpdate = false;
+  const water = createWater(scene, shared, maskTex, ripple, tier, atmosphere.envTexture, camera, tier === 3 && built.mirror);
   const terrain = createTerrain(scene, shared, textures, tier, rich);
   const boat = createBoat(scene, shared, physics, ripple, textures);
   const audio = createAudio();
@@ -157,7 +181,51 @@ export async function createWorld(canvas: HTMLCanvasElement, data: WorldData, op
   resize();
   window.addEventListener("resize", resize);
 
-  let post = createPost(renderer, scene, camera, tier);
+  const post = createPost(renderer, scene, camera, tier);
+
+  // --- Quality knobs ----------------------------------------------------------------------------
+  // Every knob changes something already built; none rebuilds a shader (see quality.ts).
+  let frameBudget = 0;
+  let level = 0;
+  /** The knobs as they actually land on this device and this build. */
+  const effective = (k: Knobs) => ({
+    pixelRatio: Math.min(window.devicePixelRatio || 1, k.pixelRatio),
+    mirror: water.hasMirror && k.mirror,
+    shadowEvery: shadows ? k.shadowEvery : 1,
+    shadowSize: shadows ? k.shadowSize : 0,
+    grass: Math.min(1, k.grass / Math.max(built.grass, 1e-3)),
+    weather: Math.min(1, k.weather / built.weather),
+    bloom: tier >= 2 && k.bloom,
+    fps: k.fps,
+  });
+  const apply = (k: Knobs) => {
+    knobs = k;
+    const e = effective(k);
+    if (renderer.getPixelRatio() !== e.pixelRatio) renderer.setPixelRatio(e.pixelRatio);
+    water.setMirror(e.mirror);
+    if (shadows) sun.shadow.mapSize.set(e.shadowSize, e.shadowSize);
+    islands.setGrass(e.grass);
+    weatherFx.setDensity(e.weather);
+    post.setBloom(e.bloom);
+    // A cap, not a clock: the slack lets a frame that arrives a little early still render, so a
+    // 60 Hz display never drops to every other frame.
+    frameBudget = (1000 / e.fps) * 0.75;
+    world.set({ tier: levelOf(k, tier, water.hasMirror) });
+  };
+  /** Auto quality: the next ladder step that changes anything here. False when none is left. */
+  const stepDown = () => {
+    const now = JSON.stringify(effective(knobs));
+    while (level < LADDER.length) {
+      const next = lighten(knobs, LADDER[level]);
+      level++;
+      if (JSON.stringify(effective(next)) !== now) {
+        apply(next);
+        return true;
+      }
+    }
+    return false;
+  };
+  apply(knobs);
 
   // Build the opening view's shaders before the first visible frame, so the first seconds don't
   // hitch; the rest of the world follows in the background once the visitor is sailing.
@@ -193,6 +261,7 @@ export async function createWorld(canvas: HTMLCanvasElement, data: WorldData, op
   // the shadow map, the sea's mirror and the post chain. Pipelines are created at once but
   // compiled on the GPU's own time, so wait for it to finish before the first visible frame.
   ripple.update(boat.body.x, boat.body.z, 1);
+  if (shadows) sun.shadow.needsUpdate = true;
   post.render();
   const device = (renderer.backend as unknown as { device?: { queue: { onSubmittedWorkDone(): Promise<void> } } }).device;
   if (device) await device.queue.onSubmittedWorkDone();
@@ -206,11 +275,14 @@ export async function createWorld(canvas: HTMLCanvasElement, data: WorldData, op
    * length of that call. The sea and the sky are always in view (already built) and stay out:
    * the sea's depth copy must only ever run inside a real frame.
    */
+  let warming = false;
   const warmTheRest = () => {
     if (paused) {
       window.setTimeout(warmTheRest, 2000);
       return;
     }
+    // Frames run slower while this builds; auto quality doesn't count them.
+    warming = true;
     const culled: THREE.Object3D[] = [];
     const hidden: THREE.Object3D[] = [];
     const shown: THREE.Object3D[] = [];
@@ -243,24 +315,23 @@ export async function createWorld(canvas: HTMLCanvasElement, data: WorldData, op
     for (const o of hidden) o.visible = false;
     for (const o of shown) o.visible = true;
     for (const g of empty) g.instanceCount = 0;
-    void done.catch(() => undefined);
+    void done
+      .catch(() => undefined)
+      .finally(() => {
+        warming = false;
+        watch.hold(performance.now(), 1500);
+      });
   };
   progress(0.97, "Setting sail");
 
   let accumulator = 0;
   let last = performance.now();
   let lastRender = 0;
-  let fpsFrames = 0;
-  let fpsTime = 0;
-  let slowWindows = 0;
   let boostAmt = 0;
   let washTimer = 0;
-  let measuredTier: Tier = tier;
   let firstFrame = true;
-  let firstFrameAt = 0;
-  // A cap, not a clock: 60 fps (30 on the light tier) on fast displays. The slack lets a frame
-  // that arrives a little early still render, so a 60 Hz display never drops to every other frame.
-  const frameBudget = (tier === 1 ? 1000 / 30 : 1000 / 60) * 0.75;
+  let frameNo = 0;
+  const watch = new FrameWatch();
 
   let statFrames = 0;
   let statCpu = 0;
@@ -323,6 +394,8 @@ export async function createWorld(canvas: HTMLCanvasElement, data: WorldData, op
     audio.update(dt, { speed, throttle: Math.abs(controls.throttle), boost: controls.boost, rain: shared.u.rain.value, wind: shared.u.wind.value, airborne: boat.body.airborne });
     interactions.place(camera, canvas);
 
+    frameNo++;
+    if (shadows && frameNo % knobs.shadowEvery === 0) sun.shadow.needsUpdate = true;
     post.render();
     statFrames++;
     statCpu += performance.now() - cpu0;
@@ -338,38 +411,36 @@ export async function createWorld(canvas: HTMLCanvasElement, data: WorldData, op
     }
     if (firstFrame) {
       firstFrame = false;
-      firstFrameAt = now;
       world.set({ status: "running", progress: 1, message: "" });
       window.setTimeout(warmTheRest, 1500);
+      // The first seconds are not the device's measure: late models arrive, the rest of the
+      // world's shaders build in the background.
+      watch.hold(now, 6000);
     }
 
-    // Auto quality: after a warm-up (late models and their shaders arrive in the first seconds),
-    // two slow windows in a row step down a tier and lighten the load now.
-    if (now - firstFrameAt < 6000) return;
-    fpsFrames++;
-    fpsTime += dt;
-    if (fpsTime > 3 && world.get().quality === "auto") {
-      const fps = fpsFrames / fpsTime;
-      slowWindows = fps < 40 ? slowWindows + 1 : 0;
-      if (slowWindows >= 2 && measuredTier > 1) {
-        slowWindows = 0;
-        measuredTier = (measuredTier - 1) as Tier;
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, measuredTier === 2 ? 1.25 : 1));
-        weatherFx.setDensity(measuredTier === 1 ? 0.35 : 0.65);
-        water.setMirror(false);
-        post.dispose();
-        post = createPost(renderer, scene, camera, measuredTier);
-        if (measuredTier === 1) {
-          renderer.shadowMap.enabled = false;
-          atmosphere.sun.castShadow = false;
-        }
-        world.set({ tier: measuredTier });
-      }
-      fpsFrames = 0;
-      fpsTime = 0;
+    // Auto quality: two slow windows in a row take the next step down the ladder, at once and
+    // without a stall. An explicit choice in Options switches this off.
+    if (!warming && level < LADDER.length && adaptive()) {
+      let steps = watch.frame(now, knobs.fps);
+      let stepped = false;
+      while (steps-- > 0 && stepDown()) stepped = true;
+      if (stepped) watch.hold(now, 2000);
     }
   };
   renderer.setAnimationLoop(frame);
+
+  // Hidden tabs get no animation frames, so nothing renders; on the way back, settle before
+  // measuring again, and keep the sea quiet while away.
+  const onVisibility = () => {
+    if (document.hidden) {
+      audio.suspend();
+      return;
+    }
+    last = performance.now();
+    watch.hold(last, 2000);
+    if (!paused && world.get().sound) audio.enable();
+  };
+  document.addEventListener("visibilitychange", onVisibility);
 
   const saveResume = () => {
     try {
@@ -387,13 +458,17 @@ export async function createWorld(canvas: HTMLCanvasElement, data: WorldData, op
       paused = next;
       input.setEnabled(!next);
       if (next) {
+        // Covered by a panel or away on another page: no frames at all until it is back.
+        renderer.setAnimationLoop(null);
         saveResume();
         audio.suspend();
       } else {
         last = performance.now();
         accumulator = 0;
+        watch.hold(last, 2000);
         if (world.get().sound) audio.enable();
         resize();
+        renderer.setAnimationLoop(frame);
       }
     },
     setSound(on) {
@@ -401,12 +476,12 @@ export async function createWorld(canvas: HTMLCanvasElement, data: WorldData, op
       else audio.disable();
     },
     setQuality(q: Quality) {
-      const target = q === "auto" ? tier : q;
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, target === 3 ? 2 : target === 2 ? 1.5 : 1));
-      weatherFx.setDensity(target === 3 ? 1 : target === 2 ? 0.65 : 0.35);
-      renderer.shadowMap.enabled = target >= 2;
-      atmosphere.sun.castShadow = target >= 2;
-      world.set({ tier: target });
+      // Applies at once, within what was built: a lighter pick switches things off; a heavier one
+      // than this world was built with (say Full after starting on Light) takes full effect the
+      // next time the world opens. Auto starts again from the top of the ladder.
+      level = 0;
+      apply(preset(q === "auto" ? tier : q, lite));
+      watch.hold(performance.now(), 3000);
     },
     setPick(pick: WeatherPick) {
       weather.setPick(pick);
@@ -421,6 +496,8 @@ export async function createWorld(canvas: HTMLCanvasElement, data: WorldData, op
       follow.snap(spot.x, spot.z);
       ripple.drop(spot.x, spot.z, 4, 0.8);
       audio.splash(4);
+      // A new view can bring a frame or two of late work; don't count it against the device.
+      watch.hold(performance.now(), 3000);
     },
     interact() {
       interactions.activate();
@@ -445,12 +522,13 @@ export async function createWorld(canvas: HTMLCanvasElement, data: WorldData, op
     },
     resize,
     stats() {
-      return { ...stats };
+      return { ...stats, tier: world.get().tier, level, lite, pixelRatio: renderer.getPixelRatio(), frames: frameNo };
     },
     dispose() {
       saveResume();
       renderer.setAnimationLoop(null);
       window.removeEventListener("resize", resize);
+      document.removeEventListener("visibilitychange", onVisibility);
       input.dispose();
       audio.dispose();
       islands.dispose();

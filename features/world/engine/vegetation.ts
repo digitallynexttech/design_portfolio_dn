@@ -260,6 +260,8 @@ export function createFlora(ctx: { scene: THREE.Scene; shared: Shared; tier: 1 |
   const rocks: { x: number; y: number; z: number; s: number }[] = [];
   const meshes: THREE.Object3D[] = [];
   const disposables: { dispose(): void }[] = [];
+  let lawn: { geometry: THREE.InstancedBufferGeometry; total: number } | null = null;
+  let grassDensity = 1;
 
   const barkSet = textures.set("bark");
   const leafTex = textures.card("leaves-cluster.webp");
@@ -285,7 +287,7 @@ export function createFlora(ctx: { scene: THREE.Scene; shared: Shared; tier: 1 |
   };
 
   const leafMaterial = (map: THREE.Texture, height: number, kind: TreeKind) => {
-    const m = new THREE.MeshStandardNodeMaterial({ side: THREE.DoubleSide, alphaTest: 0.42, roughness: 1, metalness: 0 });
+    const m = new THREE.MeshStandardNodeMaterial({ side: THREE.DoubleSide, roughness: 1, metalness: 0 });
     const t = texture(map, uv());
     // Per-tree colour variety, then the season.
     const vary = hash(instanceIndex.toFloat().add(11.7)).mul(0.25).add(0.88);
@@ -297,7 +299,13 @@ export function createFlora(ctx: { scene: THREE.Scene; shared: Shared; tier: 1 |
     col = mix(col, vec3(0.88, 0.91, 0.95), snow);
     m.colorNode = col;
     // Winter thins broadleaf canopies.
-    m.opacityNode = kind === "round" ? t.a.mul(float(1).sub(u.cover.mul(0.35))) : t.a;
+    const opacity = kind === "round" ? t.a.mul(float(1).sub(u.cover.mul(0.35))) : t.a;
+    m.opacityNode = opacity;
+    // The leaf's outline, as a mask rather than alphaTest. The sun's shadow pass shares one
+    // material among all casters and copies each caster's alphaTest onto it; alternating between
+    // cut-out leaves and solid shapes changed its version every draw, so every caster rebuilt its
+    // cache key every frame. A mask also reaches the shadow pass, so canopies cast dappled shade.
+    m.maskNode = opacity.greaterThan(0.42);
     // Light passing through leaves when the sun is behind them.
     const view = normalize(cameraPosition.sub(positionWorld));
     const through = pow(max(dot(view.negate(), u.sunDir), 0), float(4)).mul(u.sunI).mul(0.18);
@@ -392,6 +400,11 @@ export function createFlora(ctx: { scene: THREE.Scene; shared: Shared; tier: 1 |
       if (tier >= 2) buildGrass();
       void buildFerns();
     },
+    /** Grass density 0–1 (auto quality): fewer blades, spread evenly over every lawn. No rebuild. */
+    setGrass(k: number) {
+      grassDensity = k;
+      if (lawn) lawn.geometry.instanceCount = Math.round(lawn.total * k);
+    },
     dispose() {
       for (const m of meshes) m.removeFromParent();
       for (const d of disposables) d.dispose();
@@ -423,12 +436,24 @@ export function createFlora(ctx: { scene: THREE.Scene; shared: Shared; tier: 1 |
       for (const p of pts2) offsets.push(p.x, groundHeight(land, p.x, p.z) - 0.02, p.z);
     }
     if (!offsets.length) return;
+    // Shuffled, so drawing only the first part of the list thins every lawn evenly.
+    const total = offsets.length / 3;
+    const rand = seeded(97);
+    for (let i = total - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      for (let c = 0; c < 3; c++) {
+        const t = offsets[i * 3 + c];
+        offsets[i * 3 + c] = offsets[j * 3 + c];
+        offsets[j * 3 + c] = t;
+      }
+    }
     const geometry = new THREE.InstancedBufferGeometry();
     geometry.index = blade.index;
     geometry.setAttribute("position", blade.attributes.position);
     geometry.setAttribute("normal", blade.attributes.normal);
     geometry.setAttribute("offset", new THREE.InstancedBufferAttribute(new Float32Array(offsets), 3));
-    geometry.instanceCount = offsets.length / 3;
+    geometry.instanceCount = Math.round(total * grassDensity);
+    lawn = { geometry, total };
     geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 400);
     const material = new THREE.MeshStandardNodeMaterial({ side: THREE.DoubleSide, roughness: 0.8 });
     const id = instanceIndex.toFloat();
@@ -478,7 +503,23 @@ export function createFlora(ctx: { scene: THREE.Scene; shared: Shared; tier: 1 |
       if (!land.island || land.ground === "stone" || land.ground === "linen") continue;
       for (const p of scatter(land, tier === 1 ? 5 : 9, { minH: 0.9, maxRR: 0.78, spacing: 1.6, seed: land.seed * 13 })) places.push({ ...p, s: 1.1 + Math.random() * 0.8 });
     }
-    const inst = detail(new THREE.InstancedMesh(geo, mesh0.material as THREE.Material, places.length));
+    // The scan's own material, with its cut-out (glTF MASK, i.e. alphaTest) as a mask node: see
+    // leafMaterial for why no shadow caster uses alphaTest.
+    const scan = mesh0.material as THREE.MeshStandardMaterial;
+    const material = new THREE.MeshStandardNodeMaterial({
+      map: scan.map,
+      normalMap: scan.normalMap,
+      normalScale: scan.normalScale,
+      roughnessMap: scan.roughnessMap,
+      metalnessMap: scan.metalnessMap,
+      roughness: scan.roughness,
+      metalness: scan.metalness,
+      color: scan.color,
+      side: scan.side,
+    });
+    if (scan.map && scan.alphaTest > 0) material.maskNode = texture(scan.map, uv()).a.greaterThan(scan.alphaTest);
+    disposables.push(material);
+    const inst = detail(new THREE.InstancedMesh(geo, material, places.length));
     const m = new THREE.Matrix4();
     places.forEach((p, i) => {
       m.compose(new THREE.Vector3(p.x, p.y - 0.05, p.z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, i * 2.3, 0)), new THREE.Vector3(p.s, p.s, p.s));
