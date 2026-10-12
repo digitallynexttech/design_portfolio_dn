@@ -9,8 +9,12 @@ type Props = {
   className?: string;
 };
 
-/** Phone frames and tall images never grow past this, so a portrait screenshot doesn't fill a screen. */
-const NARROW = "(min-width: 416px) 352px, 92vw";
+/**
+ * Phone frames and tall images never grow past 352px, so a portrait screenshot doesn't fill a screen.
+ * Pixels only: a `vw` anywhere in `sizes` makes next/image drop every width under ~600px, so a 352px
+ * frame would always fetch 640px or more. Below 416px the frame is 92vw, within 10% of this.
+ */
+export const NARROW = "352px";
 
 /** Screenshots get a drawn browser or phone frame; photography is shown bare. */
 export function FramedImage({ image, frame = "none", sizes = "(min-width: 1216px) 1120px, 92vw", priority, className = "" }: Props) {
@@ -22,7 +26,9 @@ export function FramedImage({ image, frame = "none", sizes = "(min-width: 1216px
       width={image.width}
       height={image.height}
       sizes={frame === "phone" || tall ? NARROW : sizes}
-      preload={priority}
+      // Above-the-fold images are in the server HTML: fetch them eagerly, first.
+      loading={priority ? "eager" : undefined}
+      fetchPriority={priority ? "high" : undefined}
       className="h-auto w-full"
     />
   );

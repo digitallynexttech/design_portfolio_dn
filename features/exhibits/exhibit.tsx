@@ -95,11 +95,13 @@ export function Exhibit({ study }: { study: CaseStudy }) {
       className="exhibit relative isolate h-[calc(100svh-15rem)] min-h-[22rem] overflow-hidden bg-(--c-surface) md:h-[max(26rem,calc(100svh-21rem))]"
     >
       <ViewTransition name={`poster-${study.slug}`} share="poster-morph" default="none">
+        {/* The page's LCP: in the server HTML already, so fetched eagerly at high priority. */}
         <Image
           src={study.poster.src}
           alt={study.poster.alt}
           fill
-          preload
+          loading="eager"
+          fetchPriority="high"
           sizes="100vw"
           className="object-cover transition-opacity duration-700"
           style={{ opacity: ready ? 0 : 1 }}

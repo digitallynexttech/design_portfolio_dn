@@ -3,10 +3,11 @@
 import "@/features/stage/quiet-three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
-import { Suspense, useEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import type { ExhibitProps } from "./exhibit";
+import { roomEnvironment } from "./room-environment";
+import { exhibitDpr, useCompiled } from "./use-compiled";
 import { prefersReducedMotion, useInView } from "./use-in-view";
 
 const MODEL = "/models/skelmet/skull.glb";
@@ -42,6 +43,9 @@ function Skull({ spin, pointer, onReady }: { spin: React.RefObject<Spin>; pointe
     return () => model.filament.dispose();
   }, [model]);
 
+  // Hidden until its shader is compiled; the poster stays up until then.
+  const compiled = useCompiled(model.root);
+
   useFrame((state, delta) => {
     const s = spin.current;
     const g = group.current;
@@ -63,14 +67,14 @@ function Skull({ spin, pointer, onReady }: { spin: React.RefObject<Spin>; pointe
     g.position.y = reduced ? 0 : Math.sin(state.clock.elapsedTime * 1.3) * 0.06;
     if (material.current) material.current.emissiveIntensity = 0.03 + s.flare * 0.9;
 
-    if (!ready.current) {
+    if (compiled && !ready.current) {
       ready.current = true;
       onReady();
     }
   });
 
   return (
-    <group ref={group}>
+    <group ref={group} visible={compiled}>
       <primitive object={model.root} />
     </group>
   );
@@ -118,19 +122,25 @@ function Embers({ spin }: { spin: React.RefObject<Spin> }) {
   );
 }
 
-function Studio() {
+/** The garage's soft room light. `onLit` fires once the environment is set, so the skull compiles with it. */
+function Studio({ onLit }: { onLit: (lit: boolean) => void }) {
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);
   useEffect(() => {
-    const pmrem = new THREE.PMREMGenerator(gl);
-    const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-    scene.environment = env;
-    scene.environmentIntensity = 0.18;
+    let live = true;
+    let env: THREE.Texture | undefined;
+    void roomEnvironment(gl).then((texture) => {
+      if (!live) return texture.dispose();
+      env = texture;
+      scene.environment = texture;
+      scene.environmentIntensity = 0.18;
+      onLit(true);
+    });
     return () => {
-      env.dispose();
-      pmrem.dispose();
+      live = false;
+      env?.dispose();
     };
-  }, [gl, scene]);
+  }, [gl, scene, onLit]);
   return (
     <>
       <ambientLight intensity={0.04} />
@@ -144,6 +154,8 @@ function Studio() {
 export default function SkelmetExhibit({ onReady }: ExhibitProps) {
   const host = useRef<HTMLDivElement>(null);
   const inView = useInView(host, "100px");
+  const [dpr] = useState(exhibitDpr);
+  const [lit, setLit] = useState(false);
   const spin = useRef<Spin>({ yaw: 0, pitch: 0, vYaw: 0, vPitch: 0, flare: 0, dragging: false });
   const pointer = useRef(new THREE.Vector2());
   const drag = useRef({ x: 0, y: 0, t: 0 });
@@ -204,16 +216,18 @@ export default function SkelmetExhibit({ onReady }: ExhibitProps) {
         Park the menace
       </p>
       <Canvas
-        dpr={[1, 1.75]}
+        dpr={dpr}
         frameloop={inView ? "always" : "never"}
         camera={{ position: [0, 0, 6], fov: 34 }}
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
         style={{ position: "absolute", inset: 0 }}
       >
-        <Studio />
-        <Suspense fallback={null}>
-          <Skull spin={spin} pointer={pointer} onReady={onReady} />
-        </Suspense>
+        <Studio onLit={setLit} />
+        {lit ? (
+          <Suspense fallback={null}>
+            <Skull spin={spin} pointer={pointer} onReady={onReady} />
+          </Suspense>
+        ) : null}
         <Embers spin={spin} />
       </Canvas>
     </div>

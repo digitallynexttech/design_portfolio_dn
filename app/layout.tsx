@@ -1,9 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import {
-  Geist_Mono,
-  Stack_Sans_Headline,
-  Stack_Sans_Text,
-} from "next/font/google";
+import { Geist_Mono } from "next/font/google";
 import { JsonLd } from "@/components/ui/json-ld";
 import { ServiceWorker } from "@/components/ui/service-worker";
 import { SiteFooter } from "@/components/ui/site-footer";
@@ -13,34 +9,14 @@ import { WorldRoot } from "@/features/world/ui/world-root";
 import { MAIN_SITE, SITE_URL, SOCIALS } from "@/lib/site";
 import "./globals.css";
 
-// Next has no metric overrides for Stack Sans, so we skip its generated fallback and name our own:
-// the metric-matched "… Fallback" faces in globals.css keep line breaks steady through the swap.
-const headline = Stack_Sans_Headline({
-  subsets: ["latin"],
-  variable: "--font-headline",
-  display: "swap",
-  adjustFontFallback: false,
-  fallback: [
-    "Stack Sans Headline Fallback",
-    "Helvetica Neue",
-    "Arial",
-    "system-ui",
-    "sans-serif",
-  ],
-});
-const text = Stack_Sans_Text({
-  subsets: ["latin"],
-  variable: "--font-text",
-  display: "swap",
-  adjustFontFallback: false,
-  fallback: [
-    "Stack Sans Text Fallback",
-    "Helvetica Neue",
-    "Arial",
-    "system-ui",
-    "sans-serif",
-  ],
-});
+// Stack Sans (headline and text) is self-hosted from /fonts/ and declared in globals.css, next to
+// its metric-matched fallbacks. Through next/font, its preload travelled in a `Link` header whose URL
+// Next rewrites per deployment (?dpl=, /immutable/), while the stylesheet asked for the file by its
+// own URL, so the browser could fetch each face twice. Here the preload and the @font-face rule name
+// the same literal path, so each face downloads exactly once. Only the latin files are preloaded:
+// they are what the first paint sets. Bump the -vN suffix if a file ever changes.
+const PRELOAD_FONTS = ["/fonts/stack-sans-headline-latin-v1.woff2", "/fonts/stack-sans-text-latin-v1.woff2"];
+
 // Mono only sets labels, never the first paint's largest text, so it doesn't compete for preload.
 const mono = Geist_Mono({
   subsets: ["latin"],
@@ -89,9 +65,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
       data-scroll-behavior="smooth"
       data-header="shown"
-      className={`${headline.variable} ${text.variable} ${mono.variable} antialiased`}
+      className={`${mono.variable} antialiased`}
     >
       <head>
+        {PRELOAD_FONTS.map((href) => (
+          <link key={href} rel="preload" href={href} as="font" type="font/woff2" crossOrigin="anonymous" />
+        ))}
         <script dangerouslySetInnerHTML={{ __html: motionFlag }} />
       </head>
       <body>

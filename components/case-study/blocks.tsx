@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import type { Block, Frame, Img } from "@/content/types";
 import { fontFamily } from "@/lib/client-fonts";
 import { Architecture } from "./architecture";
-import { FramedImage } from "./framed-image";
+import { FramedImage, NARROW } from "./framed-image";
 
 function luminance(hex: string): number {
   const n = Number.parseInt(hex.replace("#", ""), 16);
@@ -43,7 +43,7 @@ function pairLayout(images: [Img, Img], frames?: [Frame, Frame]) {
   const portrait = ratios.every((r) => r < 0.8);
   const sizes = ratios.map((r, i) =>
     frames?.[i] === "phone"
-      ? "(min-width: 416px) 352px, 92vw"
+      ? NARROW
       : `(min-width: 1520px) ${Math.round((1472 * r) / total)}px, (min-width: 768px) ${Math.round((100 * r) / total)}vw, 100vw`,
   );
   return { columns, sizes, portrait };

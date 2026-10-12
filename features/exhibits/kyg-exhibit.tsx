@@ -5,10 +5,11 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useAnimations, useGLTF } from "@react-three/drei";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { KYG_CREW, KYG_GENEE } from "@/content/exhibits/kyg";
 import type { ExhibitProps } from "./exhibit";
+import { roomEnvironment } from "./room-environment";
+import { exhibitDpr, useCompiled } from "./use-compiled";
 import { prefersReducedMotion, useInView } from "./use-in-view";
 
 const DRACO = "/draco/";
@@ -49,6 +50,8 @@ function Genee({ onReady }: { onReady: () => void }) {
   const { scene } = useGLTF(KYG_GENEE.model, DRACO);
   const spread = useSpread();
   const fitted = useFitted(scene, 2.6);
+  // Hidden until its shaders are compiled; the poster stays up until then.
+  const compiled = useCompiled(fitted);
   const group = useRef<THREE.Group>(null);
   const ready = useRef(false);
   useFrame((state) => {
@@ -59,7 +62,7 @@ function Genee({ onReady }: { onReady: () => void }) {
       g.rotation.y = Math.sin(state.clock.elapsedTime * 0.17) * 0.5;
       g.scale.setScalar(1 + Math.sin(state.clock.elapsedTime * 1.6) * 0.012);
     }
-    if (!ready.current) {
+    if (compiled && !ready.current) {
       ready.current = true;
       onReady();
     }
@@ -67,6 +70,7 @@ function Genee({ onReady }: { onReady: () => void }) {
   return (
     <group
       ref={group}
+      visible={compiled}
       position={[-spread, -1.35, 0]}
       scale={spread < 1 ? 0.8 : 1}
     >
@@ -84,6 +88,8 @@ function CrewMember({
 }) {
   const { scene, animations } = useGLTF(crew.model, DRACO);
   const fitted = useFitted(scene, 2.05);
+  // Each mascot appears once its shaders are ready (the first one compiles; the rest reuse it).
+  const compiled = useCompiled(fitted);
   const spread = useSpread();
   const group = useRef<THREE.Group>(null);
   const { actions, mixer } = useAnimations(animations, group);
@@ -98,10 +104,11 @@ function CrewMember({
     idle.fadeOut(0.2);
   };
 
-  // Arrive with a jump, settle into idle; reduced motion keeps a slow idle only.
+  // Arrive with a jump, settle into idle; reduced motion keeps a slow idle only. Starts once the
+  // mascot is visible, so the jump is never spent while its shaders are still compiling.
   useEffect(() => {
     const idle = actions[crew.clips.idle];
-    if (!idle) return;
+    if (!idle || !compiled) return;
     if (prefersReducedMotion()) {
       idle.setEffectiveTimeScale(0.5).play();
       return;
@@ -115,9 +122,9 @@ function CrewMember({
     };
     mixer.addEventListener("finished", onFinished);
     return () => mixer.removeEventListener("finished", onFinished);
-    // playOnce reads the same actions object; re-run only when the crew member changes.
+    // playOnce reads the same actions object; re-run only when the crew member changes or appears.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [actions, mixer, crew]);
+  }, [actions, mixer, crew, compiled]);
 
   useEffect(() => {
     if (signatureKey === 0 || prefersReducedMotion()) return;
@@ -128,6 +135,7 @@ function CrewMember({
   return (
     <group
       ref={group}
+      visible={compiled}
       position={[spread * 1.05, -1.35, 0.3]}
       scale={spread < 1 ? 0.8 : 1}
       onPointerOver={() => {
@@ -141,20 +149,26 @@ function CrewMember({
   );
 }
 
-function Lighting() {
+/** Studio light. `onLit` fires once the environment is set, so the mascots compile with it. */
+function Lighting({ onLit }: { onLit: (lit: boolean) => void }) {
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);
   useEffect(() => {
     // Neutral tone mapping keeps the brand teal teal; ACES shifts it toward mint.
     gl.toneMapping = THREE.NeutralToneMapping;
-    const pmrem = new THREE.PMREMGenerator(gl);
-    const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-    scene.environment = env;
+    let live = true;
+    let env: THREE.Texture | undefined;
+    void roomEnvironment(gl).then((texture) => {
+      if (!live) return texture.dispose();
+      env = texture;
+      scene.environment = texture;
+      onLit(true);
+    });
     return () => {
-      env.dispose();
-      pmrem.dispose();
+      live = false;
+      env?.dispose();
     };
-  }, [gl, scene]);
+  }, [gl, scene, onLit]);
   return (
     <>
       <directionalLight position={[2, 4, 3]} intensity={1.6} />
@@ -170,8 +184,10 @@ function Lighting() {
 export default function KygExhibit({ onReady }: ExhibitProps) {
   const host = useRef<HTMLDivElement>(null);
   const inView = useInView(host, "100px");
+  const [dpr] = useState(exhibitDpr);
   const [index, setIndex] = useState(0);
   const [signature, setSignature] = useState(0);
+  const [lit, setLit] = useState(false);
   const crew = KYG_CREW[index];
 
   const choose = (i: number) => {
@@ -189,22 +205,26 @@ export default function KygExhibit({ onReady }: ExhibitProps) {
       }}
     >
       <Canvas
-        dpr={[1, 1.75]}
+        dpr={dpr}
         frameloop={inView ? "always" : "never"}
         camera={{ position: [0, 0.2, 6.2], fov: 35 }}
         gl={{ antialias: true, alpha: true }}
         style={{ position: "absolute", inset: 0 }}
         onPointerMissed={() => undefined}
       >
-        <Lighting />
-        <Suspense fallback={null}>
-          <Genee onReady={onReady} />
-        </Suspense>
-        <Suspense fallback={null}>
-          <group onClick={() => setSignature((n) => n + 1)}>
-            <CrewMember key={crew.id} crew={crew} signatureKey={signature} />
-          </group>
-        </Suspense>
+        <Lighting onLit={setLit} />
+        {lit ? (
+          <>
+            <Suspense fallback={null}>
+              <Genee onReady={onReady} />
+            </Suspense>
+            <Suspense fallback={null}>
+              <group onClick={() => setSignature((n) => n + 1)}>
+                <CrewMember key={crew.id} crew={crew} signatureKey={signature} />
+              </group>
+            </Suspense>
+          </>
+        ) : null}
       </Canvas>
 
       <div className="absolute right-(--gutter) bottom-24 left-(--gutter) flex flex-col items-end gap-3 md:bottom-5 md:left-auto">
@@ -243,3 +263,5 @@ export default function KygExhibit({ onReady }: ExhibitProps) {
 }
 
 useGLTF.preload(KYG_GENEE.model, DRACO);
+// The first mascot too: both download while the light is being prepared.
+useGLTF.preload(KYG_CREW[0].model, DRACO);

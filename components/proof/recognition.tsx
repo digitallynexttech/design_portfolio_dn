@@ -78,7 +78,15 @@ function Mark({ item, leading }: { item: RecognitionItem; leading: boolean }) {
   if (item.plate) {
     return (
       <div className="flex h-16 items-center rounded-xl bg-paper px-4">
-        <Image src={image.src} alt="" width={image.width} height={image.height} className="max-h-12 w-auto object-contain" />
+        {/* Drawn 48 px tall (max-h-12), so as wide as 48 px times its aspect ratio. */}
+        <Image
+          src={image.src}
+          alt=""
+          width={image.width}
+          height={image.height}
+          sizes={`${Math.ceil((48 * image.width) / image.height)}px`}
+          className="max-h-12 w-auto object-contain"
+        />
       </div>
     );
   }

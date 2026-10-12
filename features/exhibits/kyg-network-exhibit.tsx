@@ -47,7 +47,7 @@ export default function KygNetworkExhibit({ onReady }: ExhibitProps) {
                   </span>
                 </span>
               ) : (
-                <Image src={s.desktop.src} alt={s.desktop.alt} fill sizes="44rem" className="object-cover object-top" />
+                <Image src={s.desktop.src} alt={s.desktop.alt} fill sizes="(min-width: 904px) 44rem, 78vw" className="object-cover object-top" />
               )}
             </button>
           );
