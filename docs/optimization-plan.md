@@ -41,3 +41,17 @@ Hobby is for non-commercial use; a company site should move to Pro when it launc
 4. **World: lighter and adaptive.** Shrink textures and models (KYG mascots) and keep phone downloads small. Full by default, but step down automatically when a device can't hold it (an explicit choice in Options is kept).
 
 Then: merge, production build, measure against the targets, push, check live.
+
+## Results (12 Oct, merged production build, local)
+
+| Target | Result |
+|---|---|
+| Zero functions per page view | **Met.** Every page is prerendered and served from the CDN, bots included (they used to get a fresh server render of every page). Only `/api/weather` runs: cached for 30 minutes per 10 km area on the server and in the visitor's browser. |
+| Under 1,500 image variants | **Met:** about 930 (was about 2,190). WebP only, one quality, six screen widths and three icon widths, 31-day cache. |
+| First paint ≤ 0.45 MB | **Met on phones (0.43 MB); desktop 0.47 MB.** Each font file now downloads once (they downloaded twice). |
+| Home scrolled through ≤ 1.2 MB | **Met on desktop (1.18 MB, was 1.86); phone 1.38 MB.** The skull particles come from a 141 KB point file instead of the 562 KB model; the world engine no longer prefetches until a visitor reaches for Set sail. |
+| World ≤ 5 MB desktop / ≤ 3.5 MB phone | **Met:** 3.2 MB / 2.6 MB (was 7.6 / 7.5). |
+| No frame over 50 ms at 4× CPU | **Nearly:** long tasks while scrolling home went from 10 to 0; about one 50–70 ms frame remains per run (a GPU first-use cost). |
+| Lighthouse mobile ≥ 95 home, ≥ 90 case studies | **Not met:** 88 on both. Accessibility, best practices and SEO are 100. The lab LCP (3.5–3.8 s) is a simulation; the real LCP is the hero heading at first paint. Total blocking time is 50 ms, layout shift 0. |
+
+Also: the reel video is 2.7 MB (was 6.0); SKELMET's case study is 22% lighter and no longer freezes for a second while its 3D compiles; GSAP and Lenis are gone; the world steps down by itself and stops rendering behind panels.

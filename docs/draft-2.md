@@ -67,6 +67,21 @@ Karan's brief: "make every element high quality, specially the boat… the water
 - Auto quality now waits 6 s and needs two slow windows in a row before stepping down. If it does step down, it also drops the mirror and the multisampling.
 - World creation can now be cancelled. In development, React's double mount used to load two worlds at once.
 
+**Optimisation pass (12 Oct 2026, for Vercel's free plan; supersedes the asset sizes and auto-quality notes above):**
+- **Download from Set sail to sailing:** 7.6 → 3.2 MB on desktop, 7.5 → 2.6 MB on a Pixel 7.
+  - Normal and roughness maps are now RGB `*-nr-512` files, with `*-nr-256` copies for phones.
+  - The world has its own lighter copies of the skull (`world/models/skull.glb`, 53 KB) and the KYG mascots (`world/models/kyg/`, 791 KB for all six, animations kept). The case studies keep the full-detail originals.
+  - Panel photos are screen-sized copies in `world/img/`.
+- **Adaptive Full (`engine/quality.ts`):** Full is still the default, and the world steps itself down until the visitor picks a quality in Options (prefs v3 store whether it was a real choice).
+  - The ladder: pixel ratio, then the mirror, then shadow rate, grass and weather, then a lower pixel ratio, then bloom, then a 30 fps cap.
+  - No step rebuilds a shader: the old step dropped multisampling, which rebuilt about 300 pipelines.
+  - Phones, devices with 4 GB of memory or less, and WebGL-only browsers start on a lighter Full: 512 px colour, 256 px normal maps, 1.5× pixels and no sea mirror.
+- **Engine fixes:**
+  - The sun's shadow map rendered twice a frame (once for the mirror camera); it now renders once.
+  - Leaf cards and ferns cast masked, dappled shade instead of squares, which also stopped about 100 objects rebuilding cache keys every frame.
+  - The render loop stops while a panel or overlay is open.
+- **Loading:** the engine prefetches on intent (pointer over, focus or touch on Set sail) instead of on any interaction, so a home visit that never sails downloads about 260 KB less.
+
 **Verified (10 Oct 2026, production build):** type check, lint and build clean. axe 0 violations on home, `/work`, all making-of chapters and inside the world. Lighthouse home: desktop 100 / 100 / 100 / 100; mobile performance 90–91, the rest 100. The mobile LCP is the hero's intro text repainting when the web font arrives, not the world or its poster. Desktop and Pixel 7 flows pass with no console errors (the desktop flow runs on SwiftShader and once timed out clicking a button between frames; the re-run passed). The WebGL 2 path renders at tiers 1 and 2 with no errors. New hero posters and making-of images were captured from the new world.
 
 ---
