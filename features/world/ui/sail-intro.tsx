@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { whenEngaged } from "@/features/stage/engage";
 import type { WorldData } from "../data";
 import { world } from "../store";
 import { openWorld } from "./world-root";
@@ -16,10 +15,24 @@ function canRun(): boolean {
 
 const noop = () => () => undefined;
 
+let prefetched = false;
+
 /**
- * The front door: "Set sail" opens the world over the page. The world's code starts downloading
- * once the visitor moves, so the button is quick, but never before (it doesn't touch page speed).
+ * Start fetching the world's code (about 350 KB) the moment a visitor shows they mean to sail:
+ * a pointer over the controls, keyboard focus on them, or a finger coming down. Visitors who never
+ * sail never download it. Data-saver visitors download it only when they actually set sail.
+ * (The controls sit in the hero, in view from the first paint, so scrolling into view would be no
+ * signal at all.) A /#sail deep link loads the world directly and doesn't need this.
  */
+function prefetchWorld() {
+  if (prefetched) return;
+  if ((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData) return;
+  prefetched = true;
+  void import("../engine");
+  void import("./world-app");
+}
+
+/** The front door: "Set sail" opens the world over the page. */
 export function SailIntro({ data }: { data: WorldData }) {
   const supported = useSyncExternalStore(noop, canRun, () => true);
   const [sound, setSound] = useState(false);
@@ -28,22 +41,12 @@ export function SailIntro({ data }: { data: WorldData }) {
     world.setData(data);
   }, [data]);
 
-  useEffect(() => {
-    // Data-saver visitors download the world only if they actually set sail.
-    const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
-    if (!supported || saveData) return;
-    return whenEngaged(() => {
-      void import("../engine");
-      void import("./world-app");
-    }, 2500);
-  }, [supported]);
-
   if (!supported) {
     return <p className="max-w-[34ch] text-sm text-paper/70">This browser can&apos;t draw our 3D world; every project in it is below.</p>;
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2" onPointerEnter={prefetchWorld} onPointerDown={prefetchWorld} onTouchStart={prefetchWorld} onFocus={prefetchWorld}>
       <button type="button" onClick={() => openWorld(sound)} className="sail-button">
         <span className="sail-button__wake" aria-hidden />
         Set sail <span aria-hidden>→</span>

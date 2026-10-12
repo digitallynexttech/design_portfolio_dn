@@ -85,6 +85,8 @@ export function OptionsContent({ onClassic }: { onClassic: () => void }) {
   const showing = useWorld((v) => v.showing);
   const backend = useWorld((v) => v.backend);
   const tier = useWorld((v) => v.tier);
+  const chosen = useWorld((v) => v.chosen);
+  const adapting = !chosen || quality === "auto";
 
   const setPick = (patch: Partial<WeatherPick>) => {
     world.set({ pick: { ...pick, ...patch } });
@@ -156,7 +158,8 @@ export function OptionsContent({ onClassic }: { onClassic: () => void }) {
         legend="Quality"
         value={quality}
         onChange={(q) => {
-          world.set({ quality: q });
+          // An explicit pick is kept: the world stops lightening itself (Auto keeps adapting).
+          world.set({ quality: q, chosen: true });
           world.engine()?.setQuality(q);
           savePrefs();
         }}
@@ -174,8 +177,8 @@ export function OptionsContent({ onClassic }: { onClassic: () => void }) {
 
       <div className="mt-10 grid gap-2 border-t border-paper/15 pt-6 text-sm text-paper/60">
         <p>
-          Rendering with {backend === "webgpu" ? "WebGPU" : "WebGL 2"}, quality level {tier}. Your approximate city is used only to fetch the weather; nothing is
-          stored.
+          Rendering with {backend === "webgpu" ? "WebGPU" : "WebGL 2"}, quality level {tier}
+          {adapting ? ", lightening itself if this device needs it" : ""}. Your approximate city is used only to fetch the weather; nothing is stored.
         </p>
         <p>
           Weather data from{" "}

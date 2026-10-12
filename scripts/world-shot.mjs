@@ -1,5 +1,5 @@
 // Screenshots of the 3D world for development and for poster frames.
-// Usage: node scripts/world-shot.mjs <url> <out.png> [width] [height] [waitMs] [--webgpu] [--keys=KeyW:2000,KeyA:500]
+// Usage: node scripts/world-shot.mjs <url> <out.png> [width] [height] [waitMs] [--webgpu] [--mobile] [--dpr=2] [--keys=KeyW:2000,KeyA:500]
 // Prints console errors and the engine status line. Uses SwiftShader so it runs on any machine.
 import { chromium } from "@playwright/test";
 
@@ -7,6 +7,7 @@ const [url, out, w = "1440", h = "900", wait = "2500", ...flags] = process.argv.
 const webgpu = flags.includes("--webgpu");
 const keysFlag = flags.find((f) => f.startsWith("--keys="));
 const mobile = flags.includes("--mobile");
+const dpr = Number(flags.find((f) => f.startsWith("--dpr="))?.slice(6) ?? 1);
 
 // --webgpu uses the installed Chrome on the real GPU (fast, true WebGPU); otherwise headless
 // Chromium on SwiftShader, which tests the WebGL 2 path.
@@ -16,7 +17,7 @@ const browser = await chromium.launch({
     ? ["--enable-unsafe-webgpu"]
     : ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"],
 });
-const page = await browser.newPage({ viewport: { width: Number(w), height: Number(h) }, deviceScaleFactor: 1, hasTouch: mobile, isMobile: mobile });
+const page = await browser.newPage({ viewport: { width: Number(w), height: Number(h) }, deviceScaleFactor: dpr, hasTouch: mobile, isMobile: mobile });
 const logs = [];
 page.on("console", (m) => {
   if (process.env.ALL_LOGS || m.type() === "error" || m.type() === "warning") logs.push(`[${m.type()}] ${m.text().slice(0, 400)}`);

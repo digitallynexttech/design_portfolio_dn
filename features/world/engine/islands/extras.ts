@@ -10,6 +10,7 @@ import { PAL } from "../shared";
 import { groundHeight, landById } from "../terrain";
 import { type Batch, type Disposables, type IslandCtx, type Materials, type Part, SHAPES, textTexture } from "./common";
 import { detail } from "../layers";
+import { screenImage } from "./loaders";
 
 type Floater = { body: Body; object: THREE.Object3D; lift: number; anchor?: { x: number; z: number; k: number } };
 
@@ -241,7 +242,7 @@ export function buildExtras(ctx: IslandCtx, batch: Batch, mats: Materials, d: Di
   // --- Drive-in screen: the reel -------------------------------------------------------------
   {
     const s = REEL_SCREEN;
-    const posterTex = new THREE.TextureLoader().load("/video/reel-poster.webp");
+    const posterTex = new THREE.TextureLoader().load(screenImage("/video/reel-poster.webp"));
     posterTex.colorSpace = THREE.SRGBColorSpace;
     d.textures.push(posterTex);
     const video = document.createElement("video");
@@ -461,7 +462,7 @@ export function buildExtras(ctx: IslandCtx, batch: Batch, mats: Materials, d: Di
     updates.push((_dt, _t, _n, boat) => {
       if (loaded || Math.hypot(boat.x - slot.x, boat.z - slot.z) > 130) return;
       loaded = true;
-      new THREE.TextureLoader().load(entry.image.src, (tex) => {
+      new THREE.TextureLoader().load(screenImage(entry.image.src), (tex) => {
         tex.colorSpace = THREE.SRGBColorSpace;
         d.textures.push(tex);
         const m = mats.screen(tex);

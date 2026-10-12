@@ -6,6 +6,7 @@ import { PAL } from "../shared";
 import { groundHeight, landById, scatter } from "../terrain";
 import { type Batch, type Disposables, type IslandCtx, type Materials, type Part, SHAPES, lamp, sign, textTexture } from "./common";
 import { detail } from "../layers";
+import { screenImage } from "./loaders";
 
 type Flora = { tree: (x: number, y: number, z: number, s?: number, kind?: "round" | "pine" | "palm") => void };
 
@@ -46,7 +47,7 @@ export function buildStudio(ctx: IslandCtx, batch: Batch, mats: Materials, d: Di
     d.geometries.push(mesh.geometry);
     batch.add(SHAPES.box, mats.pal(PAL.WOOD_DARK), { x: s.x, y: y + 2.2 + h / 2, z: s.z, ry: s.ry, s: [w + 0.3, h + 0.3, 0.15] });
     for (const k of [-1, 1]) batch.add(SHAPES.box, mats.pal(PAL.WOOD_DARK), { x: s.x + Math.cos(s.ry) * k * w * 0.35, y: y + 1.1, z: s.z - Math.sin(s.ry) * k * w * 0.35, s: [0.2, 2.6, 0.2] });
-    new THREE.TextureLoader().load(photo.src, (tex) => {
+    new THREE.TextureLoader().load(screenImage(photo.src), (tex) => {
       tex.colorSpace = THREE.SRGBColorSpace;
       d.textures.push(tex);
       const m = mats.screen(tex);

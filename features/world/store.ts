@@ -5,7 +5,6 @@ import { useSyncExternalStore } from "react";
 import type { WorldData } from "./data";
 import type { PointKind } from "./layout";
 import { LIVE_PICK, type DayPhase, type LiveWeather, type Season, type WeatherPick, type WeatherState } from "./weather-logic";
-
 export type Near = { id: string; kind: PointKind; ref: string; label: string; verb: string };
 export type Panel = { kind: PointKind; ref: string };
 export type Overlay = "map" | "logbook" | "options" | null;
@@ -25,6 +24,12 @@ export type WorldView = {
   overlay: Overlay;
   sound: boolean;
   quality: Quality;
+  /**
+   * The visitor picked the quality in Options. Until then the world starts on Full and lightens
+   * itself if the device can't hold it; an explicit pick is kept as is (Auto keeps adapting).
+   */
+  chosen: boolean;
+  /** The quality level actually rendering now (it drops below `quality` when the world lightens itself). */
   tier: 1 | 2 | 3;
   backend: "webgpu" | "webgl2" | null;
   pick: WeatherPick;
@@ -51,10 +56,15 @@ export interface EngineHandle {
   zoom(delta: number): void;
   horn(): void;
   resize(): void;
-  /** Frames rendered per second over the last second, and the average CPU time per frame (ms). */
-  stats(): { fps: number; cpuMs: number; calls: number; triangles: number };
+  /**
+   * Frames rendered per second over the last second, the average CPU time per frame (ms), and how
+   * far the world has lightened itself (`level`, 0 = as built; `lite` = phone-scale assets).
+   */
+  stats(): EngineStats;
   dispose(): void;
 }
+
+export type EngineStats = { fps: number; cpuMs: number; calls: number; triangles: number; tier: 1 | 2 | 3; level: number; lite: boolean; pixelRatio: number; frames: number };
 
 const initial: WorldView = {
   status: "closed",
@@ -68,6 +78,7 @@ const initial: WorldView = {
   sound: false,
   // Full quality unless the visitor picks otherwise in Options.
   quality: 3,
+  chosen: false,
   tier: 2,
   backend: null,
   pick: LIVE_PICK,
@@ -117,7 +128,7 @@ export const world = {
     engine = next;
   },
   reset() {
-    state = { ...initial, sound: state.sound, quality: state.quality, pick: state.pick, live: state.live };
+    state = { ...initial, sound: state.sound, quality: state.quality, chosen: state.chosen, pick: state.pick, live: state.live };
     emit();
   },
 };
@@ -134,16 +145,38 @@ export function useWorldData(): WorldData | null {
   return useSyncExternalStore(world.subscribe, () => data, () => null);
 }
 
-// Persisted per device: the visitor's sound, quality and weather choices.
-// v2: quality now defaults to Full; earlier saves (made when it defaulted to Auto) are dropped.
-const PREFS_KEY = "dn-world-prefs-v2";
+// Persisted per device: the visitor's quality and weather choices.
+// v3 records whether the quality was picked in Options (`chosen`). v2 saved the quality whenever
+// any option changed, so its default (Full) can't be told from a pick; anything else in a v2 save
+// was picked, since Full was the only default it ever wrote. v2 is migrated once, then removed.
+const PREFS_KEY = "dn-world-prefs-v3";
+const PREFS_V2 = "dn-world-prefs-v2";
 
-export function loadPrefs(): Partial<Pick<WorldView, "quality" | "pick">> {
+type Prefs = Partial<Pick<WorldView, "quality" | "chosen" | "pick">>;
+
+function validQuality(q: unknown): Quality | null {
+  return q === "auto" || q === 1 || q === 2 || q === 3 ? q : null;
+}
+
+export function loadPrefs(): Prefs {
   try {
-    const raw = window.localStorage.getItem(PREFS_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw) as Partial<Pick<WorldView, "quality" | "pick">>;
-    return { quality: parsed.quality ?? 3, pick: { ...LIVE_PICK, ...parsed.pick } };
+    const store = window.localStorage;
+    let raw = store.getItem(PREFS_KEY);
+    let migrated = false;
+    if (!raw) {
+      raw = store.getItem(PREFS_V2);
+      if (!raw) return {};
+      migrated = true;
+    }
+    const parsed = JSON.parse(raw) as { quality?: unknown; chosen?: unknown; pick?: Partial<WeatherPick> };
+    const quality = validQuality(parsed.quality) ?? 3;
+    const chosen = migrated ? quality !== 3 : parsed.chosen === true;
+    const prefs: Prefs = { quality: chosen ? quality : 3, chosen, pick: { ...LIVE_PICK, ...parsed.pick } };
+    if (migrated) {
+      store.setItem(PREFS_KEY, JSON.stringify(prefs));
+      store.removeItem(PREFS_V2);
+    }
+    return prefs;
   } catch {
     return {};
   }
@@ -151,7 +184,7 @@ export function loadPrefs(): Partial<Pick<WorldView, "quality" | "pick">> {
 
 export function savePrefs() {
   try {
-    window.localStorage.setItem(PREFS_KEY, JSON.stringify({ quality: state.quality, pick: state.pick }));
+    window.localStorage.setItem(PREFS_KEY, JSON.stringify({ quality: state.quality, chosen: state.chosen, pick: state.pick }));
   } catch {
     // Private windows can refuse storage; the world works without it.
   }

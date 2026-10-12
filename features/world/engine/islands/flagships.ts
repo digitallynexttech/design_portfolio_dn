@@ -9,7 +9,7 @@ import { ISLANDS, dockEnd, type Island } from "../../layout";
 import { world } from "../../store";
 import { groundHeight, landById, scatter } from "../terrain";
 import { type Batch, type Disposables, type IslandCtx, type Materials, type Part, SHAPES, lamp, sign, textTexture } from "./common";
-import { loadGLTF } from "./loaders";
+import { loadGLTF, screenImage } from "./loaders";
 import { detail } from "../layers";
 
 type Flora = { tree: (x: number, y: number, z: number, s?: number, kind?: "round" | "pine" | "palm") => void };
@@ -99,9 +99,10 @@ export function buildSkelmet(ctx: IslandCtx, batch: Batch, mats: Materials, d: D
   filament.colorNode = color(new THREE.Color(blaze));
   filament.emissiveNode = color(new THREE.Color(blaze)).mul(flare.mul(1.6).add(ctx.shared.u.night.mul(0.12)).add(0.03));
   d.materials.push(filament);
-  // The print file (0.8 MB) loads with the world: it is in view from the spawn, and loading it
-  // up front lets its shaders build behind the loader instead of stalling the first seconds.
-  void loadGLTF("/models/skelmet/skull.glb").then((gltf) => {
+  // A simplified copy of the print file (the case study shows the full one) loads with the world:
+  // it is in view from the spawn, and loading it up front lets its shaders build behind the
+  // loader instead of stalling the first seconds.
+  void loadGLTF("/world/models/skull.glb").then((gltf) => {
     const root = gltf.scene;
     const box = new THREE.Box3().setFromObject(root);
     const size = box.getSize(new THREE.Vector3());
@@ -151,12 +152,12 @@ export function buildSkelmet(ctx: IslandCtx, batch: Batch, mats: Materials, d: D
 // ---------------------------------------------------------------------------------------------
 
 const KYG_CREW = [
-  { id: "vita", model: "/models/kyg/vita.glb" },
-  { id: "cardi", model: "/models/kyg/cardi.glb" },
-  { id: "genee", model: "/models/kyg/genee.glb" },
-  { id: "dozy", model: "/models/kyg/dozy.glb" },
-  { id: "guard", model: "/models/kyg/guard.glb" },
-  { id: "glow", model: "/models/kyg/glow.glb" },
+  { id: "vita", model: "/world/models/kyg/vita.glb" },
+  { id: "cardi", model: "/world/models/kyg/cardi.glb" },
+  { id: "genee", model: "/world/models/kyg/genee.glb" },
+  { id: "dozy", model: "/world/models/kyg/dozy.glb" },
+  { id: "guard", model: "/world/models/kyg/guard.glb" },
+  { id: "glow", model: "/world/models/kyg/glow.glb" },
 ];
 
 export function buildKyg(ctx: IslandCtx, batch: Batch, mats: Materials, d: Disposables, flora: Flora): Part {
@@ -239,7 +240,8 @@ export function buildKyg(ctx: IslandCtx, batch: Batch, mats: Materials, d: Dispo
   const mixers: THREE.AnimationMixer[] = [];
   const crews: { id: string; actions: Record<string, THREE.AnimationAction>; group: THREE.Group }[] = [];
   const spots = [-14, -10.5, -7, 8.5, 12, 15.5];
-  // The mascots (2.1 MB together) load with the world, for the same reason as SKELMET's skull.
+  // The mascots load with the world, for the same reason as SKELMET's skull. These are simplified
+  // copies (scripts/world-assets.py) with every clip kept; the case study shows the originals.
   const contactGeo = new THREE.CircleGeometry(0.9, 24);
   const contactMat = new THREE.MeshBasicNodeMaterial({ color: "#000000", transparent: true, depthWrite: false });
   contactMat.opacityNode = float(1).sub(smoothstep(0.15, 1, uv().sub(0.5).length().mul(2))).mul(0.42);
@@ -472,7 +474,7 @@ export function buildDnms(ctx: IslandCtx, batch: Batch, mats: Materials, d: Disp
     ctx.scene.add(mesh);
     d.meshes.push(mesh);
     d.geometries.push(mesh.geometry);
-    new THREE.TextureLoader().load(src, (tex) => {
+    new THREE.TextureLoader().load(screenImage(src), (tex) => {
       tex.colorSpace = THREE.SRGBColorSpace;
       d.textures.push(tex);
       const m = mats.screen(tex);

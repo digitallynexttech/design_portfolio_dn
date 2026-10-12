@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
+import { getImageProps } from "next/image";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { LiquidSurface } from "@/components/liquid/liquid-surface";
 import { setWaterCovered } from "@/features/water/bus";
-import { loadPrefs, useWorld, useWorldData, world, type EngineHandle } from "../store";
+import { loadPrefs, useWorld, useWorldData, world, type EngineHandle, type EngineStats } from "../store";
 import { WEATHER_LABEL, type LiveWeather } from "../weather-logic";
 import { MapContent } from "./map";
 import { LogbookContent, OptionsContent } from "./overlays";
@@ -13,6 +13,29 @@ import { TouchControls } from "./touch";
 import { closeWorld } from "./world-root";
 
 type NavigatorHints = Navigator & { deviceMemory?: number; connection?: { saveData?: boolean } };
+type WithStats = Window & { __worldStats?: () => EngineStats };
+
+/**
+ * The loader's backdrop: the same frame of the world as the home hero, with the same art
+ * direction (portrait on phones) and the same image URLs, so it comes from the browser's cache.
+ */
+function LoadingPoster() {
+  const common = { alt: "", sizes: "100vw" };
+  const {
+    props: { srcSet: wide },
+  } = getImageProps({ ...common, width: 1920, height: 1080, src: "/world/poster.webp" });
+  const {
+    props: { srcSet: tall, ...rest },
+  } = getImageProps({ ...common, width: 900, height: 1600, src: "/world/poster-phone.webp" });
+  return (
+    <picture>
+      <source media="(min-aspect-ratio: 4/5)" srcSet={wide} />
+      <source srcSet={tall} />
+      {/* eslint-disable-next-line jsx-a11y/alt-text -- decorative (alt=""); getImageProps supplies alt, src, srcSet and sizes */}
+      <img {...rest} className="absolute inset-0 h-full w-full object-cover" loading="eager" decoding="async" />
+    </picture>
+  );
+}
 
 /** Quality tier for the world, or null if the device can't run it at all. */
 function worldTier(): 1 | 2 | 3 | null {
@@ -129,6 +152,8 @@ export default function WorldApp() {
         }
         engineRef.current = engine;
         world.setEngine(engine);
+        // Read-only diagnostics for performance checks (scripts/world-weight.mjs).
+        (window as WithStats).__worldStats = () => engine.stats();
         engine.setPick(world.get().pick);
         const l = world.get().live;
         if (l) engine.setLive(l);
@@ -147,6 +172,7 @@ export default function WorldApp() {
     return () => {
       disposed = true;
       abort.abort();
+      delete (window as WithStats).__worldStats;
       engineRef.current?.dispose();
       engineRef.current = null;
       world.setEngine(null);
@@ -248,7 +274,7 @@ export default function WorldApp() {
 
       {/* Loading: a real frame of the world, then the world itself. */}
       <div className="world-loading" data-done={running || status === "error"} aria-hidden={running}>
-        <Image src="/world/poster.webp" alt="" fill sizes="100vw" className="object-cover" priority={false} />
+        <LoadingPoster />
         <div className="world-loading__veil" />
         <div className="relative z-10 grid max-w-md gap-4 px-6 text-center">
           {status === "error" ? (
