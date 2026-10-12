@@ -5,6 +5,9 @@ import { RouteFocus } from "@/components/work/route-focus";
 import { WorkGrid } from "@/components/work/work-grid";
 import { WORK_CARDS } from "@/content/work/cards";
 
+// The index must stay complete static output; the build fails if it ever needs per-request work.
+export const ensureStatic = "navigation";
+
 export const metadata: Metadata = {
   title: "Work",
   description:

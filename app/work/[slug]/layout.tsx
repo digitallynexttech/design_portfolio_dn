@@ -5,6 +5,10 @@ import { CASE_STUDIES, chapterHref, chapterMinutes, chaptersFor, getCaseStudy } 
 import { WaterPause } from "@/features/water/water-pause";
 import { clientFontVariables, fontFamily } from "@/lib/client-fonts";
 
+// Every case-study page (overview and chapters) must be complete static output: no server work
+// per view. The build fails if anything here starts reading request data or uncached work.
+export const ensureStatic = "navigation";
+
 export function generateStaticParams() {
   return CASE_STUDIES.map((study) => ({ slug: study.slug }));
 }
