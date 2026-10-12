@@ -20,6 +20,9 @@ export function CompareSlider({ demo }: { demo: Compare }) {
   const touched = useRef(false);
   const id = useId();
   const ratio = demo.after.width / demo.after.height;
+  // The frame never grows taller than 78% of the viewport, so on a landscape screen anything up to
+  // 7:5 is held by height and drawn 78vh × ratio wide, well under the reading column.
+  const sizes = ratio < 1.4 ? `(orientation: landscape) ${(78 * ratio).toFixed(1)}vh, 92vw` : "(min-width: 1216px) 1120px, 92vw";
 
   useEffect(() => {
     const el = frame.current;
@@ -63,9 +66,9 @@ export function CompareSlider({ demo }: { demo: Compare }) {
         className="group relative overflow-hidden rounded-xl ring-1 ring-(--c-line) ring-offset-(--c-bg) transition-shadow has-focus-visible:ring-2 has-focus-visible:ring-(--c-accent) has-focus-visible:ring-offset-4"
         style={{ aspectRatio: ratio }}
       >
-        <Image src={demo.after.src} alt={demo.after.alt} fill sizes="(min-width: 1216px) 1120px, 92vw" className="object-cover" />
+        <Image src={demo.after.src} alt={demo.after.alt} fill sizes={sizes} className="object-cover" />
         <div className="absolute inset-0" style={{ clipPath: `inset(0 ${100 - value}% 0 0)` }}>
-          <Image src={demo.before.src} alt={demo.before.alt} fill sizes="(min-width: 1216px) 1120px, 92vw" className="object-cover" />
+          <Image src={demo.before.src} alt={demo.before.alt} fill sizes={sizes} className="object-cover" />
         </div>
         <div className="pointer-events-none absolute inset-y-0 w-0.5 bg-(--c-accent)" style={{ left: `${value}%` }} aria-hidden>
           <span className="absolute top-1/2 left-1/2 grid size-10 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-(--c-accent) text-sm text-(--c-on-accent) shadow-lg shadow-black/30 transition-[scale] duration-300 group-hover:scale-110 group-has-focus-visible:scale-125">

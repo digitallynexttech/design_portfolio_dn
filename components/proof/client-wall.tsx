@@ -4,6 +4,21 @@ import Image from "next/image";
 import { useState, type CSSProperties } from "react";
 import { CLIENTS } from "@/content/clients";
 
+const clamp = (min: number, value: number, max: number) => Math.min(max, Math.max(min, value));
+
+/**
+ * A logo's optical-size factor and its rendered width, mirroring .logo-current__logo in home.css:
+ * height clamp(1.15rem, k × 1.75rem, 2.5rem), and clamp(1.625rem, k × 2.5rem, 3.5rem) from 768 px.
+ * The `sizes` keeps phones and desktops from fetching variants several times wider than the logo.
+ */
+function logoFit(width: number, height: number) {
+  const aspect = width / height;
+  const k = Math.sqrt(2.6 / aspect);
+  const phone = Math.ceil(aspect * clamp(1.15, k * 1.75, 2.5) * 16);
+  const desktop = Math.ceil(aspect * clamp(1.625, k * 2.5, 3.5) * 16);
+  return { k: k.toFixed(3), sizes: `(min-width: 768px) ${desktop}px, ${phone}px` };
+}
+
 /**
  * Client logos carried on a slow current. A visible Pause control stops it (WCAG 2.2.2), and it also
  * rests under the pointer. With reduced motion every logo shows once, still, in a centred wrap.
@@ -31,18 +46,22 @@ export function ClientWall({ label }: { label?: string }) {
       </div>
       <div className="logo-current__viewport mt-4 overflow-hidden">
         <ul className="logo-current__track flex w-max items-center py-4" aria-label="Clients">
-          {row.map((client, i) => (
-            <li key={`${client.name}-${i}`} aria-hidden={i >= CLIENTS.length || undefined} className="shrink-0">
-              <Image
-                src={client.logo.src}
-                alt={i >= CLIENTS.length ? "" : client.name}
-                width={client.logo.width}
-                height={client.logo.height}
-                style={{ "--logo-k": Math.sqrt(2.6 / (client.logo.width / client.logo.height)).toFixed(3) } as CSSProperties}
-                className="logo-current__logo opacity-70 brightness-0 invert transition-opacity hover:opacity-100"
-              />
-            </li>
-          ))}
+          {row.map((client, i) => {
+            const fit = logoFit(client.logo.width, client.logo.height);
+            return (
+              <li key={`${client.name}-${i}`} aria-hidden={i >= CLIENTS.length || undefined} className="shrink-0">
+                <Image
+                  src={client.logo.src}
+                  alt={i >= CLIENTS.length ? "" : client.name}
+                  width={client.logo.width}
+                  height={client.logo.height}
+                  sizes={fit.sizes}
+                  style={{ "--logo-k": fit.k } as CSSProperties}
+                  className="logo-current__logo opacity-70 brightness-0 invert transition-opacity hover:opacity-100"
+                />
+              </li>
+            );
+          })}
         </ul>
       </div>
     </div>

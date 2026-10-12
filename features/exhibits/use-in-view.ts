@@ -27,6 +27,11 @@ export function useInView(ref: RefObject<Element | null>, rootMargin = "0px"): b
   return inView;
 }
 
+// Exhibits ask every frame; one live query object answers without re-parsing the media query.
+let reducedMotion: MediaQueryList | undefined;
+
 export function prefersReducedMotion(): boolean {
-  return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (typeof window === "undefined") return false;
+  reducedMotion ??= window.matchMedia("(prefers-reduced-motion: reduce)");
+  return reducedMotion.matches;
 }

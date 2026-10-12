@@ -44,7 +44,8 @@ export default function HappyGangaExhibit({ onReady }: ExhibitProps) {
               alt={product.image.alt}
               width={product.image.width}
               height={product.image.height}
-              sizes="20vw"
+              // Drawn by height (46% of the exhibit), so ~0.4 of that wide: under 12rem on desktop.
+              sizes="(min-width: 768px) 12rem, 22vw"
               className="relative h-full w-auto drop-shadow-xl"
             />
           </li>

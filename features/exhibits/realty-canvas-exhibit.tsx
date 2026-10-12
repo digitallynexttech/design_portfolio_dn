@@ -57,7 +57,7 @@ export default function RealtyCanvasExhibit({ onReady }: ExhibitProps) {
               }}
               aria-hidden={!isTop}
             >
-              <Image src={card.image.src} alt={card.image.alt} fill sizes="34rem" className="pointer-events-none object-cover" />
+              <Image src={card.image.src} alt={card.image.alt} fill sizes="(min-width: 633px) 34rem, 86vw" className="pointer-events-none object-cover" />
               <figcaption className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/75 to-transparent p-4 text-sm">{card.title}</figcaption>
             </figure>
           );
