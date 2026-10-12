@@ -14,6 +14,7 @@ import { toCard } from "@/content/work/cards";
 import { FormsStage } from "@/features/home/forms-stage";
 import { Hero } from "@/features/home/hero";
 import { SelectedWork } from "@/features/home/selected-work";
+import { ServiceReel } from "@/features/home/service-reel";
 import { FACTS } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -140,38 +141,24 @@ export default function Home() {
           </section>
         ) : null}
 
-        {/* (04) Services, each with the clients that prove it */}
+        {/* (04) Services: a ribbon of pictures that bends like water as it moves */}
         <section aria-labelledby="services-title" className={SECTION}>
           <p className="label">{label(servicesN)} How we adapt</p>
           <h2 id="services-title" className={`reveal max-w-[18ch] text-balance ${HEADING}`}>
             Six kinds of work, one studio<span className="stop">.</span>
           </h2>
-          {/* overflow-clip, not hidden: a clipping box that isn't a scroll container keeps the reveals on the page's scroll. */}
-          <ul className={`${CONTENT} grid gap-px overflow-clip rounded-3xl bg-paper/10 sm:grid-cols-2 lg:grid-cols-3`}>
-            {SERVICES.map((service, i) => {
-              const proof = service.proof.flatMap((slug) => getCaseStudy(slug)?.client ?? []);
-              return (
-                <li key={service.id} className="bg-ink">
-                  <FlowLink
-                    href={`/services#${service.id}`}
-                    className="group flex h-full flex-col p-5 transition-colors hover:bg-ink-2 focus-visible:bg-ink-2 focus-visible:-outline-offset-4! md:p-7"
-                  >
-                    <span className="reveal stagger flex h-full flex-col" style={stagger(i % 3)}>
-                      <span className="font-mono text-sm text-teal">{String(i + 1).padStart(2, "0")}</span>
-                      <span className="mt-3 text-h3 font-semibold md:mt-4">{service.title}</span>
-                      <span className="mt-2 text-paper/70 md:mt-3">{service.line}</span>
-                      {proof.length ? (
-                        <span className="mt-auto pt-6 font-mono text-xs leading-relaxed text-paper/60 transition-colors group-hover:text-teal group-focus-visible:text-teal md:pt-8">
-                          <span className="sr-only">Proof: </span>
-                          {proof.join(" · ")}
-                        </span>
-                      ) : null}
-                    </span>
-                  </FlowLink>
-                </li>
-              );
-            })}
-          </ul>
+          {/* Full width, so the ribbon runs edge to edge; the first card lines up with the gutter. */}
+          <div className={`${CONTENT} -mx-(--gutter)`}>
+            <ServiceReel
+              services={SERVICES.map((service) => ({
+                id: service.id,
+                title: service.title,
+                line: service.line,
+                proof: service.proof.flatMap((slug) => getCaseStudy(slug)?.client ?? []),
+                image: `/services/${service.id}.webp`,
+              }))}
+            />
+          </div>
         </section>
 
         {/* (05) Client voices. Rendered only when there is a quote to show (none until approved in production). */}
