@@ -47,7 +47,7 @@ export function SailIntro({ data }: { data: WorldData }) {
 
   return (
     <div className="flex items-center gap-2" onPointerEnter={prefetchWorld} onPointerDown={prefetchWorld} onTouchStart={prefetchWorld} onFocus={prefetchWorld}>
-      <button type="button" onClick={() => openWorld(sound)} className="sail-button">
+      <button type="button" onClick={() => openWorld(sound)} className="btn btn--primary btn--lg sail-button">
         <span className="sail-button__wake" aria-hidden />
         Set sail <span aria-hidden>→</span>
       </button>

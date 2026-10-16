@@ -9,7 +9,7 @@ export type ReelService = { id: string; title: string; line: string; proof: stri
 // The ribbon's feel (CSS px and seconds).
 const STRIP = 4; // narrowest slice the images are cut into (at speed)
 const STEP = 0.25; // the most a straight slice may stray from the wave; wider slices while it's flat
-const AUTOPLAY = 34; // px/s drift when nobody is touching it
+const AUTOPLAY = 34; // px/s drift until somebody takes hold of it (and while no pointer is on it)
 const SETTLE = 2.6; // how fast a flick slows back to the drift
 const SCROLL_PULL = 0.55; // how far the page's scroll carries the ribbon
 const WAVE_GAIN = 0.032; // wave height per px/s of speed
@@ -25,6 +25,7 @@ const RADIUS = 18;
  * swipeable row.
  */
 export function ServiceReel({ services }: { services: ReelService[] }) {
+  const reel = useRef<HTMLDivElement>(null);
   const root = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const track = useRef<HTMLOListElement>(null);
@@ -34,10 +35,11 @@ export function ServiceReel({ services }: { services: ReelService[] }) {
   const reveal = useRef<(index: number) => void>(() => undefined);
 
   useEffect(() => {
+    const outer = reel.current;
     const el = root.current;
     const cv = canvas.current;
     const list = track.current;
-    if (!el || !cv || !list) return;
+    if (!outer || !el || !cv || !list) return;
     const ctx = cv.getContext("2d");
     if (!ctx) return;
     const cards = Array.from(list.querySelectorAll<HTMLElement>("[data-card]"));
@@ -104,6 +106,9 @@ export function ServiceReel({ services }: { services: ReelService[] }) {
     let dragging = false;
     let hover = false;
     let focusHold = false;
+    // Once the visitor has taken hold of it (a drag, an arrow, a focus, a sideways wheel), the ribbon
+    // stays where they leave it: no more drift.
+    let engaged = false;
     let target: number | null = null; // a step or a focus asks to glide here
     let visible = false;
     let raf = 0;
@@ -277,7 +282,7 @@ export function ServiceReel({ services }: { services: ReelService[] }) {
           target = null;
         }
       } else if (!dragging) {
-        const drift = still || hover || focusHold ? 0 : AUTOPLAY;
+        const drift = still || hover || focusHold || engaged ? 0 : AUTOPLAY;
         velocity += (drift - velocity) * (1 - Math.exp(-SETTLE * dt));
         offset += velocity * dt;
       }
@@ -297,7 +302,7 @@ export function ServiceReel({ services }: { services: ReelService[] }) {
       }
       if (best !== index) setCurrent((index = best));
       const settled = Math.abs(speed) < 0.5 && Math.abs(amp) < 0.05 && target === null && !dragging && Math.abs(velocity) < 0.5;
-      if (visible && !(settled && (still || hover || focusHold))) raf = requestAnimationFrame(frame);
+      if (visible && !(settled && (still || hover || focusHold || engaged))) raf = requestAnimationFrame(frame);
       else last = 0;
     };
     const kick = () => {
@@ -314,6 +319,7 @@ export function ServiceReel({ services }: { services: ReelService[] }) {
       // Links and buttons keep their own clicks; the rest of the stage is for dragging.
       if (e.button !== 0 || (e.target as Element).closest("a, button")) return;
       dragging = true;
+      engaged = true;
       target = null;
       downX = lastX = e.clientX;
       lastT = performance.now();
@@ -369,6 +375,7 @@ export function ServiceReel({ services }: { services: ReelService[] }) {
     const onWheel = (e: WheelEvent) => {
       if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
       e.preventDefault();
+      engaged = true;
       target = null;
       offset += e.deltaX;
       kick();
@@ -377,14 +384,15 @@ export function ServiceReel({ services }: { services: ReelService[] }) {
     step.current = (dir: number) => {
       const base = Math.round((target ?? offset) / pitch);
       target = (base + dir) * pitch;
+      engaged = true;
       kick();
     };
-    // Keyboard focus on a card brings it to the middle.
+    // Keyboard focus on a card parks it at the gutter, where the arrows put it, so the counter
+    // names the card that has focus.
     reveal.current = (index: number) => {
-      const mid = W / 2 - cardW / 2 - lead;
-      const x = xOf(index);
-      target = offset + (x - mid);
+      target = offset + xOf(index);
       focusHold = true;
+      engaged = true;
       kick();
     };
     const onFocusOut = (e: FocusEvent) => {
@@ -429,8 +437,9 @@ export function ServiceReel({ services }: { services: ReelService[] }) {
     el.addEventListener("pointermove", onMove);
     el.addEventListener("pointerup", onUp);
     el.addEventListener("pointercancel", onUp);
-    el.addEventListener("pointerenter", onEnter);
-    el.addEventListener("pointerleave", onLeave);
+    // A pointer anywhere on the reel, the arrows and counter included, holds it still.
+    outer.addEventListener("pointerenter", onEnter);
+    outer.addEventListener("pointerleave", onLeave);
     el.addEventListener("wheel", onWheel, { passive: false });
     el.addEventListener("focusout", onFocusOut);
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -446,8 +455,8 @@ export function ServiceReel({ services }: { services: ReelService[] }) {
       el.removeEventListener("pointermove", onMove);
       el.removeEventListener("pointerup", onUp);
       el.removeEventListener("pointercancel", onUp);
-      el.removeEventListener("pointerenter", onEnter);
-      el.removeEventListener("pointerleave", onLeave);
+      outer.removeEventListener("pointerenter", onEnter);
+      outer.removeEventListener("pointerleave", onLeave);
       el.removeEventListener("wheel", onWheel);
       el.removeEventListener("focusout", onFocusOut);
       window.removeEventListener("scroll", onScroll);
@@ -457,7 +466,7 @@ export function ServiceReel({ services }: { services: ReelService[] }) {
   }, []);
 
   return (
-    <div className="reel">
+    <div ref={reel} className="reel">
       <div ref={root} className="reel__stage">
         <span data-probe className="reel__probe" aria-hidden />
         <canvas ref={canvas} className="reel__canvas" aria-hidden />
@@ -472,7 +481,7 @@ export function ServiceReel({ services }: { services: ReelService[] }) {
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <h3 className="reel__title">
-                  <FlowLink href={`/services#${s.id}`} className="reel__link" onFocus={() => reveal.current(i)} draggable={false}>
+                  <FlowLink href={`/services#${s.id}`} className="reel__link hit" onFocus={() => reveal.current(i)} draggable={false}>
                     {s.title}
                   </FlowLink>
                 </h3>

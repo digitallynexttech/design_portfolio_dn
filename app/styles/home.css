@@ -136,6 +136,9 @@
   padding-block: 1.1rem;
   border-radius: 0.75rem;
   transition: opacity 450ms var(--ease-flow);
+  /* The client colour lifted halfway to paper: bright enough on ink for every client, so the
+     highlight never lowers the contrast it is meant to raise. */
+  --accent-ink: color-mix(in oklab, var(--accent), var(--paper));
 }
 .work-row__thumb {
   grid-area: thumb;
@@ -151,7 +154,7 @@
   display: none;
   font-family: var(--font-geist-mono), monospace;
   font-size: 0.8125rem;
-  color: rgb(250 250 248 / 0.6);
+  color: var(--text-3);
   transition: color 400ms var(--ease-flow);
 }
 .work-row__client {
@@ -169,15 +172,16 @@
   font-size: 0.75rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgb(250 250 248 / 0.72);
+  color: var(--text-3);
+  text-wrap: balance;
 }
 .work-row__metric {
   grid-area: metric;
   font-size: 0.875rem;
-  color: rgb(250 250 248 / 0.72);
+  color: var(--text-3);
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   overflow: hidden;
 }
 .work-row__value {
@@ -188,7 +192,7 @@
 .work-row__arrow {
   grid-area: arrow;
   font-size: 1.25rem;
-  color: rgb(250 250 248 / 0.6);
+  color: var(--text-3);
   transition:
     translate 500ms var(--ease-flow),
     color 400ms var(--ease-flow);
@@ -258,7 +262,7 @@
   }
   .work-row[data-on] .work-row__index,
   .work-row[data-on] .work-row__arrow {
-    color: var(--accent);
+    color: var(--accent-ink);
   }
   .work-row[data-on] .work-row__arrow {
     translate: 0.5rem 0;
@@ -442,7 +446,7 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 0.75rem;
   line-height: 1.6;
-  color: rgb(250 250 248 / 0.66);
+  color: var(--text-3);
 }
 
 /* With script: the cards ride the ribbon and the canvas draws their pictures, waving. */
@@ -486,7 +490,7 @@
 .reel__count {
   font-family: var(--font-geist-mono), monospace;
   font-size: 0.875rem;
-  color: rgb(250 250 248 / 0.66);
+  color: var(--text-3);
 }
 .reel__count span {
   color: var(--paper);
@@ -496,7 +500,7 @@
   font-size: 0.75rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgb(250 250 248 / 0.6);
+  color: var(--text-3);
 }
 @media (max-width: 767px) {
   .reel__hint {
