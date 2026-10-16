@@ -1,0 +1,1891 @@
+/* =====================================================================================================
+   Draft 1 "Monograph": the home page as a printed studio monograph.
+
+   Spec
+   - Colour: paper #F3F0E8, ink #161512 (two greys of the same ink for secondary text), one red
+     (#E21F26) for the Set sail action, folio rules and the plate numerals. Nothing else is coloured
+     except the work itself.
+   - Type: Fraunces (opsz 9–144) for everything literary, from the 300 px title to the captions;
+     italic is the water's voice (water., taken., containers., poured). Stack Sans Text for reading
+     text and interface, Geist Mono for folios, running heads and figure numbers.
+   - Grid: 12 columns from 1100 px, 8 from 700 px, one column on phones. Margins clamp(20, 4.4vw, 72) px.
+     Hairline rules open every chapter; folios sit at the outer corner (recto right, verso left).
+   - Motion: hairlines draw, plates are uncovered by a rising waterline as they scroll in (both
+     scroll-driven, compositor-only), a plate ripples once under the mouse. Nothing moves under
+     reduced motion.
+
+   Scope: every selector is under .d-monograph, or under html:has() a .d-monograph that is on
+   screen, so nothing leaks into the rest of the site after a client-side navigation.
+   ===================================================================================================== */
+
+/* ---------- The site's own chrome steps aside on this route ---------- */
+
+/* Only while the draft is the page on screen. With cacheComponents, Next keeps a page you leave in
+   the DOM (a hidden React Activity: inline display: none) so Back can restore it; without the
+   :not(), these rules would follow the reader to the real home and hide its header. */
+
+html:has(.d-monograph:not([style*="display"])) {
+  background: #f3f0e8;
+  color: #161512;
+  color-scheme: light;
+  scroll-padding-top: 1rem;
+}
+@media (min-width: 700px) {
+  html:has(.d-monograph:not([style*="display"])) {
+    scroll-padding-top: 4.5rem;
+  }
+}
+html:has(.d-monograph:not([style*="display"])) body > .site-header,
+html:has(.d-monograph:not([style*="display"])) body > .site-header-glass,
+html:has(.d-monograph:not([style*="display"])) body > footer,
+html:has(.d-monograph:not([style*="display"])) body > .water-fallback,
+html:has(.d-monograph:not([style*="display"])) body > canvas,
+html:has(.d-monograph:not([style*="display"])) body > button[aria-haspopup="dialog"] {
+  display: none !important;
+}
+
+/* ---------- Tokens ---------- */
+
+.d-monograph {
+  --m-paper: #f3f0e8;
+  --m-paper-2: #e8e4d8;
+  --m-ink: #161512;
+  --m-ink-2: #3b3832;
+  --m-ink-3: #5c584e;
+  --m-rule: rgb(22 21 18 / 0.17);
+  --m-red: #e21f26;
+  --m-serif-face: var(--m-serif), "Times New Roman", Georgia, serif;
+  --m-sans: var(--font-text);
+  --m-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --m-margin: max(clamp(1.25rem, 4.4vw, 4.5rem), env(safe-area-inset-left), env(safe-area-inset-right));
+  --m-gap: clamp(1rem, 1.7vw, 1.75rem);
+  --m-bar: 3.5rem;
+  --m-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --m-section: clamp(4.5rem, 9vw, 9rem);
+
+  position: relative;
+  background: var(--m-paper);
+  color: var(--m-ink);
+  font-family: var(--m-sans);
+  font-size: 1rem;
+  line-height: 1.55;
+  font-variant-numeric: lining-nums;
+  overflow-x: clip;
+}
+.d-monograph ::selection {
+  background: var(--m-ink);
+  color: var(--m-paper);
+}
+.d-monograph :focus-visible {
+  outline: 2px solid var(--m-ink);
+  outline-offset: 3px;
+}
+/* The reel plays in its own dark cinema; focus there keeps the site's teal. */
+.d-monograph .liquid--cinema :focus-visible {
+  outline-color: var(--teal);
+}
+.d-monograph em {
+  font-style: italic;
+}
+.d-monograph .m-ripple-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* ---------- Shared type: side heads, captions, links, buttons, folios ---------- */
+
+.d-monograph .m-sidehead {
+  font-family: var(--m-mono);
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--m-ink);
+}
+
+.d-monograph .m-caption {
+  margin-top: 0.75rem;
+  max-width: 62ch;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--m-ink-3);
+}
+.d-monograph .m-caption__no {
+  margin-right: 0.6em;
+  font-family: var(--m-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  color: var(--m-ink);
+}
+
+.d-monograph .m-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  min-height: 2.75rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--m-ink);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: color-mix(in oklab, var(--m-ink) 35%, transparent);
+  text-underline-offset: 0.4em;
+  transition: text-decoration-color 250ms var(--m-ease);
+}
+.d-monograph .m-link span[aria-hidden] {
+  text-decoration: none;
+  transition: translate 400ms var(--m-ease);
+}
+@media (hover: hover) {
+  .d-monograph .m-link:hover {
+    text-decoration-color: var(--m-red);
+  }
+  .d-monograph .m-link:hover span[aria-hidden] {
+    translate: 0.25em 0;
+  }
+  .d-monograph .m-link--down:hover span[aria-hidden] {
+    translate: 0 0.2em;
+  }
+}
+
+/* Buttons are set rectangles, like a printed label: ink outline, or solid ink. */
+.d-monograph .m-btn {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6em;
+  min-height: 2.875rem;
+  padding: 0 1.25rem;
+  border: 1px solid var(--m-ink);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: var(--m-ink);
+  transition: color 320ms var(--m-ease);
+}
+.d-monograph .m-btn::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: var(--m-ink);
+  transform: translateY(101%);
+  transition: transform 520ms var(--m-ease);
+}
+.d-monograph .m-btn--ink {
+  background: var(--m-ink);
+  color: var(--m-paper);
+}
+.d-monograph .m-btn--ink::before {
+  background: var(--m-red);
+}
+.d-monograph .m-btn--lg {
+  min-height: 3.5rem;
+  padding: 0 1.75rem;
+  font-size: 1rem;
+}
+@media (hover: hover) {
+  .d-monograph .m-btn:hover {
+    color: var(--m-paper);
+  }
+  .d-monograph .m-btn--ink:hover {
+    color: #fff;
+  }
+  .d-monograph .m-btn:hover::before {
+    transform: none;
+  }
+}
+.d-monograph .m-btn:focus-visible {
+  color: var(--m-paper);
+}
+.d-monograph .m-btn:focus-visible::before {
+  transform: none;
+}
+.d-monograph .m-btn--ink:focus-visible {
+  color: #fff;
+}
+
+/* Page numbers: a red rule and the number, at the outer corner of the page. */
+.d-monograph .m-folio {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: clamp(3rem, 6vw, 5rem);
+  font-family: var(--m-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  color: var(--m-ink-3);
+}
+.d-monograph .m-folio[data-side="recto"] {
+  justify-content: flex-end;
+}
+.d-monograph .m-folio[data-side="verso"] {
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+}
+.d-monograph .m-folio__rule {
+  width: 2rem;
+  height: 1px;
+  background: var(--m-red);
+}
+
+/* Every chapter opens on a full-width hairline that draws itself in. */
+.d-monograph .m-block {
+  position: relative;
+  padding: var(--m-section) var(--m-margin) clamp(1.5rem, 3vw, 2.5rem);
+}
+.d-monograph .m-block::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: var(--m-margin);
+  right: var(--m-margin);
+  height: 1px;
+  background: var(--m-ink);
+  transform-origin: left center;
+}
+
+/* ---------- Masthead: running head on wide screens, running foot on phones ---------- */
+
+.d-monograph .m-head {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 40;
+}
+.d-monograph .m-head__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  height: var(--m-bar);
+  padding-inline: var(--m-margin);
+  border-bottom: 1px solid var(--m-rule);
+  background: var(--m-paper);
+}
+.d-monograph .m-head__logo {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+}
+.d-monograph .m-head__logo-img {
+  width: auto;
+  height: 1.625rem;
+}
+.d-monograph .m-head__running,
+.d-monograph .m-head__nav {
+  display: none;
+}
+.d-monograph .m-head__running {
+  align-items: baseline;
+  gap: 0.75rem;
+  min-width: 0;
+  white-space: nowrap;
+}
+.d-monograph .m-head__chapter {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--m-serif-face);
+  font-size: 1.0625rem;
+  font-style: italic;
+  color: var(--m-ink);
+  animation: m-ink-in 500ms var(--m-ease) both;
+}
+.d-monograph .m-head__folio {
+  font-family: var(--m-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  color: var(--m-ink-3);
+}
+.d-monograph .m-head__nav {
+  align-items: center;
+  gap: 0.25rem;
+}
+.d-monograph .m-head__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
+  font-size: 0.875rem;
+  color: var(--m-ink);
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 0.4em;
+  transition: text-decoration-color 250ms var(--m-ease);
+}
+.d-monograph .m-head__link:hover {
+  text-decoration-color: var(--m-ink);
+}
+.d-monograph .m-head__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  min-height: 2.25rem;
+  margin-left: 0.75rem;
+  padding: 0 0.9rem;
+  background: var(--m-ink);
+  color: var(--m-paper);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: background-color 250ms var(--m-ease);
+}
+.d-monograph .m-head__cta:hover {
+  background: var(--m-red);
+  color: #fff;
+}
+@media (pointer: coarse) {
+  .d-monograph .m-head__cta {
+    min-height: 2.75rem;
+  }
+}
+@media (min-width: 700px) {
+  .d-monograph .m-head {
+    position: fixed;
+  }
+  .d-monograph .m-head__nav {
+    display: flex;
+  }
+}
+@media (min-width: 1000px) {
+  .d-monograph .m-head__bar {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+  }
+  .d-monograph .m-head__running {
+    display: flex;
+  }
+  .d-monograph .m-head__nav {
+    justify-self: end;
+  }
+}
+@keyframes m-ink-in {
+  from {
+    opacity: 0;
+    filter: blur(3px);
+  }
+}
+
+/* Phones: the running foot. */
+.d-monograph .m-foot {
+  position: fixed;
+  inset: auto 0 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  height: calc(3.5rem + env(safe-area-inset-bottom));
+  padding: 0 var(--m-margin) env(safe-area-inset-bottom);
+  border-top: 1px solid var(--m-ink);
+  background: var(--m-paper);
+}
+.d-monograph .m-foot__running {
+  display: flex;
+  align-items: baseline;
+  gap: 0.875rem;
+  min-width: 0;
+  white-space: nowrap;
+}
+.d-monograph .m-foot__folio {
+  font-family: var(--m-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  color: var(--m-ink-3);
+}
+.d-monograph .m-foot__chapter {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--m-serif-face);
+  font-size: 1.0625rem;
+  font-style: italic;
+  animation: m-ink-in 500ms var(--m-ease) both;
+}
+.d-monograph .m-foot__menu {
+  flex-shrink: 0;
+  min-height: 2.75rem;
+  padding: 0 1.25rem;
+  border: 1px solid var(--m-ink);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--m-ink);
+}
+.d-monograph .m-foot__menu:active {
+  background: var(--m-ink);
+  color: var(--m-paper);
+}
+@media (min-width: 700px) {
+  .d-monograph .m-foot {
+    display: none;
+  }
+}
+
+/* The menu sheet: a sheet of the same paper sliding up. */
+.d-monograph .liquid--glass .liquid__panel {
+  background: var(--m-paper);
+  color: var(--m-ink);
+  backdrop-filter: none;
+  box-shadow: 0 -1px 0 var(--m-ink);
+  border-radius: 0;
+}
+.d-monograph .liquid--glass::backdrop {
+  background: rgb(22 21 18 / 0.42);
+  backdrop-filter: none;
+}
+.d-monograph .liquid--glass .liquid__close {
+  border-color: var(--m-ink);
+  border-radius: 0;
+  color: var(--m-ink);
+}
+.d-monograph .m-menu__list {
+  border-top: 1px solid var(--m-ink);
+}
+.d-monograph .m-menu__link {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  min-height: 3.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--m-rule);
+  font-family: var(--m-serif-face);
+  font-size: 2.5rem;
+  font-weight: 300;
+  line-height: 1.1;
+  letter-spacing: -0.011em;
+}
+.d-monograph .m-menu__no {
+  font-family: var(--m-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  color: var(--m-ink-3);
+}
+.d-monograph .m-menu__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
+/* ---------- Title page (hero) ---------- */
+
+.d-monograph .m-hero {
+  display: flex;
+  flex-direction: column;
+  padding: calc(var(--m-bar) + 2.25rem) var(--m-margin) clamp(3.5rem, 7vw, 5rem);
+}
+.d-monograph .m-hero__title {
+  margin: 0;
+  font-family: var(--m-serif-face);
+  font-size: clamp(5.5rem, 36vw, 10rem);
+  font-weight: 300;
+  line-height: 0.78;
+  letter-spacing: -0.022em;
+  margin-left: -0.04em;
+}
+.d-monograph .m-hero__title em {
+  display: block;
+  font-weight: 300;
+  letter-spacing: -0.017em;
+}
+
+.d-monograph .m-hero__verse {
+  margin-top: 1.75rem;
+  font-family: var(--m-serif-face);
+}
+.d-monograph .m-hero__title {
+  order: 1;
+}
+.d-monograph .m-hero__pour {
+  font-size: clamp(1.625rem, 2.9vw, 2.75rem);
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.008em;
+}
+.d-monograph .m-hero__lines {
+  margin-top: 0.75rem;
+  font-size: clamp(1.1875rem, 1.6vw, 1.5rem);
+  font-style: italic;
+  font-weight: 300;
+  line-height: 1.32;
+  color: var(--m-ink-2);
+}
+.d-monograph .m-hero__lines span {
+  display: block;
+}
+/* The second sentence steps in, the way water steps down. */
+.d-monograph .m-hero__lines span + span {
+  padding-left: 1.5em;
+}
+
+.d-monograph .m-hero__text {
+  order: 2;
+}
+.d-monograph .m-hero__intro {
+  margin-top: 1.75rem;
+  max-width: 38ch;
+  font-size: clamp(1.0625rem, 0.85rem + 0.3vw, 1.3125rem);
+  line-height: 1.55;
+  color: var(--m-ink-2);
+}
+
+/* Phones: the actions come before the plate, so Set sail sits in the first screen. */
+.d-monograph .m-hero__actions {
+  order: 3;
+  margin-top: 1.75rem;
+}
+.d-monograph .m-hero__sail p {
+  color: var(--m-ink-2);
+}
+.d-monograph .m-hero__aside {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.5rem;
+  margin-top: 0.75rem;
+}
+
+.d-monograph .m-hero__plate {
+  order: 4;
+  margin: 2.5rem calc(-1 * var(--m-margin)) 0;
+}
+.d-monograph .m-hero__frame {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: clip;
+  background: var(--m-paper-2);
+}
+.d-monograph .m-hero__img {
+  object-fit: cover;
+  object-position: 50% 42%;
+}
+.d-monograph .m-hero__plate .m-caption {
+  padding-inline: var(--m-margin);
+}
+
+/* Set sail: the one red block on the page. Its fill rises in ink. */
+.d-monograph .m-hero__sail .sail-button {
+  --btn-fill: var(--m-ink);
+  --btn-on-fill: #fff;
+  flex: 1;
+  min-height: 3.5rem;
+  padding: 0 1.75rem;
+  border-radius: 0;
+  background: var(--m-red);
+  color: #fff;
+  box-shadow: none;
+  font-size: 1.0625rem;
+  font-weight: 500;
+}
+.d-monograph .m-hero__sail .sail-button::before {
+  left: 0;
+  width: 100%;
+  border-radius: 0;
+}
+.d-monograph .m-hero__sail .sail-button__wake {
+  display: none;
+}
+.d-monograph .m-hero__sail .sail-sound {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 0;
+  background: transparent;
+  color: var(--m-ink);
+  box-shadow: inset 0 0 0 1px var(--m-ink);
+  backdrop-filter: none;
+}
+.d-monograph .m-hero__sail .sail-sound:hover {
+  box-shadow: inset 0 0 0 1px var(--m-ink);
+  background: var(--m-paper-2);
+  color: var(--m-ink);
+}
+.d-monograph .m-hero__sail .sail-sound[aria-pressed="true"] {
+  background: var(--m-ink);
+  color: var(--m-paper);
+  box-shadow: none;
+}
+
+/* Play reel, restyled in ink. Child combinators: the reel's own dialog sits beside the button. */
+.d-monograph .m-reel > .btn {
+  --btn-fill: var(--m-ink);
+  --btn-on-fill: var(--m-paper);
+  min-height: 2.875rem;
+  border-radius: 0;
+  border-color: var(--m-ink);
+  color: var(--m-ink);
+}
+.d-monograph .m-reel > .btn > span:first-child {
+  background: var(--m-ink);
+  color: var(--m-paper);
+  transition: background-color 320ms var(--m-ease), color 320ms var(--m-ease);
+}
+.d-monograph .m-reel > .btn > .font-mono {
+  color: var(--m-ink-3);
+  transition: color 320ms var(--m-ease);
+}
+@media (hover: hover) {
+  .d-monograph .m-reel > .btn:hover {
+    border-color: var(--m-ink);
+  }
+  .d-monograph .m-reel > .btn:hover > span:first-child {
+    background: var(--m-paper);
+    color: var(--m-ink);
+  }
+  .d-monograph .m-reel > .btn:hover > .font-mono {
+    color: var(--m-paper);
+  }
+}
+.d-monograph .m-reel > .btn:focus-visible > span:first-child {
+  background: var(--m-paper);
+  color: var(--m-ink);
+}
+.d-monograph .m-reel > .btn:focus-visible > .font-mono {
+  color: var(--m-paper);
+}
+
+@media (min-width: 700px) {
+  .d-monograph .m-hero {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    column-gap: var(--m-gap);
+    padding-top: calc(var(--m-bar) + clamp(2.5rem, 5vw, 4rem));
+  }
+  .d-monograph .m-hero__title {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    font-size: clamp(5rem, 20.2vw, 24rem);
+    white-space: nowrap;
+  }
+  .d-monograph .m-hero__title em {
+    display: inline;
+  }
+  .d-monograph .m-hero__plate {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    margin-top: clamp(2rem, 4vw, 3rem);
+  }
+  .d-monograph .m-hero__frame {
+    aspect-ratio: 16 / 9;
+  }
+  .d-monograph .m-hero__text {
+    grid-column: 1 / 5;
+    grid-row: 3;
+    margin-top: 2.5rem;
+  }
+  .d-monograph .m-hero__verse {
+    margin-top: 0;
+  }
+  .d-monograph .m-hero__actions {
+    grid-column: 5 / -1;
+    grid-row: 3;
+    align-self: end;
+    margin-top: 2.5rem;
+  }
+  .d-monograph .m-hero__sail .sail-button {
+    flex: 0 0 auto;
+  }
+}
+@media (min-width: 1100px) {
+  .d-monograph .m-hero {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-template-rows: auto auto 1fr;
+    padding-top: calc(var(--m-bar) + clamp(2rem, 4.5vh, 3rem));
+    padding-bottom: clamp(2.5rem, 5vh, 4rem);
+  }
+  .d-monograph .m-hero__text {
+    grid-column: 1 / 6;
+    grid-row: 2;
+    margin-top: clamp(1.75rem, 4vh, 2.75rem);
+  }
+  .d-monograph .m-hero__actions {
+    grid-column: 1 / 6;
+    grid-row: 3;
+    margin-top: 2rem;
+  }
+  .d-monograph .m-hero__plate {
+    grid-column: 6 / -1;
+    grid-row: 2 / 4;
+    margin: clamp(1.75rem, 4vh, 2.75rem) calc(-1 * var(--m-margin)) 0 0;
+  }
+  /* The plate fills what the title leaves of the first screen. */
+  .d-monograph .m-hero__frame {
+    aspect-ratio: auto;
+    height: clamp(20rem, calc(100svh - 13.5rem - 17vw), 46rem);
+  }
+  .d-monograph .m-hero__plate .m-caption {
+    padding-inline: 0 var(--m-margin);
+  }
+}
+
+/* ---------- Chapter: The studio ---------- */
+
+.d-monograph .m-studio__statement {
+  margin-top: 1.5rem;
+  font-family: var(--m-serif-face);
+  font-size: clamp(2.125rem, 4.4vw, 4.75rem);
+  font-weight: 300;
+  line-height: 1.04;
+  letter-spacing: -0.014em;
+  text-wrap: balance;
+}
+.d-monograph .m-studio__sub {
+  margin-top: 1.5rem;
+  max-width: 30ch;
+  font-size: clamp(1.1875rem, 1.6vw, 1.4375rem);
+  line-height: 1.4;
+  color: var(--m-ink-2);
+}
+.d-monograph .m-studio__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--m-gap);
+  margin-top: clamp(3rem, 6vw, 5.5rem);
+}
+.d-monograph .m-stat {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+  padding-top: 0.875rem;
+  border-top: 1px solid var(--m-ink);
+}
+.d-monograph .m-stat__value {
+  font-family: var(--m-serif-face);
+  font-size: clamp(3rem, 8vw, 9rem);
+  font-weight: 300;
+  line-height: 0.9;
+  letter-spacing: -0.022em;
+}
+.d-monograph .m-stat__label {
+  margin-top: 0.75rem;
+  max-width: 24ch;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--m-ink-3);
+}
+
+.d-monograph .m-studio__clients,
+.d-monograph .m-studio__honours {
+  margin-top: clamp(3.5rem, 7vw, 6rem);
+}
+
+.d-monograph .m-sidehead--inline {
+  margin-bottom: 1rem;
+}
+.d-monograph .m-logos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  border: 1px solid var(--m-rule);
+  background: var(--m-rule);
+}
+.d-monograph .m-logos__cell {
+  display: grid;
+  place-items: center;
+  height: 4.25rem;
+  padding: 0 0.75rem;
+  background: var(--m-paper);
+}
+.d-monograph .m-logos__img {
+  width: auto;
+  height: clamp(1rem, calc(var(--k) * 1.6rem), 2.4rem);
+  max-width: 100%;
+  object-fit: contain;
+  filter: brightness(0);
+  opacity: 0.78;
+  transition: opacity 250ms var(--m-ease);
+}
+.d-monograph .m-logos__cell:hover .m-logos__img {
+  opacity: 1;
+}
+
+.d-monograph .m-honours {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+.d-monograph .m-honours__item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.875rem;
+}
+.d-monograph .m-honours__item[data-badge] {
+  flex-direction: row;
+  align-items: center;
+}
+.d-monograph .m-honours__img {
+  width: auto;
+  height: 2.75rem;
+  flex-shrink: 0;
+}
+.d-monograph .m-honours__item[data-badge] .m-honours__img {
+  height: 4.25rem;
+}
+.d-monograph .m-honours__text {
+  max-width: 34ch;
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+.d-monograph .m-honours__title {
+  display: block;
+  font-weight: 500;
+}
+.d-monograph .m-honours__detail {
+  display: block;
+  color: var(--m-ink-3);
+}
+
+@media (min-width: 700px) {
+  .d-monograph .m-logos {
+    grid-template-columns: repeat(9, minmax(0, 1fr));
+  }
+  .d-monograph .m-logos__cell {
+    height: 5.5rem;
+    padding: 0 0.5rem;
+  }
+  .d-monograph .m-logos__img {
+    height: clamp(0.875rem, calc(var(--k) * 1.35rem), 2rem);
+  }
+  .d-monograph .m-honours {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 2rem 3.5rem;
+  }
+}
+@media (min-width: 1100px) {
+  .d-monograph .m-studio {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--m-gap);
+    align-items: start;
+  }
+  .d-monograph .m-studio > .m-sidehead {
+    grid-column: 1 / 3;
+    grid-row: 1;
+    padding-top: 0.75rem;
+  }
+  .d-monograph .m-studio__statement {
+    grid-column: 3 / 12;
+    grid-row: 1;
+    margin-top: 0;
+  }
+  .d-monograph .m-studio__sub {
+    grid-column: 3 / 8;
+    margin-top: 2rem;
+  }
+  .d-monograph .m-studio__stats {
+    grid-column: 3 / -1;
+  }
+  .d-monograph .m-studio__clients,
+  .d-monograph .m-studio__honours {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: subgrid;
+  }
+  .d-monograph .m-studio__clients > .m-sidehead,
+  .d-monograph .m-studio__honours > .m-sidehead {
+    grid-column: 1 / 3;
+    margin: 0;
+    padding-top: 0.25rem;
+  }
+  .d-monograph .m-logos,
+  .d-monograph .m-honours {
+    grid-column: 3 / -1;
+  }
+  .d-monograph .m-studio > .m-folio {
+    grid-column: 1 / -1;
+  }
+  .d-monograph .m-logos__img {
+    height: clamp(1rem, calc(var(--k) * 1.55rem), 2.3rem);
+  }
+}
+
+/* ---------- Chapter: Selected work (the plates) ---------- */
+
+.d-monograph .m-opener__title {
+  margin-top: 0;
+  font-family: var(--m-serif-face);
+  font-size: clamp(3.75rem, 11vw, 12.5rem);
+  font-weight: 300;
+  line-height: 0.86;
+  letter-spacing: -0.022em;
+}
+.d-monograph .m-contents {
+  margin-top: 2.5rem;
+}
+.d-monograph .m-contents ol {
+  border-top: 1px solid var(--m-ink);
+}
+.d-monograph .m-contents__link {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  min-height: 2.75rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--m-rule);
+}
+.d-monograph .m-contents__no {
+  flex: 0 0 2.25rem;
+  font-family: var(--m-serif-face);
+  font-style: italic;
+  color: var(--m-ink-3);
+}
+.d-monograph .m-contents__name {
+  font-family: var(--m-serif-face);
+  font-size: 1.1875rem;
+}
+.d-monograph .m-contents__leader {
+  flex: 1;
+  min-width: 1rem;
+  border-bottom: 1px dotted color-mix(in oklab, var(--m-ink) 45%, transparent);
+  translate: 0 -0.3em;
+}
+.d-monograph .m-contents__folio {
+  font-family: var(--m-mono);
+  font-size: 0.75rem;
+  color: var(--m-ink-2);
+}
+@media (hover: hover) {
+  .d-monograph .m-contents__link:hover .m-contents__name {
+    font-style: italic;
+  }
+}
+@media (min-width: 1100px) {
+  .d-monograph .m-opener {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--m-gap);
+    align-items: end;
+  }
+  .d-monograph .m-opener__title {
+    grid-column: 1 / 9;
+  }
+  .d-monograph .m-contents {
+    grid-column: 9 / -1;
+    margin: 0 0 0.5rem;
+  }
+}
+
+.d-monograph .m-work {
+  padding-bottom: clamp(2.5rem, 5vw, 4rem);
+}
+.d-monograph .m-plate {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(3rem, 7vw, 6rem) 0 0;
+}
+.d-monograph .m-plate__no {
+  order: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-inline: var(--m-margin);
+  font-family: var(--m-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.d-monograph .m-plate__rule {
+  width: 2rem;
+  height: 1px;
+  background: var(--m-red);
+}
+.d-monograph .m-plate__fig {
+  order: 2;
+  margin-top: 1rem;
+}
+.d-monograph .m-plate__frame {
+  position: relative;
+  overflow: clip;
+  background: var(--m-paper-2);
+}
+/* Light screens get a keyline so their white meets the paper cleanly. */
+.d-monograph .m-plate__frame[data-tone="light"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  box-shadow: inset 0 0 0 1px var(--m-rule);
+  pointer-events: none;
+}
+.d-monograph .m-plate__img {
+  object-fit: cover;
+}
+.d-monograph .m-plate__caption {
+  padding-inline: var(--m-margin);
+}
+.d-monograph .m-plate__text {
+  order: 3;
+  padding: 2rem var(--m-margin) 0;
+}
+.d-monograph .m-plate__client {
+  font-family: var(--m-serif-face);
+  font-size: clamp(2.75rem, 4.6vw, 5rem);
+  font-weight: 400;
+  line-height: 0.95;
+  letter-spacing: -0.017em;
+}
+.d-monograph .m-plate__industry {
+  margin-top: 0.875rem;
+  font-family: var(--m-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--m-ink-3);
+}
+.d-monograph .m-plate__line {
+  margin-top: 1.25rem;
+  max-width: 28ch;
+  font-family: var(--m-serif-face);
+  font-size: clamp(1.3125rem, 1.75vw, 1.625rem);
+  font-style: italic;
+  font-weight: 300;
+  line-height: 1.28;
+  color: var(--m-ink-2);
+}
+.d-monograph .m-plate__metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--m-gap);
+  margin-top: 1.75rem;
+}
+.d-monograph .m-plate__metric {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--m-rule);
+}
+.d-monograph .m-plate__metric-value {
+  font-family: var(--m-serif-face);
+  font-size: clamp(1.625rem, 2.3vw, 2.375rem);
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: -0.011em;
+  white-space: nowrap;
+}
+.d-monograph .m-plate__metric-label {
+  margin-top: 0.4rem;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--m-ink-3);
+}
+.d-monograph .m-plate__quote {
+  margin-top: 1.75rem;
+  max-width: 40ch;
+  font-family: var(--m-serif-face);
+  font-style: italic;
+  color: var(--m-ink-2);
+}
+.d-monograph .m-link--case {
+  margin-top: 1.25rem;
+}
+.d-monograph .m-plate__inset {
+  order: 4;
+  width: 64%;
+  margin: 2.25rem var(--m-margin) 0 auto;
+}
+.d-monograph .m-plate__inset[data-kind="image"] {
+  width: 42%;
+}
+.d-monograph .m-plate__inset-frame {
+  overflow: clip;
+  background: var(--m-ink);
+}
+.d-monograph .m-plate__video,
+.d-monograph .m-plate__phone {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.d-monograph .m-plate__inset[data-kind="image"] .m-plate__inset-frame {
+  background: none;
+}
+.d-monograph .m-plate > .m-folio {
+  order: 5;
+  margin-top: 2.5rem;
+  padding-inline: var(--m-margin);
+}
+
+@media (min-width: 700px) and (max-width: 1099px) {
+  .d-monograph .m-plate__text {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    column-gap: var(--m-gap);
+    align-items: start;
+  }
+  .d-monograph .m-plate__text > * {
+    grid-column: 1 / 5;
+  }
+  .d-monograph .m-plate__client,
+  .d-monograph .m-plate__industry {
+    grid-column: 1 / -1;
+  }
+  .d-monograph .m-plate__line {
+    grid-row: 3 / 6;
+  }
+  .d-monograph .m-plate__metrics,
+  .d-monograph .m-plate__quote,
+  .d-monograph .m-link--case {
+    grid-column: 5 / -1;
+  }
+  .d-monograph .m-plate__metrics {
+    margin-top: 1.25rem;
+  }
+  .d-monograph .m-plate__inset {
+    width: 46%;
+  }
+  .d-monograph .m-plate__inset[data-kind="image"] {
+    width: 26%;
+  }
+}
+
+@media (min-width: 1100px) {
+  .d-monograph .m-plate {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-template-rows: auto auto 1fr auto;
+    column-gap: var(--m-gap);
+    padding: clamp(4rem, 7vw, 6.5rem) var(--m-margin) 0;
+  }
+  .d-monograph .m-plate__no,
+  .d-monograph .m-plate__text,
+  .d-monograph .m-plate > .m-folio {
+    padding-inline: 0;
+  }
+  .d-monograph .m-plate__fig {
+    grid-row: 1 / 4;
+    margin: 0;
+  }
+  .d-monograph .m-plate__no {
+    grid-row: 1;
+    align-self: start;
+  }
+  .d-monograph .m-plate__text {
+    grid-row: 2;
+    padding-top: 1.5rem;
+  }
+  .d-monograph .m-plate__inset {
+    grid-row: 3;
+    align-self: end;
+    width: auto;
+    margin: 2rem 0 0;
+  }
+  .d-monograph .m-plate__inset[data-kind="image"] {
+    width: auto;
+  }
+  .d-monograph .m-plate > .m-folio {
+    grid-column: 1 / -1;
+    grid-row: 4;
+  }
+  /* Verso: the plate bleeds off the left edge; the margin column is on the right. */
+  .d-monograph .m-plate[data-side="left"] .m-plate__fig {
+    grid-column: 1 / 9;
+    margin-left: calc(-1 * var(--m-margin));
+  }
+  .d-monograph .m-plate[data-side="left"] .m-plate__caption {
+    padding-inline: var(--m-margin) 0;
+  }
+  .d-monograph .m-plate[data-side="left"] .m-plate__no,
+  .d-monograph .m-plate[data-side="left"] .m-plate__text {
+    grid-column: 9 / -1;
+    padding-left: clamp(0rem, 1.5vw, 1.5rem);
+  }
+  .d-monograph .m-plate[data-side="left"] .m-plate__inset {
+    grid-column: 10 / -1;
+  }
+  .d-monograph .m-plate[data-side="left"] .m-plate__inset[data-kind="image"] {
+    grid-column: 11 / -1;
+  }
+  /* Recto: mirrored, bleeding off the right edge. */
+  .d-monograph .m-plate[data-side="right"] .m-plate__fig {
+    grid-column: 5 / -1;
+    margin-right: calc(-1 * var(--m-margin));
+  }
+  .d-monograph .m-plate[data-side="right"] .m-plate__caption {
+    padding-inline: 0 var(--m-margin);
+  }
+  .d-monograph .m-plate[data-side="right"] .m-plate__no,
+  .d-monograph .m-plate[data-side="right"] .m-plate__text {
+    grid-column: 1 / 5;
+    padding-right: clamp(0rem, 1.5vw, 1.5rem);
+  }
+  .d-monograph .m-plate[data-side="right"] .m-plate__inset {
+    grid-column: 1 / 4;
+  }
+  .d-monograph .m-plate[data-side="right"] .m-plate__inset[data-kind="image"] {
+    grid-column: 1 / 3;
+  }
+}
+
+/* ---------- Chapter: More work (the index) ---------- */
+
+.d-monograph .m-more__title {
+  margin-top: 1.5rem;
+  font-family: var(--m-serif-face);
+  font-size: clamp(3rem, 5.4vw, 6rem);
+  font-weight: 300;
+  line-height: 0.92;
+  letter-spacing: -0.019em;
+}
+.d-monograph .m-index__plate {
+  display: none;
+}
+.d-monograph .m-index__table {
+  margin-top: 2.5rem;
+}
+.d-monograph .m-index__cols {
+  display: none;
+}
+.d-monograph .m-index__rows {
+  border-top: 1px solid var(--m-ink);
+}
+.d-monograph .m-index__row {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  grid-template-areas:
+    "thumb no"
+    "thumb client"
+    "thumb industry"
+    "thumb result";
+  column-gap: 1rem;
+  align-items: start;
+  padding: 1.125rem 0;
+  border-bottom: 1px solid var(--m-rule);
+}
+.d-monograph .m-index__thumb {
+  grid-area: thumb;
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: clip;
+  background: var(--m-paper-2);
+  box-shadow: inset 0 0 0 1px var(--m-rule);
+}
+.d-monograph .m-index__img {
+  object-fit: cover;
+  object-position: top;
+}
+.d-monograph .m-index__no {
+  grid-area: no;
+  font-family: var(--m-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  color: var(--m-ink-3);
+}
+.d-monograph .m-index__client {
+  grid-area: client;
+  font-family: var(--m-serif-face);
+  font-size: 1.625rem;
+  line-height: 1.05;
+  letter-spacing: -0.011em;
+}
+.d-monograph .m-index__industry {
+  grid-area: industry;
+  margin-top: 0.35rem;
+  font-size: 0.8125rem;
+  color: var(--m-ink-3);
+}
+.d-monograph .m-index__result {
+  grid-area: result;
+  margin-top: 0.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--m-ink-2);
+}
+.d-monograph .m-index__value {
+  font-family: var(--m-serif-face);
+  font-size: 1.1875rem;
+  color: var(--m-ink);
+}
+.d-monograph .m-index__arrow {
+  display: none;
+}
+.d-monograph .m-more__all {
+  margin-top: 2.5rem;
+}
+.d-monograph .m-more__all .m-btn {
+  width: 100%;
+}
+
+@media (min-width: 700px) {
+  .d-monograph .m-index__row {
+    grid-template-columns: 7rem 2.5rem minmax(0, 1.4fr) minmax(0, 1fr);
+    grid-template-areas:
+      "thumb no client result"
+      "thumb no industry result";
+    column-gap: var(--m-gap);
+    align-items: baseline;
+  }
+  .d-monograph .m-index__thumb {
+    align-self: start;
+  }
+  .d-monograph .m-index__industry {
+    margin-top: 0;
+  }
+  .d-monograph .m-index__result {
+    margin-top: 0;
+    align-self: center;
+  }
+  .d-monograph .m-more__all {
+    text-align: right;
+  }
+  .d-monograph .m-more__all .m-btn {
+    width: auto;
+  }
+}
+
+/* With a mouse on a wide screen: the index proper, with the facing plate. */
+@media (min-width: 1100px) and (hover: hover) and (pointer: fine) {
+  .d-monograph .m-index {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--m-gap);
+    align-items: start;
+  }
+  .d-monograph .m-index__aside {
+    grid-column: 1 / 5;
+    position: sticky;
+    top: calc(var(--m-bar) + 2.5rem);
+  }
+  .d-monograph .m-index__plate {
+    display: block;
+    margin-top: 2.5rem;
+  }
+  .d-monograph .m-index__frame {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    overflow: clip;
+    background: var(--m-paper-2);
+    box-shadow: inset 0 0 0 1px var(--m-rule);
+  }
+  .d-monograph .m-index__layer {
+    position: absolute;
+    inset: 0;
+    clip-path: inset(100% 0 0 0);
+    transition: clip-path 0s linear 700ms;
+  }
+  .d-monograph .m-index__layer[data-on] {
+    z-index: 1;
+    clip-path: inset(0);
+    transition: clip-path 700ms var(--m-ease);
+  }
+  .d-monograph .m-index__plate .m-caption {
+    min-height: 2.9em;
+  }
+  .d-monograph .m-index__table {
+    grid-column: 5 / -1;
+    margin-top: 0;
+    padding-top: 0.5rem;
+  }
+  .d-monograph .m-index__cols {
+    display: grid;
+    grid-template-columns: 3rem minmax(0, 1.35fr) minmax(0, 1fr) minmax(0, 1.2fr) 1.5rem;
+    column-gap: var(--m-gap);
+    padding-bottom: 0.75rem;
+    font-family: var(--m-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--m-ink-3);
+  }
+  .d-monograph .m-index__row {
+    grid-template-columns: 3rem minmax(0, 1.35fr) minmax(0, 1fr) minmax(0, 1.2fr) 1.5rem;
+    grid-template-areas: "no client industry result arrow";
+    align-items: baseline;
+    min-height: 6rem;
+    padding: 1.75rem 0;
+    transition: background-color 300ms var(--m-ease);
+  }
+  .d-monograph .m-index__thumb {
+    display: none;
+  }
+  .d-monograph .m-index__client {
+    font-size: clamp(1.625rem, 2.3vw, 2.375rem);
+  }
+  .d-monograph .m-index__industry {
+    font-size: 0.875rem;
+  }
+  .d-monograph .m-index__result {
+    align-self: baseline;
+  }
+  .d-monograph .m-index__arrow {
+    display: block;
+    grid-area: arrow;
+    justify-self: end;
+    font-size: 1.125rem;
+    transition: translate 400ms var(--m-ease);
+  }
+  .d-monograph .m-index__row:hover .m-index__client,
+  .d-monograph .m-index__row:focus-visible .m-index__client {
+    font-style: italic;
+  }
+  .d-monograph .m-index__row:hover .m-index__arrow,
+  .d-monograph .m-index__row:focus-visible .m-index__arrow {
+    translate: 0.4rem 0;
+    color: var(--m-red);
+  }
+}
+
+/* ---------- Chapter: How we adapt (services) ---------- */
+
+.d-monograph .m-services__title {
+  margin-top: 1.5rem;
+  font-family: var(--m-serif-face);
+  font-size: clamp(2.75rem, 6.4vw, 7.25rem);
+  font-weight: 300;
+  line-height: 0.95;
+  letter-spacing: -0.019em;
+  text-wrap: balance;
+}
+.d-monograph .m-services__list {
+  display: grid;
+  gap: 3.5rem;
+  margin-top: 3rem;
+}
+.d-monograph .m-service__frame {
+  position: relative;
+  aspect-ratio: 3 / 2;
+  overflow: clip;
+  margin-inline: calc(-1 * var(--m-margin));
+  background: var(--m-paper);
+}
+/* Water shot on black, printed as a negative: ink spreading through water, on paper. */
+.d-monograph .m-service__img {
+  object-fit: cover;
+  filter: invert(1) grayscale(1) contrast(1.3);
+  mix-blend-mode: multiply;
+}
+.d-monograph .m-service__cap {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr);
+  column-gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--m-rule);
+}
+.d-monograph .m-service__cap > :not(.m-service__no) {
+  grid-column: 2;
+}
+.d-monograph .m-service__no {
+  grid-row: 1 / 4;
+  font-family: var(--m-serif-face);
+  font-size: 1.75rem;
+  font-style: italic;
+  line-height: 1;
+  color: var(--m-red);
+}
+.d-monograph .m-service__name {
+  font-family: var(--m-serif-face);
+  font-size: clamp(1.625rem, 2.3vw, 2.25rem);
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: -0.011em;
+}
+.d-monograph .m-service__link {
+  display: inline-block;
+  margin-block: -0.625rem;
+  padding-block: 0.625rem;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: transparent;
+  text-underline-offset: 0.18em;
+  transition: text-decoration-color 250ms var(--m-ease);
+}
+.d-monograph .m-service__link:hover {
+  text-decoration-color: currentColor;
+}
+.d-monograph .m-service__line {
+  margin-top: 0.5rem;
+  max-width: 36ch;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--m-ink-2);
+}
+.d-monograph .m-service__proof {
+  margin-top: 0.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--m-ink-3);
+}
+.d-monograph .m-service__proof-label {
+  margin-right: 0.6em;
+  font-family: var(--m-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--m-ink);
+}
+@media (min-width: 700px) {
+  .d-monograph .m-services__list {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    column-gap: var(--m-gap);
+    row-gap: 4.5rem;
+  }
+  .d-monograph .m-service:nth-child(odd) {
+    grid-column: 1 / 5;
+  }
+  .d-monograph .m-service:nth-child(even) {
+    grid-column: 5 / -1;
+    margin-top: 6rem;
+  }
+  .d-monograph .m-service__frame {
+    margin-inline: 0;
+  }
+}
+@media (min-width: 1100px) {
+  .d-monograph .m-services {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--m-gap);
+  }
+  .d-monograph .m-services > .m-sidehead {
+    grid-column: 1 / 3;
+    padding-top: 0.75rem;
+  }
+  .d-monograph .m-services__title {
+    grid-column: 3 / 12;
+    margin-top: 0;
+  }
+  .d-monograph .m-services__list {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    margin-top: clamp(4rem, 7vw, 6.5rem);
+    row-gap: clamp(4rem, 7vw, 6rem);
+  }
+  .d-monograph .m-service:nth-child(odd) {
+    grid-column: 1 / 7;
+  }
+  .d-monograph .m-service:nth-child(even) {
+    grid-column: 8 / -1;
+    margin-top: clamp(5rem, 9vw, 8rem);
+  }
+  .d-monograph .m-services > .m-folio {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ---------- Client voices (only when a quote may be shown) ---------- */
+
+.d-monograph .m-voices__title {
+  margin-top: 0;
+  font-family: var(--m-serif-face);
+  font-size: clamp(2.75rem, 6vw, 6.5rem);
+  font-weight: 300;
+  line-height: 0.95;
+  letter-spacing: -0.019em;
+}
+.d-monograph .m-voices__list {
+  display: grid;
+  gap: 3rem;
+  margin-top: 3rem;
+}
+.d-monograph .m-voice {
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--m-rule);
+}
+.d-monograph .m-voice__draft {
+  display: inline-block;
+  margin-bottom: 1rem;
+  padding: 0.25rem 0.6rem;
+  border: 1px dashed var(--m-ink-3);
+  font-family: var(--m-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--m-ink-3);
+}
+.d-monograph .m-voice__quote {
+  font-family: var(--m-serif-face);
+  font-size: clamp(1.375rem, 2.2vw, 2rem);
+  font-style: italic;
+  font-weight: 300;
+  line-height: 1.3;
+}
+.d-monograph .m-voice__by {
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  color: var(--m-ink-3);
+}
+@media (min-width: 900px) {
+  .d-monograph .m-voices__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: calc(var(--m-gap) * 3);
+  }
+}
+
+/* ---------- Chapter: The people ---------- */
+
+.d-monograph .m-people__title {
+  margin-top: 0;
+  font-family: var(--m-serif-face);
+  font-size: clamp(4rem, 12vw, 14rem);
+  font-weight: 300;
+  line-height: 0.84;
+  letter-spacing: -0.025em;
+}
+.d-monograph .m-people__photo {
+  margin: 2.5rem calc(-1 * var(--m-margin)) 0;
+}
+.d-monograph .m-people__frame {
+  position: relative;
+  aspect-ratio: 1536 / 893;
+  overflow: clip;
+  background: var(--m-paper-2);
+}
+.d-monograph .m-people__img {
+  object-fit: cover;
+}
+.d-monograph .m-people__photo .m-caption {
+  padding-inline: var(--m-margin);
+}
+.d-monograph .m-people__list {
+  margin-top: 2.5rem;
+}
+.d-monograph .m-makers {
+  border-top: 1px solid var(--m-ink);
+}
+.d-monograph .m-maker {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  column-gap: 1rem;
+  padding: 0.875rem 0;
+  border-bottom: 1px solid var(--m-rule);
+}
+.d-monograph .m-maker__name {
+  font-family: var(--m-serif-face);
+  font-size: 1.375rem;
+  line-height: 1.15;
+  letter-spacing: -0.006em;
+}
+.d-monograph .m-maker__title {
+  font-family: var(--m-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: right;
+  color: var(--m-ink-3);
+}
+.d-monograph .m-maker__shipped {
+  grid-column: 1 / -1;
+  margin-top: 0.25rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--m-ink-2);
+}
+.d-monograph .m-people__list > .m-btn {
+  margin-top: 2rem;
+}
+@media (min-width: 700px) {
+  .d-monograph .m-people__photo {
+    margin-inline: 0;
+  }
+  .d-monograph .m-people__photo .m-caption {
+    padding-inline: 0;
+  }
+  .d-monograph .m-makers {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--m-gap);
+  }
+}
+@media (min-width: 1100px) {
+  .d-monograph .m-people {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--m-gap);
+    align-items: start;
+  }
+  .d-monograph .m-people__title {
+    grid-column: 1 / -1;
+  }
+  .d-monograph .m-people__photo {
+    grid-column: 1 / 9;
+    margin: clamp(3rem, 5vw, 4.5rem) 0 0 calc(-1 * var(--m-margin));
+  }
+  .d-monograph .m-people__photo .m-caption {
+    padding-inline: var(--m-margin) 0;
+  }
+  .d-monograph .m-people__list {
+    grid-column: 9 / -1;
+    margin-top: clamp(3rem, 5vw, 4.5rem);
+    padding-left: clamp(0rem, 1.5vw, 1.5rem);
+  }
+  .d-monograph .m-makers {
+    display: block;
+  }
+  .d-monograph .m-people > .m-folio {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ---------- Colophon (footer) ---------- */
+
+.d-monograph .m-colophon {
+  position: relative;
+  padding: var(--m-section) var(--m-margin) calc(3.5rem + 2.5rem + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--m-ink);
+}
+.d-monograph .m-colophon__title {
+  margin-top: 0;
+  font-family: var(--m-serif-face);
+  font-size: clamp(3rem, 8.6vw, 10rem);
+  font-weight: 300;
+  line-height: 0.9;
+  letter-spacing: -0.022em;
+  text-wrap: balance;
+}
+.d-monograph .m-colophon__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 2.5rem;
+}
+.d-monograph .m-colophon__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2rem var(--m-gap);
+  margin-top: clamp(4rem, 8vw, 7rem);
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--m-rule);
+  font-size: 0.9375rem;
+}
+.d-monograph .m-colophon__col {
+  display: flex;
+  flex-direction: column;
+}
+.d-monograph .m-colophon__link {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  color: var(--m-ink-2);
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 0.35em;
+  transition: text-decoration-color 250ms var(--m-ease), color 250ms var(--m-ease);
+}
+.d-monograph .m-colophon__link:hover {
+  color: var(--m-ink);
+  text-decoration-color: var(--m-ink);
+}
+.d-monograph .m-colophon__copy {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  color: var(--m-ink-3);
+}
+.d-monograph .m-colophon__end {
+  display: flex;
+  justify-content: center;
+  margin-top: 3.5rem;
+}
+.d-monograph .m-colophon__end span {
+  width: 0.625rem;
+  height: 0.625rem;
+  background: var(--m-red);
+}
+@media (min-width: 700px) {
+  .d-monograph .m-colophon {
+    padding-bottom: 3rem;
+  }
+  .d-monograph .m-colophon__actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .d-monograph .m-colophon__grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1100px) {
+  .d-monograph .m-colophon__cta {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--m-gap);
+    align-items: end;
+  }
+  .d-monograph .m-colophon__title {
+    grid-column: 1 / 10;
+  }
+  .d-monograph .m-colophon__actions {
+    grid-column: 10 / -1;
+    flex-direction: column;
+    align-items: stretch;
+    margin: 0 0 0.75rem;
+  }
+  .d-monograph .m-colophon__grid {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+  .d-monograph .m-colophon__col {
+    grid-column: span 3;
+  }
+  .d-monograph .m-colophon__col--end {
+    align-items: flex-end;
+  }
+}
+@media (pointer: fine) and (min-width: 700px) {
+  .d-monograph .m-colophon__link,
+  .d-monograph .m-colophon__copy {
+    min-height: 2rem;
+  }
+}
+
+/* ---------- Motion: hairlines draw, plates surface, a plate ripples ---------- */
+
+/* A plate under the pointer, for the second its ripple runs (ripple.tsx). */
+/* The filter runs on the picture inside its frame, so the frame's edges stay straight; the
+   picture swells a little while it ripples so no edge ever shows. */
+.d-monograph [data-ripple] img {
+  transition: scale 700ms var(--m-ease);
+}
+.d-monograph [data-rippling] img {
+  filter: url(#m-ripple);
+  scale: 1.05;
+}
+.d-monograph [data-rippling] .m-service__img {
+  filter: invert(1) grayscale(1) contrast(1.3) url(#m-ripple);
+}
+
+@supports (animation-timeline: view()) {
+  html[data-motion="on"] .d-monograph .m-block::before {
+    animation: m-draw linear both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 30%;
+  }
+  /* The waterline: a sheet of paper with a wave for its lower edge lifts off the plate as it
+     scrolls in, so the picture surfaces from the bottom up. Transform only. */
+  html[data-motion="on"] .d-monograph .m-rise::after {
+    content: "";
+    position: absolute;
+    inset: 0 0 -1.5rem;
+    z-index: 2;
+    background: var(--m-paper);
+    pointer-events: none;
+    mask: linear-gradient(#000, #000) top / 100% calc(100% - 1.5rem) no-repeat,
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 24' preserveAspectRatio='none'%3E%3Cpath d='M0 0h160v10c-20 0-20 10-40 10S100 10 80 10 60 20 40 20 20 10 0 10z'/%3E%3C/svg%3E") bottom / 10rem 1.5rem repeat-x;
+    animation: m-tide linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 85%;
+  }
+}
+@keyframes m-draw {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes m-tide {
+  to {
+    transform: translateY(calc(-100% - 1px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .d-monograph .m-head__chapter,
+  .d-monograph .m-foot__chapter {
+    animation: none;
+  }
+}
