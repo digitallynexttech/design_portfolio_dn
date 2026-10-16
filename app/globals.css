@@ -398,32 +398,34 @@ body {
       border-color: var(--teal);
     }
   }
-}
 
-/* Grows a control's tap area to --target-min without changing how it looks. The control needs no
-   other positioned ::after. */
-.hit {
-  position: relative;
-}
-.hit::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: max(100%, var(--target-min));
-  height: max(100%, var(--target-min));
-  translate: -50% -50%;
-}
-.chip::after {
-  content: "";
-  position: absolute;
-  inset: calc((var(--target-min) - 100%) / -2) 0;
-}
-@media (pointer: fine) {
+  /* Grows a control's tap area to --target-min without changing how it looks. Layered, so a
+     utility like `absolute` or `sticky` on the same element still wins over `relative`. The
+     control needs no other positioned ::after. */
+  .hit {
+    position: relative;
+  }
+  .hit::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: max(100%, var(--target-min));
+    height: max(100%, var(--target-min));
+    translate: -50% -50%;
+  }
   .chip::after {
-    content: none;
+    content: "";
+    position: absolute;
+    inset: calc((var(--target-min) - 100%) / -2) 0;
+  }
+  @media (pointer: fine) {
+    .chip::after {
+      content: none;
+    }
   }
 }
+
 
 /* ---------- Page flow (view transitions follow the direction of travel) ---------- */
 
@@ -687,9 +689,9 @@ body:has(.study[data-scheme="light"]) .site-header {
   }
 }
 /* On light case studies the header's text is ink, and the site teal is too faint on linen: focus
-   rings there take the header's own colour (15:1 or better). */
+   rings there are ink (15:1 or better). Not currentColor: a focused button's label turns paper. */
 body:has(.study[data-scheme="light"]) .site-header :focus-visible {
-  outline-color: currentColor;
+  outline-color: var(--ink);
 }
 @media (hover: hover) {
   .site-header__cta:hover {
