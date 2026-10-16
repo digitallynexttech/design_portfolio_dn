@@ -9,9 +9,10 @@ export default function NotFound() {
   const picks = CASE_STUDIES.filter((s) => s.tier === "flagship").slice(0, 3);
   return (
     <PageFlow>
+      {/* Anchored at the top like every page, so the title lands where the last page's did. */}
       <main
         id="main"
-        className="grid min-h-svh content-center px-(--gutter) py-36"
+        className="grid min-h-svh content-start px-(--gutter) py-page-top"
       >
         <p className="label">404</p>
         <h1 className="mt-4 font-display text-d1 font-semibold">

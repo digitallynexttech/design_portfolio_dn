@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 import { LiquidSurface } from "@/components/liquid/liquid-surface";
 import { FlowLink } from "@/components/ui/flow-link";
 import type { ReelData } from "@/content/reel";
@@ -21,8 +22,9 @@ function chapterAt(chapters: ReelData["chapters"], time: number): number {
 
 /**
  * The silent showreel with its text alternative: a "Now" pill in the current client's colour that links to the
- * case study, and an ordered chapter list (jump to any site, or read what each one is). Native controls stay, so
- * the player is fully keyboard accessible; the reel has no audio track.
+ * case study, and an ordered chapter list (jump to any site, or read what each one is). Until it first plays, one
+ * teal play button sits over the poster; after that the native controls take over, so the player stays fully
+ * keyboard accessible. The reel has no audio track.
  */
 export function ReelPlayer({
   reel,
@@ -41,6 +43,8 @@ export function ReelPlayer({
   const stage = useRef<HTMLDivElement>(null);
   const [current, setCurrent] = useState(0);
   const [ended, setEnded] = useState(false);
+  // The pop-up autoplays, so it shows the native controls from the start.
+  const [started, setStarted] = useState(autoPlay);
   const listId = useId();
   const { chapters } = reel;
   const now = chapters[current];
@@ -66,6 +70,15 @@ export function ReelPlayer({
     }
   };
 
+  const start = () => {
+    const v = video.current;
+    if (!v) return;
+    // The controls render before focus moves, so the video can take focus from the button that goes away.
+    flushSync(() => setStarted(true));
+    v.focus();
+    v.play().catch(() => undefined);
+  };
+
   const replay = () => {
     const v = video.current;
     if (!v) return;
@@ -89,7 +102,7 @@ export function ReelPlayer({
               poster={reel.poster}
               width={reel.width}
               height={reel.height}
-              controls
+              controls={started}
               playsInline
               muted
               autoPlay={autoPlay}
@@ -97,11 +110,25 @@ export function ReelPlayer({
               aria-label={`Showreel: ${reel.summary.toLowerCase()}. ${reel.length}, no sound.`}
               onTimeUpdate={sync}
               onSeeked={sync}
-              onPlay={() => setEnded(false)}
+              onPlay={() => {
+                setStarted(true);
+                setEnded(false);
+              }}
               onEnded={() => setEnded(true)}
             >
               <track kind="chapters" src={reel.chaptersTrack} srcLang="en" label="Sites" default />
             </video>
+            {started ? null : (
+              // The whole poster is the tap area; the teal circle is what shows.
+              <button type="button" className="reel__play" onClick={start} aria-label={`Play the reel, ${reel.length}`}>
+                <span className="reel__play-dot" aria-hidden>
+                  {/* Centred on the triangle's centroid, not its box, so it sits optically in the middle. */}
+                  <svg viewBox="0 0 24 24" width="26" height="26">
+                    <path d="M8.5 5.2v13.6L19.5 12z" fill="currentColor" />
+                  </svg>
+                </span>
+              </button>
+            )}
             {ended ? (
               <div className="reel__end" role="group" aria-label="End of the reel">
                 <FlowLink href="/work" className="btn btn--solid">

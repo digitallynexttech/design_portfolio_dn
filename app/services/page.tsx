@@ -21,7 +21,7 @@ const NAV_LINK =
 export default function ServicesPage() {
   return (
     <PageFlow>
-      <main id="main" className="px-(--gutter) pt-36 pb-24">
+      <main id="main" className="px-(--gutter) pt-page-top pb-24">
         <header className="grid gap-12 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:items-end lg:gap-16">
           <div>
             <p className="label">(03) Services</p>
@@ -56,7 +56,7 @@ export default function ServicesPage() {
           </nav>
         </header>
 
-        <ol className="mt-20 grid grid-cols-1 gap-px overflow-hidden rounded-3xl bg-paper/10 md:mt-24">
+        <ol className="mt-stack grid grid-cols-1 gap-px overflow-hidden rounded-3xl bg-paper/10">
           {SERVICES.map((service, i) => {
             const proof = service.proof
               .map(getCaseStudy)
@@ -124,12 +124,12 @@ export default function ServicesPage() {
         <section
           id="process"
           aria-labelledby="process-title"
-          className="process-section mt-32 scroll-mt-28"
+          className="process-section mt-section scroll-mt-28"
         >
           <p className="label">How we work</p>
           <h2
             id="process-title"
-            className="mt-4 font-display text-[clamp(2.5rem,6vw,5.5rem)] leading-[0.95] font-semibold tracking-[-0.03em]"
+            className="mt-4 font-display text-d2 font-semibold"
           >
             Six steps, every time<span className="stop">.</span>
           </h2>
@@ -149,7 +149,10 @@ export default function ServicesPage() {
                   direction="deeper"
                   className="mt-2 inline-flex min-h-11 items-center text-sm text-teal underline-offset-4 hover:underline"
                 >
-                  Proof: {step.evidence.label} <span aria-hidden>&nbsp;→</span>
+                  {/* One run of text, so a wrapped label keeps the arrow beside its last word. */}
+                  <span>
+                    Proof: {step.evidence.label}&nbsp;<span aria-hidden>→</span>
+                  </span>
                 </FlowLink>
               </li>
             ))}
