@@ -63,14 +63,15 @@ export default function RealtyCanvasExhibit({ onReady }: ExhibitProps) {
           );
         })}
       </div>
-      <div className="flex items-center gap-3">
-        <button type="button" onClick={() => advance(-1)} className="rounded-full border border-[#FEB711]/50 px-4 py-2 text-sm text-[#FEB711]">
+      {/* Above the deck: the cards fanned out behind the top one reach down over this row. */}
+      <div className="relative z-20 flex items-center gap-3">
+        <button type="button" onClick={() => advance(-1)} className="hit rounded-full border border-[#FEB711]/50 px-4 py-2 text-sm text-[#FEB711]">
           ← Back
         </button>
         <span className="font-mono text-xs text-white/60" aria-live="polite">
           {top + 1} / {RC_DECK.length}
         </span>
-        <button type="button" onClick={() => advance(1)} className="rounded-full bg-[#FEB711] px-4 py-2 text-sm font-medium text-[#0D1B25]">
+        <button type="button" onClick={() => advance(1)} className="hit rounded-full bg-[#FEB711] px-4 py-2 text-sm font-medium text-[#0D1B25]">
           Next →
         </button>
       </div>

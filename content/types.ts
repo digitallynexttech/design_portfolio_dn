@@ -192,6 +192,11 @@ export type CaseStudy = {
   order: number;
   theme: Theme;
   poster: Img;
+  /**
+   * Where the poster is cropped when the exhibit is narrower than it (a CSS object-position, e.g.
+   * "82% 50%"), so a phone still sees the subject. Centre when omitted.
+   */
+  posterFocus?: string;
   /** The same screen as `poster`, captured on a phone (art direction for cards under 768px). */
   posterPhone?: Img;
   /** Short muted loop shown on hover in grids (optional). */

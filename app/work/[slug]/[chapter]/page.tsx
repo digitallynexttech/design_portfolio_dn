@@ -163,7 +163,7 @@ export default async function StudyChapter({ params }: PageProps<"/work/[slug]/[
         <>
           <nav aria-label="Hurdles in this chapter" className="mb-6 flex flex-wrap gap-2">
             {list.map((hurdle, i) => (
-              <a key={hurdle.id} href={`#${hurdle.id}`} className="rounded-full border border-(--c-line) px-3 py-1.5 text-sm hover:border-(--c-accent)">
+              <a key={hurdle.id} href={`#${hurdle.id}`} className="chip hover:border-(--c-accent)">
                 <span className="font-mono text-xs text-(--c-accent-ink)">{String(offset + i + 1).padStart(2, "0")}</span> {hurdle.title}
               </a>
             ))}
@@ -205,7 +205,11 @@ export default async function StudyChapter({ params }: PageProps<"/work/[slug]/[
           minutes={chapterMinutes(study, chapter)}
         />
         {body}
-        <ChapterPager prev={{ href: chapterHref(study, prev), label: prev.label, kicker: "Previous" }} next={next} />
+        {/* The outcome already ends on the next project's poster; its pager keeps only Previous. */}
+        <ChapterPager
+          prev={{ href: chapterHref(study, prev), label: prev.label, kicker: "Previous" }}
+          next={chapter.key === "outcome" && nextStudy ? undefined : next}
+        />
       </main>
     </PageFlow>
   );

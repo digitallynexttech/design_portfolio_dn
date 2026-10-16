@@ -1,8 +1,22 @@
 import Image from "next/image";
-import { ViewTransition } from "react";
+import { Fragment, ViewTransition } from "react";
 import { person } from "@/content/team";
 import type { CaseStudy, Metric, Testimonial } from "@/content/types";
 import { FlowLink } from "@/components/ui/flow-link";
+
+/** A label of segments ("D2C · Genetic testing · 2026") that wraps between segments, never inside one. */
+export function MetaLine({ parts, className = "" }: { parts: string[]; className?: string }) {
+  return (
+    <p className={`label text-balance ${className}`}>
+      {parts.map((part, i) => (
+        <Fragment key={i}>
+          {i > 0 ? " " : null}
+          <span className="whitespace-nowrap">{i < parts.length - 1 ? `${part} ·` : part}</span>
+        </Fragment>
+      ))}
+    </p>
+  );
+}
 
 export function ChapterHeader({
   index,
@@ -19,10 +33,9 @@ export function ChapterHeader({
 }) {
   return (
     <header className="pt-16 pb-10 md:pt-24">
-      <p className="label">
-        Chapter {String(index + 1).padStart(2, "0")} / {String(total).padStart(2, "0")}
-        {minutes ? ` · ${minutes} min` : ""}
-      </p>
+      <MetaLine
+        parts={[`Chapter ${String(index + 1).padStart(2, "0")} / ${String(total).padStart(2, "0")}`, ...(minutes ? [`${minutes} min`] : [])]}
+      />
       <h1 tabIndex={-1} className="study-h1 mt-4">
         {title}
         <span className="text-(--c-accent)">.</span>
@@ -34,12 +47,17 @@ export function ChapterHeader({
 
 export function Metrics({ metrics }: { metrics: Metric[] }) {
   return (
-    <dl className="grid gap-8 sm:grid-cols-3">
+    // One column until 1024px, then a row of equal thirds. A value never wraps ("8.9 → 1 / MB"): a
+    // cell is at least as wide as its value, so a long one takes more of the row or a row of its own.
+    // The 3rem gap keeps two long values in a row from reading as one.
+    <dl className="flex flex-col gap-8 lg:flex-row lg:flex-wrap lg:gap-x-12">
       {metrics.map((metric) => (
-        <div key={metric.label} className="reveal border-t border-(--c-line) pt-5">
+        <div key={metric.label} className="reveal border-t border-(--c-line) pt-5 lg:grow lg:basis-60">
           <dt className="sr-only">{metric.label}</dt>
           <dd>
-            <span className="block font-(family-name:--c-display) text-5xl leading-none tracking-tight lining-nums md:text-6xl">{metric.value}</span>
+            <span className="block font-(family-name:--c-display) text-5xl leading-none tracking-tight whitespace-nowrap lining-nums md:text-6xl">
+              {metric.value}
+            </span>
             <span className="mt-3 block text-(--c-muted)">{metric.label}</span>
           </dd>
         </div>
@@ -90,8 +108,11 @@ export function Quote({ testimonial, size = "lg" }: { testimonial: Testimonial; 
 
 type PagerLink = { href: string; label: string; kicker: string; minutes?: number };
 
-/** End-of-chapter hand-off: there is always a next place to go (flow rule 4). */
-export function ChapterPager({ prev, next }: { prev?: PagerLink; next: PagerLink }) {
+/**
+ * End-of-chapter hand-off: there is always a next place to go (flow rule 4). `next` is left out only
+ * where the page already ends on one (the outcome chapter's next-project teaser).
+ */
+export function ChapterPager({ prev, next }: { prev?: PagerLink; next?: PagerLink }) {
   return (
     <nav aria-label="Chapter" className="mt-24 grid gap-4 border-t border-(--c-line) pt-10 md:grid-cols-2">
       {prev ? (
@@ -102,17 +123,19 @@ export function ChapterPager({ prev, next }: { prev?: PagerLink; next: PagerLink
       ) : (
         <span />
       )}
-      <FlowLink
-        href={next.href}
-        direction="forward"
-        className="group rounded-2xl bg-(--c-surface) p-5 text-right transition-colors hover:bg-(--c-accent) hover:text-(--c-on-accent)"
-      >
-        <span className="label">
-          {next.kicker}
-          {next.minutes ? ` · ${next.minutes} min` : ""} →
-        </span>
-        <span className="mt-2 block font-(family-name:--c-display) text-3xl md:text-4xl">{next.label}</span>
-      </FlowLink>
+      {next ? (
+        <FlowLink
+          href={next.href}
+          direction="forward"
+          className="group rounded-2xl bg-(--c-surface) p-5 text-right transition-colors hover:bg-(--c-accent) hover:text-(--c-on-accent)"
+        >
+          <span className="label">
+            {next.kicker}
+            {next.minutes ? ` · ${next.minutes} min` : ""} →
+          </span>
+          <span className="mt-2 block font-(family-name:--c-display) text-3xl md:text-4xl">{next.label}</span>
+        </FlowLink>
+      ) : null}
     </nav>
   );
 }
@@ -129,6 +152,7 @@ export function NextStudyTeaser({ study }: { study: CaseStudy }) {
           height={study.poster.height}
           sizes="(min-width: 1216px) 1120px, 92vw"
           className="h-[50svh] w-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+          style={{ objectPosition: study.posterFocus }}
         />
       </ViewTransition>
       <div className="absolute inset-0 flex flex-col justify-end bg-linear-to-t from-black/80 via-black/20 to-transparent p-6 text-white md:p-10">

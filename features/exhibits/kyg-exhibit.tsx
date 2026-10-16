@@ -227,7 +227,7 @@ export default function KygExhibit({ onReady }: ExhibitProps) {
         ) : null}
       </Canvas>
 
-      <div className="absolute right-(--gutter) bottom-24 left-(--gutter) flex flex-col items-end gap-3 md:bottom-5 md:left-auto">
+      <div className="absolute right-(--gutter) bottom-20 left-(--gutter) flex flex-col items-end gap-3 md:bottom-5 md:left-auto">
         <p
           className="rounded-full bg-white/80 px-4 py-2 text-sm text-[#0E4D4B] backdrop-blur"
           aria-live="polite"
@@ -235,17 +235,21 @@ export default function KygExhibit({ onReady }: ExhibitProps) {
           <strong>{crew.name}</strong> · {crew.family} - tap again:{" "}
           {crew.signature.toLowerCase()}
         </p>
+        {/* Phones: one row that swipes sideways, edge to edge, so it never stacks up over the
+            mascots' legs. It stretches to the row (a nowrap row is otherwise as wide as its chips),
+            sits right while it fits and starts at Vita once it doesn't (safe end). py-1 keeps the
+            chips' 44px tap areas inside the scroller. */}
         <ul
-          className="flex flex-wrap justify-end gap-2"
+          className="flex justify-end-safe gap-2 [scrollbar-width:none] max-md:-mx-(--gutter) max-md:self-stretch max-md:overflow-x-auto max-md:px-(--gutter) max-md:py-1 md:flex-wrap"
           aria-label="Choose a mascot"
         >
           {KYG_CREW.map((member, i) => (
-            <li key={member.id}>
+            <li key={member.id} className="shrink-0">
               <button
                 type="button"
                 aria-pressed={i === index}
                 onClick={() => choose(i)}
-                className="flex items-center gap-2 rounded-full border border-[#0E4D4B]/20 bg-white/85 px-3.5 py-2 text-sm text-[#0E4D4B] backdrop-blur transition-colors aria-pressed:border-[#0E4D4B] aria-pressed:bg-[#0E4D4B] aria-pressed:text-white"
+                className="hit flex items-center gap-2 rounded-full border border-[#0E4D4B]/20 bg-white/85 px-3.5 py-2 text-sm text-[#0E4D4B] backdrop-blur transition-colors aria-pressed:border-[#0E4D4B] aria-pressed:bg-[#0E4D4B] aria-pressed:text-white"
               >
                 <span
                   className="size-2.5 rounded-full"

@@ -43,7 +43,8 @@ export default function DnmsExhibit({ onReady }: ExhibitProps) {
 
   return (
     <div ref={host} className="absolute inset-0 overflow-hidden text-white" style={{ background: "radial-gradient(70% 60% at 20% 20%, #4c2fd1 0%, transparent 60%), radial-gradient(60% 60% at 90% 80%, #0891b2 0%, transparent 60%), #0b0d17" }}>
-      <div className="grid h-full gap-6 px-(--gutter) pt-16 pb-24 md:grid-cols-[1.25fr_1fr] md:py-12">
+      {/* pt-16 at every width: the exhibit's More button sits top-right, just above the replay panel. */}
+      <div className="grid h-full gap-6 px-(--gutter) pt-16 pb-24 md:grid-cols-[1.25fr_1fr] md:pt-16 md:pb-12">
         <div className="relative hidden md:block" style={{ perspective: "1600px" }}>
           <ul className="absolute inset-0 grid grid-cols-3 gap-3" style={{ transform: "rotateY(14deg) rotateX(6deg)", transformStyle: "preserve-3d" }}>
             {wall.map((screen, i) => (
@@ -67,7 +68,7 @@ export default function DnmsExhibit({ onReady }: ExhibitProps) {
         <section aria-label="Ask DNMS, replayed" className="flex min-h-0 flex-col rounded-2xl bg-black/45 p-5 ring-1 ring-white/10 backdrop-blur-md">
           <div className="flex items-center justify-between gap-3">
             <p className="font-mono text-xs tracking-widest text-cyan-200 uppercase">Claude × DNMS · replay</p>
-            <button type="button" onClick={() => setRun((n) => n + 1)} className="rounded-full border border-white/25 px-3 py-1 text-xs hover:bg-white hover:text-black">
+            <button type="button" onClick={() => setRun((n) => n + 1)} className="hit rounded-full border border-white/25 px-3 py-1 text-xs hover:bg-white hover:text-black">
               Replay
             </button>
           </div>

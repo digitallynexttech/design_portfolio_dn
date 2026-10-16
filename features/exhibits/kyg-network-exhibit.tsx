@@ -64,13 +64,13 @@ export default function KygNetworkExhibit({ onReady }: ExhibitProps) {
               <span key={c} className="size-5 rounded-full ring-1 ring-black/15" style={{ background: c }} />
             ))}
           </span>
-          <button type="button" onClick={() => setActive((a) => (a - 1 + n) % n)} className="rounded-full border border-current/30 px-4 py-2 text-sm">
+          <button type="button" onClick={() => setActive((a) => (a - 1 + n) % n)} className="hit rounded-full border border-current/30 px-4 py-2 text-sm">
             ←
           </button>
           <span className="font-mono text-xs opacity-70">
             {active + 1}/{n}
           </span>
-          <button type="button" onClick={() => setActive((a) => (a + 1) % n)} className="rounded-full px-4 py-2 text-sm" style={{ background: site.palette.accent, color: site.palette.bg }}>
+          <button type="button" onClick={() => setActive((a) => (a + 1) % n)} className="hit rounded-full px-4 py-2 text-sm" style={{ background: site.palette.accent, color: site.palette.bg }}>
             →
           </button>
         </div>

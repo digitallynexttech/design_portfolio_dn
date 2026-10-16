@@ -37,7 +37,7 @@ export default function TalentifixExhibit({ onReady }: ExhibitProps) {
       <div className="mx-auto flex min-h-full max-w-6xl flex-col justify-center px-(--gutter) pt-16 pb-28 md:py-12">
         <div className="flex items-end justify-between gap-4">
           <p className="font-display text-3xl font-semibold md:text-5xl">Built to be found.</p>
-          <button type="button" onClick={() => setRun((n) => n + 1)} className="rounded-full border border-white/40 px-4 py-2 text-sm hover:bg-white hover:text-[#000099]">
+          <button type="button" onClick={() => setRun((n) => n + 1)} className="hit rounded-full border border-white/40 px-4 py-2 text-sm hover:bg-white hover:text-[#000099]">
             Run it again
           </button>
         </div>

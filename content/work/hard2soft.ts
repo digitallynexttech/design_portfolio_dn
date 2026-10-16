@@ -34,6 +34,8 @@ const hard2soft: CaseStudy = {
     width: 1600,
     height: 1000,
   },
+  // The headline sits in the left half: keep "Here Is the Fix." whole on a phone.
+  posterFocus: "8% 50%",
   exhibit: "h2s",
   exhibitHint: "Tap the signs you recognise at home and watch the gauge rise. Then find your city among the 43.",
   metrics: [
@@ -166,7 +168,7 @@ const hard2soft: CaseStudy = {
       caption: "Local facts go in on the left; one engine turns them into pages that sell.",
       nodes: [
         { id: "cities", label: "City & state pages", note: "43 short data files", lane: 0 },
-        { id: "topics", label: "Topic pages", note: "hair, skin, laundry, bathroom, geyser", lane: 0 },
+        { id: "topics", label: "Topic pages", note: "5 topics, hair to geyser", lane: 0 },
         { id: "engine", label: "Landing engine", note: "one Liquid snippet", lane: 1 },
         { id: "check", label: "Symptom check", note: "live ring gauge", lane: 2 },
         { id: "reels", label: "Shoppable reels", note: "video loads on view", lane: 2 },

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ChapterPager, Credits, Metrics, Quote } from "@/components/case-study/study-parts";
+import { Fragment } from "react";
+import { ChapterPager, Credits, MetaLine, Metrics, Quote } from "@/components/case-study/study-parts";
 import { PageFlow } from "@/components/ui/page-flow";
 import { RouteFocus } from "@/components/work/route-focus";
 import { chapterHref, chapterMinutes, chaptersFor, getCaseStudy, visibleTestimonial } from "@/content/work";
@@ -52,9 +53,7 @@ export default async function StudyOverview({ params }: PageProps<"/work/[slug]"
         <div className="study-wrap pb-24">
           <header className="grid gap-10 pt-8 md:grid-cols-[1.4fr_1fr] md:pt-10">
             <div>
-              <p className="label">
-                {study.industry} · {study.year}
-              </p>
+              <MetaLine parts={[...study.industry.split(" · "), String(study.year)]} />
               <h1 tabIndex={-1} className="study-h1 mt-4">
                 {study.client}
                 <span className="text-(--c-accent)">.</span>
@@ -70,16 +69,18 @@ export default async function StudyOverview({ params }: PageProps<"/work/[slug]"
                 </div>
                 <div>
                   <dt className="text-(--c-muted)">Disciplines</dt>
-                  <dd>{study.disciplines.join(", ")}</dd>
+                  <dd>
+                    {study.disciplines.map((d, i) => (
+                      <Fragment key={d}>
+                        {i > 0 ? " " : null}
+                        <span className="whitespace-nowrap">{i < study.disciplines.length - 1 ? `${d},` : d}</span>
+                      </Fragment>
+                    ))}
+                  </dd>
                 </div>
               </dl>
               {study.liveUrl ? (
-                <a
-                  href={study.liveUrl}
-                  target="_blank"
-                  rel="noopener"
-                  className="w-fit rounded-full bg-(--c-accent) px-5 py-3 text-sm font-medium text-(--c-on-accent)"
-                >
+                <a href={study.liveUrl} target="_blank" rel="noopener" className="btn btn--accent w-fit">
                   Visit the live site <span aria-hidden>↗</span>
                   <span className="sr-only"> (opens in a new tab)</span>
                 </a>

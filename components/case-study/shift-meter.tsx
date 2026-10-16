@@ -58,11 +58,12 @@ export function ShiftMeter({ demo, max }: { demo: Shift; max?: number }) {
     <div ref={ref} className="mx-auto w-full max-w-xl rounded-2xl border border-(--c-line) p-6">
       <div className="flex items-baseline justify-between gap-4">
         <p className="label">{demo.label}</p>
-        <button type="button" onClick={() => setRuns((r) => r + 1)} className="text-xs text-(--c-muted) underline-offset-4 hover:underline">
+        <button type="button" onClick={() => setRuns((r) => r + 1)} className="hit text-xs text-(--c-muted) underline-offset-4 hover:underline">
           Replay
         </button>
       </div>
-      <p className="mt-4 font-(family-name:--c-display) text-6xl tabular-nums md:text-7xl" aria-hidden>
+      {/* Lining figures: old-style ones turn "0.6" into "o.6" and "311" into "3II" in some client faces. */}
+      <p className="mt-4 font-(family-name:--c-display) text-6xl lining-nums tabular-nums md:text-7xl" aria-hidden>
         {value.toFixed(decimals)}
         <span className="text-2xl text-(--c-muted)">{unit}</span>
       </p>
