@@ -82,7 +82,7 @@ export default function Home() {
                 <p className="label">(01) The studio</p>
                 <h2
                   id="studio-title"
-                  className="reveal mt-4 max-w-[22ch] font-display text-[clamp(2.25rem,5.6vw,5.25rem)] leading-[1.02] font-semibold tracking-[-0.03em]"
+                  className="reveal mt-4 max-w-[22ch] font-display text-statement font-semibold"
                 >
                   We are the designers, developers and motion artists inside Digitally Next<span className="stop">.</span>
                 </h2>
@@ -97,7 +97,7 @@ export default function Home() {
                   { value: String(clientStudies.length), label: "case studies, told in full" },
                 ].map((stat, i) => (
                   <div key={stat.label} className="reveal stagger flex flex-col-reverse justify-end border-t border-paper/15 pt-5" style={stagger(i)}>
-                    <dt className="mt-2 text-sm text-paper/70 md:text-base">{stat.label}</dt>
+                    <dt className="mt-2 text-sm text-(--text-3) md:text-base">{stat.label}</dt>
                     <dd className="font-display text-5xl font-semibold tracking-tight md:text-7xl">{stat.value}</dd>
                   </div>
                 ))}
@@ -179,7 +179,7 @@ export default function Home() {
                   style={stagger(i % 2)}
                 >
                   {t.approved ? null : (
-                    <p className="mb-4 rounded-full border border-dashed border-paper/30 px-3 py-1 font-mono text-[0.65rem] tracking-widest text-paper/60 uppercase">
+                    <p className="mb-4 rounded-full border border-dashed border-paper/30 px-3 py-1 font-mono text-[0.65rem] tracking-widest text-(--text-3) uppercase">
                       Draft · awaiting approval
                     </p>
                   )}
@@ -189,7 +189,7 @@ export default function Home() {
                       {t.quote}
                       <span className="text-paper/40">”</span>
                     </blockquote>
-                    <figcaption className="mt-5 text-paper/70">{attribution(t)}</figcaption>
+                    <figcaption className="mt-5 text-(--text-3)">{attribution(t)}</figcaption>
                   </figure>
                   <FlowLink
                     href={`/work/${study.slug}`}
@@ -224,9 +224,9 @@ export default function Home() {
                 {makers.map((p) => (
                   <li key={p.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 gap-y-1 border-b border-paper/10 py-4 md:gap-x-6">
                     <p className="text-lg font-semibold tracking-tight md:text-xl">{p.name}</p>
-                    <p className="text-right text-sm text-paper/70">{p.title}</p>
+                    <p className="text-right text-sm text-(--text-3)">{p.title}</p>
                     {p.shipped.length ? (
-                      <p className="col-span-2 text-sm text-paper/60">
+                      <p className="col-span-2 text-sm text-(--text-3)">
                         <span className="sr-only">Shipped: </span>
                         {p.shipped.join(" · ")}
                       </p>

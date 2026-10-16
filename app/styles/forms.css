@@ -37,8 +37,19 @@ html[data-forms="off"] .form-fallback {
     inset 0 1px 0 rgb(14 200 197 / 0.5),
     0 -24px 48px -24px rgb(14 200 197 / 0.18);
 }
+/* The section's bottom rhythm lives inside the list, so on wide screens the vessel beside the cases
+   stays in place until the last card has been read (it beats the 1024+ `margin: 0` on purpose). */
+.sw-case:last-child {
+  margin-bottom: var(--spacing-section);
+}
+/* A faint edge, so a dark client colour (KYG's teal on ink) still reads as a button. */
+.sw-card .btn--accent {
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--paper) 16%, transparent);
+}
 
-@media (min-width: 768px) {
+/* Two columns only from 1024: below that the text column is too narrow for the numbers, so tablets
+   keep the phone's stage-and-card. */
+@media (min-width: 1024px) {
   .sw-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -68,7 +79,14 @@ html[data-forms="off"] .form-fallback {
     margin: 0;
     padding: 4rem 0;
   }
+  /* The last case ends at its button: below it there is only the section's rhythm. */
+  .sw-case:last-child {
+    min-height: auto;
+    padding-bottom: 0;
+  }
   .sw-card {
+    /* Full column, so every card's metric rules end at the same x. */
+    width: 100%;
     margin: 0;
     padding: 0;
     border-radius: 0;
@@ -105,9 +123,9 @@ html[data-forms="off"] .form-fallback {
 .hero-beat {
   font-family: var(--font-headline);
   font-weight: 600;
-  line-height: 0.92;
-  letter-spacing: -0.035em;
-  font-size: clamp(3.25rem, 12.5vw, 12.5rem);
+  line-height: var(--text-hero--line-height);
+  letter-spacing: var(--text-hero--letter-spacing);
+  font-size: var(--text-hero);
   text-wrap: balance;
 }
 
@@ -145,6 +163,17 @@ html[data-forms="off"] .form-fallback {
   opacity: 0;
 }
 
+/* With motion off the beats are read together, so the first stays the headline and the other two
+   follow it as a sub-head: the whole hero, Set sail included, fits the first screen. */
+[data-motion="off"] .hero-beats {
+  gap: 0.75rem;
+}
+[data-motion="off"] .hero-beat:not(:first-child) {
+  font-size: var(--text-d3);
+  line-height: var(--text-d3--line-height);
+  letter-spacing: var(--text-d3--letter-spacing);
+  max-width: 22ch;
+}
 
 
 .hero-sticky {
@@ -169,21 +198,14 @@ html[data-forms="off"] .form-fallback {
     linear-gradient(90deg, rgb(10 10 10 / 0.6), transparent 62%);
 }
 
+/* Set sail is a .btn btn--primary btn--lg (its fill, focus and press); it adds a red glow and a
+   wake that runs across it, under the label and over the fill. */
 .sail-button {
-  position: relative;
-  overflow: hidden;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  border-radius: 999px;
-  background: var(--red);
-  color: #fff;
-  padding: 0.9rem 1.6rem;
-  font-weight: 600;
   box-shadow: 0 12px 34px rgb(226 31 38 / 0.35);
 }
 .sail-button__wake {
   position: absolute;
+  z-index: -1;
   inset: 0;
   background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.32), transparent);
   transform: translateX(-100%);
