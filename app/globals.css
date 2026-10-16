@@ -72,6 +72,13 @@
   --text-d1: clamp(3.25rem, 10vw, 9rem);
   --text-d1--line-height: 0.9;
   --text-d1--letter-spacing: -0.035em;
+  /* Home only: the (02) Selected work title, and the studio's opening statement. */
+  --text-showpiece: clamp(2.75rem, 8vw, 7.5rem);
+  --text-showpiece--line-height: 0.92;
+  --text-showpiece--letter-spacing: -0.035em;
+  --text-statement: clamp(2.25rem, 5.6vw, 5.25rem);
+  --text-statement--line-height: 1.02;
+  --text-statement--letter-spacing: -0.03em;
   --text-d2: clamp(2.25rem, 5vw, 4.5rem);
   --text-d2--line-height: 0.98;
   --text-d2--letter-spacing: -0.03em;
@@ -104,6 +111,11 @@
   --radius-card: 1.5rem;
   --radius-inner: 1rem;
   --radius-sheet: 1.75rem;
+
+  /* The smallest tap area on a touch screen (PLAN §14.2). */
+  --target-min: 2.75rem;
+  /* The header's glass. */
+  --chrome-blur: 14px;
 
   --ease-drain: cubic-bezier(0.7, 0, 0.84, 0);
   --ease-tide: cubic-bezier(0.65, 0, 0.35, 1);
@@ -363,6 +375,54 @@ body {
     padding: 0 1.75rem;
     font-size: 1rem;
   }
+
+  /* A tappable pill: project chips, filters, index chips. 36px to the eye; on touch screens an
+     invisible margin brings the tap area to --target-min. Static lists (a stack, tags) use a
+     filled pill without a border, so a border always means "you can press this". */
+  .chip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 2.25rem;
+    padding: 0 0.875rem;
+    border: 1px solid color-mix(in oklab, currentColor 20%, transparent);
+    border-radius: var(--radius-pill);
+    font-size: 0.875rem;
+    line-height: 1.2;
+    text-decoration: none;
+    transition: border-color var(--dur-2) var(--ease-flow), color var(--dur-2) var(--ease-flow);
+  }
+  @media (hover: hover) {
+    .chip:hover {
+      border-color: var(--teal);
+    }
+  }
+}
+
+/* Grows a control's tap area to --target-min without changing how it looks. The control needs no
+   other positioned ::after. */
+.hit {
+  position: relative;
+}
+.hit::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100%, var(--target-min));
+  height: max(100%, var(--target-min));
+  translate: -50% -50%;
+}
+.chip::after {
+  content: "";
+  position: absolute;
+  inset: calc((var(--target-min) - 100%) / -2) 0;
+}
+@media (pointer: fine) {
+  .chip::after {
+    content: none;
+  }
 }
 
 /* ---------- Page flow (view transitions follow the direction of travel) ---------- */
@@ -430,6 +490,27 @@ body {
 }
 ::view-transition-new(site-header) {
   animation: none;
+}
+/* The phone's Menu pill is chrome too: pinned, never blinking out between pages. */
+::view-transition-group(menu-pill) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-old(menu-pill) {
+  display: none;
+}
+::view-transition-new(menu-pill) {
+  animation: none;
+}
+/* Phones get no blur, so the new page waits until the old one has fully drained; otherwise two
+   pages of text overlap for a moment. */
+@media (pointer: coarse) {
+  ::view-transition-new(.nav-forward),
+  ::view-transition-new(.nav-back),
+  ::view-transition-new(.nav-deeper),
+  ::view-transition-new(.nav-fade) {
+    animation-delay: 240ms;
+  }
 }
 
 /* ---------- Scroll reveals (CSS only; content is visible where unsupported) ---------- */
@@ -580,16 +661,31 @@ body:has(.study[data-scheme="light"]) .site-header {
   pointer-events: none;
   background: linear-gradient(
     to bottom,
-    color-mix(in oklab, var(--scrim) 80%, transparent),
-    color-mix(in oklab, var(--scrim) 45%, transparent) 55%,
+    color-mix(in oklab, var(--scrim) 88%, transparent),
+    color-mix(in oklab, var(--scrim) 60%, transparent) 55%,
     transparent
   );
+  /* Glass: whatever slides under the header blurs, so the logo always reads; the blur fades out
+     towards the bottom edge with the scrim. Plain backdrop-filter only (Lightning CSS drops it
+     when the -webkit- form sits beside it). */
+  backdrop-filter: blur(var(--chrome-blur)) saturate(140%);
+  mask-image: linear-gradient(to bottom, #000 55%, transparent);
 }
 .site-header__cta {
   --btn-fill: var(--red);
   --btn-on-fill: var(--paper);
   min-height: 2.375rem;
   padding: 0 1rem;
+}
+@media (pointer: coarse) {
+  .site-header__cta {
+    min-height: var(--target-min);
+  }
+}
+/* On light case studies the header's text is ink, and the site teal is too faint on linen: focus
+   rings there take the header's own colour (15:1 or better). */
+body:has(.study[data-scheme="light"]) .site-header :focus-visible {
+  outline-color: currentColor;
 }
 @media (hover: hover) {
   .site-header__cta:hover {
@@ -631,7 +727,8 @@ body:has(.study[data-scheme="light"]) .site-header .logo-on-light {
   ::view-transition-new(*) {
     animation: 150ms ease both vt-fade-in !important;
   }
-  ::view-transition-new(site-header) {
+  ::view-transition-new(site-header),
+  ::view-transition-new(menu-pill) {
     animation: none !important;
   }
 }
