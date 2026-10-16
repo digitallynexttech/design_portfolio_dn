@@ -1,8 +1,9 @@
 import { CAREERS_URL, CONTACT_URL, COPYRIGHT_YEAR, JOURNAL_URL, MAIN_SITE, NAV, PRIVACY_URL, SOCIALS } from "@/lib/site";
 import { FlowLink } from "./flow-link";
 
-// Footer links: 40px tall rows on phones (thumb-sized), compact on desktop. Text stays at 75% over the water.
-const LINK = "py-2.5 transition-colors hover:text-paper md:py-1.5";
+// Footer links: full-width 44px rows on touch screens (thumb-sized); with a mouse, compact and only as wide
+// as their text, so hover and focus hug the words. Text stays at 75% over the water.
+const LINK = "py-3 transition-colors hover:text-paper md:pointer-fine:py-1.5";
 
 export function SiteFooter() {
   return (
@@ -30,14 +31,14 @@ export function SiteFooter() {
       </div>
 
       <div className="grid grid-cols-2 gap-x-6 gap-y-8 text-sm text-paper/75 md:grid-cols-4">
-        <nav aria-label="Footer" className="flex flex-col">
+        <nav aria-label="Footer" className="flex flex-col pointer-fine:items-start">
           {NAV.map((item) => (
             <FlowLink key={item.href} href={item.href} className={LINK}>
               {item.label}
             </FlowLink>
           ))}
         </nav>
-        <div className="flex flex-col">
+        <div className="flex flex-col pointer-fine:items-start">
           <a href={CAREERS_URL} className={LINK}>
             Careers <span aria-hidden>↗</span>
           </a>
@@ -48,18 +49,18 @@ export function SiteFooter() {
             Privacy <span aria-hidden>↗</span>
           </a>
         </div>
-        <div className="flex flex-col">
+        <div className="flex flex-col pointer-fine:items-start">
           {SOCIALS.map((social) => (
             <a key={social.href} href={social.href} className={LINK}>
               {social.label} <span aria-hidden>↗</span>
             </a>
           ))}
         </div>
-        <div className="flex flex-col md:text-right">
+        <div className="flex flex-col pointer-fine:items-start md:text-right md:pointer-fine:items-end">
           <a href={MAIN_SITE} className={LINK}>
             Part of Digitally Next <span aria-hidden>↗</span>
           </a>
-          <span className="py-2.5 md:py-1.5">© {COPYRIGHT_YEAR} Digitally Next</span>
+          <span className="py-3 md:pointer-fine:py-1.5">© {COPYRIGHT_YEAR} Digitally Next</span>
         </div>
       </div>
     </footer>

@@ -11,8 +11,8 @@ export const REEL = {
   width: 1280,
   height: 720,
   duration: 48.96,
-  /** Shown as "0:49"; the file is 48.96 s. */
-  length: "0:49",
+  /** The file is 48.96 s; players floor it to "0:48", so the page says the same. */
+  length: "0:48",
   summary: "Seven live sites, seven seconds each",
 } as const;
 

@@ -32,13 +32,13 @@ export function ArchiveGrid() {
                   </>
                 ) : null}
               </p>
-              <p className="shrink-0 font-mono text-xs text-paper/60">
+              <p className="shrink-0 font-mono text-xs text-(--text-2)">
                 {entry.platform}
                 {entry.year ? ` · ${entry.year}` : ""}
               </p>
             </div>
-            <p className="mt-1 text-sm text-paper/60">{entry.sector}</p>
-            <p className="mt-2 text-paper/70">{entry.note}</p>
+            <p className="mt-1 text-sm text-(--text-2)">{entry.sector}</p>
+            <p className="mt-2 text-(--text-2)">{entry.note}</p>
           </>
         );
         return (

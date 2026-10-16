@@ -100,7 +100,20 @@ export function WorkCard({
     phonePoster ? "max-md:aspect-[1170/1992]" : "",
   ].join(" ");
 
-  const meta = `${study.industry} · ${study.year}${showChapters ? ` · ${study.chapters} chapters` : ""}`;
+  // Each segment ("Odour control", "2026", "7 chapters") stays whole; lines break only between them, with
+  // the dot left at the end of the line. Compact cards keep one line: the industry alone.
+  const segments = compact
+    ? [study.industry]
+    : [...study.industry.split(" · "), String(study.year), ...(showChapters ? [`${study.chapters} chapters`] : [])];
+  const meta = segments.map((segment, i) => (
+    <span key={segment}>
+      <span className="whitespace-nowrap">
+        {segment}
+        {i < segments.length - 1 ? " ·" : ""}
+      </span>
+      {i < segments.length - 1 ? " " : ""}
+    </span>
+  ));
 
   return (
     <FlowLink
@@ -149,7 +162,9 @@ export function WorkCard({
 
       <div className={`flex flex-1 flex-col ${large ? "lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:gap-x-16" : ""}`}>
         <div>
-          <p className={`font-mono text-[0.7rem] tracking-[0.14em] text-paper/60 uppercase ${compact ? "mt-4" : "mt-5"}`}>{meta}</p>
+          <p className={`font-mono text-[0.7rem] tracking-[0.14em] text-(--text-2) uppercase ${compact ? "mt-4 truncate" : "mt-5 text-balance"}`}>
+            {meta}
+          </p>
           <Heading
             id={titleId}
             className={`mt-2 font-display font-semibold tracking-tight ${compact ? "text-xl md:text-2xl" : large ? "text-3xl md:text-4xl" : "text-2xl md:text-3xl"}`}
@@ -157,7 +172,7 @@ export function WorkCard({
             {study.client}
             <span className="stop">.</span>
           </Heading>
-          <p id={lineId} className={`mt-2 text-paper/65 ${compact ? "truncate" : "max-w-[48ch]"}`}>
+          <p id={lineId} className={`mt-2 text-(--text-2) ${compact ? "line-clamp-2" : "max-w-[48ch]"}`}>
             {study.headline}
           </p>
         </div>
@@ -167,12 +182,12 @@ export function WorkCard({
             {study.metric ? (
               <p className="mt-5 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-t border-paper/10 pt-4">
                 <span className="font-display text-2xl font-semibold tracking-tight md:text-3xl">{study.metric.value}</span>
-                <span className="text-sm text-paper/60">{study.metric.label}</span>
+                <span className="text-sm text-(--text-2)">{study.metric.label}</span>
               </p>
             ) : null}
             <ul className="mt-4 hidden flex-wrap gap-1.5 md:flex" aria-label="Disciplines">
               {study.disciplines.map((d) => (
-                <li key={d} className="rounded-full border border-paper/15 px-2.5 py-0.5 text-xs text-paper/60">
+                <li key={d} className="rounded-full border border-paper/15 px-2.5 py-0.5 text-xs text-(--text-2)">
                   {d}
                 </li>
               ))}

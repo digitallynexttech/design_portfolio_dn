@@ -11,7 +11,7 @@ import {
   STUDIO_PHOTOS,
   TEAM_PHOTO_PORTRAIT,
 } from "@/content/studio";
-import { CAREERS_URL, FACTS } from "@/lib/site";
+import { FACTS } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "About",
@@ -84,7 +84,7 @@ export default function AboutPage() {
 
   return (
     <PageFlow>
-      <main id="main" className="pt-36 pb-24">
+      <main id="main" className="pt-page-top pb-24">
         <header>
           <div className="px-(--gutter)">
             <p className="label">(04) About</p>
@@ -111,14 +111,14 @@ export default function AboutPage() {
           </div>
         </header>
 
-        <section aria-labelledby="principles" className="mt-32 px-(--gutter)">
+        <section aria-labelledby="principles" className="mt-section px-(--gutter)">
           <h2 id="principles" className="label">
             How we think
           </h2>
           <ul className="mt-8 grid gap-10 md:grid-cols-2 xl:grid-cols-4">
             {PRINCIPLES.map((principle) => (
               <li key={principle.title} className="reveal">
-                <h3 className="font-display text-5xl font-semibold tracking-tight">
+                <h3 className="font-display text-d3 font-semibold">
                   {principle.title}
                   <span className="stop">.</span>
                 </h3>
@@ -130,10 +130,10 @@ export default function AboutPage() {
           </ul>
         </section>
 
-        <section aria-labelledby="people" className="mt-36 px-(--gutter)">
+        <section aria-labelledby="people" className="mt-section px-(--gutter)">
           <h2
             id="people"
-            className="font-display text-[clamp(2.5rem,6vw,5.5rem)] leading-[0.95] font-semibold tracking-[-0.03em]"
+            className="font-display text-d2 font-semibold"
           >
             The people<span className="stop">.</span>
           </h2>
@@ -154,7 +154,7 @@ export default function AboutPage() {
                     return (
                       <li
                         key={p.id}
-                        className={`grid gap-2 border-b border-paper/10 py-6 ${
+                        className={`grid content-start gap-2 border-b border-paper/10 py-6 ${
                           makers
                             ? "lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.6fr)] lg:items-baseline lg:gap-6"
                             : ""
@@ -172,7 +172,7 @@ export default function AboutPage() {
                         <p className="text-paper/60">{p.title}</p>
                         {shipped.length ? (
                           <ul
-                            className="flex flex-wrap gap-1.5"
+                            className="flex flex-wrap gap-2"
                             aria-label={`Projects ${p.name} worked on`}
                           >
                             {shipped.map((study) => (
@@ -180,7 +180,7 @@ export default function AboutPage() {
                                 <FlowLink
                                   href={`/work/${study.slug}`}
                                   direction="deeper"
-                                  className="inline-flex items-center rounded-full border border-paper/15 px-2.5 py-1 text-xs whitespace-nowrap text-paper/60 transition-colors hover:border-teal/60 hover:text-teal"
+                                  className="chip whitespace-nowrap text-(--text-2)"
                                 >
                                   {study.client}
                                 </FlowLink>
@@ -197,7 +197,7 @@ export default function AboutPage() {
           })}
         </section>
 
-        <section aria-labelledby="inside" className="mt-28 px-(--gutter)">
+        <section aria-labelledby="inside" className="mt-section px-(--gutter)">
           <h2 id="inside" className="label">
             Inside the studio
           </h2>
@@ -224,7 +224,7 @@ export default function AboutPage() {
           </ul>
         </section>
 
-        <p className="mt-24 px-(--gutter)">
+        <p className="mt-stack px-(--gutter)">
           <FlowLink
             href="/services#process"
             className="flex min-h-11 w-fit items-center font-display text-2xl font-semibold tracking-tight transition-colors hover:text-teal md:text-3xl"
@@ -235,7 +235,7 @@ export default function AboutPage() {
           </FlowLink>
         </p>
 
-        <section aria-labelledby="proof" className="mt-28 px-(--gutter)">
+        <section aria-labelledby="proof" className="mt-section px-(--gutter)">
           <h2 id="proof" className="label">
             Clients &amp; recognition
           </h2>
@@ -246,16 +246,6 @@ export default function AboutPage() {
             <Recognition />
           </div>
         </section>
-
-        <p className="mt-24 px-(--gutter) text-lg text-paper/70">
-          We hire designers and developers.{" "}
-          <a
-            href={CAREERS_URL}
-            className="text-paper underline decoration-paper/30 underline-offset-4 transition-colors hover:decoration-teal"
-          >
-            Open roles on digitallynext.com <span aria-hidden>↗</span>
-          </a>
-        </p>
       </main>
     </PageFlow>
   );

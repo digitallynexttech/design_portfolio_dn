@@ -8,7 +8,8 @@ export const metadata: Metadata = { title: "Offline", robots: { index: false } }
 export default function Offline() {
   return (
     <PageFlow>
-      <main id="main" className="grid min-h-svh content-center px-(--gutter)">
+      {/* data-offline: the footer's CTA (external links that can't load) steps aside (pages.css). */}
+      <main id="main" data-offline className="grid min-h-svh content-start px-(--gutter) py-page-top">
         <p className="label">Offline</p>
         <h1 className="mt-4 font-display text-d1 font-semibold">
           The tide is out<span className="stop">.</span>
@@ -22,7 +23,7 @@ export default function Offline() {
             prefetch={false}
             className="btn"
           >
-            Home <span aria-hidden>←</span>
+            <span aria-hidden>←</span> Home
           </FlowLink>
         </div>
       </main>

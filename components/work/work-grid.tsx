@@ -99,7 +99,7 @@ export function WorkGrid({ studies }: { studies: WorkCardData[] }) {
           <p className="text-sm text-paper/60">
             Showing <span className="text-paper">{active}</span>
           </p>
-          <button type="button" onClick={() => setSheet(true)} aria-haspopup="dialog" className="rounded-full border border-paper/20 px-4 py-2 text-sm">
+          <button type="button" onClick={() => setSheet(true)} aria-haspopup="dialog" className="rounded-full border border-paper/20 px-4 py-3 text-sm">
             Filter
           </button>
         </div>

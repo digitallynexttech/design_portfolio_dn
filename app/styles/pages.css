@@ -34,8 +34,9 @@
   }
 }
 
-/* Proof under each service: a snap row on phones, one row of equal cards from tablets (three slots, so cards
-   keep the same size from service to service). */
+/* Proof under each service: a snap row up to 1023px that runs to the row's edges (two cards and the edge of a
+   third on tablets), then one row of equal cards (three slots, so cards keep the same size from service to
+   service). The bleed matches .service-row's padding. */
 .proof-row {
   display: flex;
   gap: 0.75rem;
@@ -57,17 +58,23 @@
 }
 @media (min-width: 768px) {
   .proof-row {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 1.25rem;
-    margin-inline: 0;
-    padding-inline: 0;
-    overflow: visible;
+    margin-inline: -3rem;
+    padding-inline: 3rem;
+    scroll-padding-inline: 3rem;
+  }
+  .proof-row > li {
+    flex-basis: min(46%, 20rem);
   }
 }
 @media (min-width: 1024px) {
   .proof-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 1.75rem;
+    margin-inline: 0;
+    padding-inline: 0;
+    overflow: visible;
   }
 }
 
@@ -183,6 +190,42 @@
   height: 100%;
 }
 
+/* Before the first play: one teal play button over the poster (the whole poster takes the tap; the circle is
+   what shows), instead of the native 16px triangle sitting on the poster's own copy. */
+.reel__play {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.reel__play:focus-visible {
+  outline: none;
+}
+.reel__play-dot {
+  display: grid;
+  place-items: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--teal);
+  color: var(--ink);
+  box-shadow: 0 0.75rem 2rem rgb(0 0 0 / 0.35);
+  transition: scale var(--dur-2) var(--ease-flow);
+}
+.reel__play:focus-visible .reel__play-dot {
+  outline: 2px solid var(--teal);
+  outline-offset: 4px;
+}
+@media (hover: hover) {
+  .reel__play:hover .reel__play-dot {
+    scale: 1.04;
+  }
+}
+.reel__play:active .reel__play-dot {
+  scale: 0.97;
+}
+
 /* "Now: client · Case study →" in the client's colour; the text rises in as each site begins. */
 .reel__now {
   grid-area: now;
@@ -255,6 +298,16 @@
   row-gap: 0.125rem;
   padding-block: 0.625rem;
   border-bottom: 1px solid rgb(250 250 248 / 0.1);
+}
+/* Phones: the text runs to three or four lines, so the time pill sits at the top, level with the client: the
+   text drops by half the difference between the pill and its first line, so the two share a centre line. */
+@media (max-width: 639px) {
+  .reel__chapter {
+    align-items: start;
+  }
+  .reel__chapter > p {
+    padding-top: calc((2.75rem - 1lh) / 2);
+  }
 }
 @media (min-width: 640px) {
   .reel__chapter {
@@ -357,4 +410,11 @@
   .reel--popup .reel__stage {
     width: max(16rem, calc((100svh - 6.5rem) * 16 / 9));
   }
+}
+
+/* ---------- Offline ---------- */
+
+/* The footer's CTA links out to pages that can't load without a connection. */
+body:has(main[data-offline]) .footer-cta {
+  display: none;
 }

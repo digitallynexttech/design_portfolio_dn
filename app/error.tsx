@@ -10,7 +10,7 @@ export default function ErrorPage({ error, retry }: { error: Error & { digest?: 
   }, [error]);
 
   return (
-    <main id="main" className="grid min-h-svh content-center px-(--gutter) py-36">
+    <main id="main" className="grid min-h-svh content-start px-(--gutter) py-page-top">
       <p className="label">Error</p>
       <h1 className="mt-4 font-display text-d1 font-semibold">
         Something spilled<span className="stop">.</span>
@@ -21,7 +21,7 @@ export default function ErrorPage({ error, retry }: { error: Error & { digest?: 
           Try again
         </button>
         <FlowLink href="/" direction="back" className="btn">
-          Home <span aria-hidden>←</span>
+          <span aria-hidden>←</span> Home
         </FlowLink>
       </div>
     </main>
