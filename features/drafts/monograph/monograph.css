@@ -21,26 +21,26 @@
 /* ---------- The site's own chrome steps aside on this route ---------- */
 
 /* Only while the draft is the page on screen. With cacheComponents, Next keeps a page you leave in
-   the DOM (a hidden React Activity: inline display: none) so Back can restore it; without the
-   :not(), these rules would follow the reader to the real home and hide its header. */
+   the DOM (a hidden React Activity) so Back can restore it; AwayFlag marks html .dm-away then, or
+   these rules would follow the reader to the real home and hide its header. */
 
-html:has(.d-monograph:not([style*="display"])) {
+html:has(.d-monograph):not(.dm-away) {
   background: #f3f0e8;
   color: #161512;
   color-scheme: light;
   scroll-padding-top: 1rem;
 }
 @media (min-width: 700px) {
-  html:has(.d-monograph:not([style*="display"])) {
+  html:has(.d-monograph):not(.dm-away) {
     scroll-padding-top: 4.5rem;
   }
 }
-html:has(.d-monograph:not([style*="display"])) body > .site-header,
-html:has(.d-monograph:not([style*="display"])) body > .site-header-glass,
-html:has(.d-monograph:not([style*="display"])) body > footer,
-html:has(.d-monograph:not([style*="display"])) body > .water-fallback,
-html:has(.d-monograph:not([style*="display"])) body > canvas,
-html:has(.d-monograph:not([style*="display"])) body > button[aria-haspopup="dialog"] {
+html:has(.d-monograph):not(.dm-away) body > .site-header,
+html:has(.d-monograph):not(.dm-away) body > .site-header-glass,
+html:has(.d-monograph):not(.dm-away) body > footer,
+html:has(.d-monograph):not(.dm-away) body > .water-fallback,
+html:has(.d-monograph):not(.dm-away) body > canvas,
+html:has(.d-monograph):not(.dm-away) body > button[aria-haspopup="dialog"] {
   display: none !important;
 }
 

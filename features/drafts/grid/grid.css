@@ -1,11 +1,12 @@
 /* =====================================================================================
    Draft 4 · "Spec Sheet". A precise engineering document for a studio that builds things.
 
-   Scope: every selector starts with .d-grid, or with html:has(.d-grid:not([style*="display"]))
+   Scope: every selector starts with .d-grid, or with html:has(.d-grid):not(.dg-away)
    for the few page-level rules. CSS imported by a page stays loaded after client navigation, and
-   Next keeps the page you left mounted as a hidden copy (style="display: none !important" on the
-   .d-grid root) so Back can restore it: the :not() keeps the page-level rules off every other
-   route while that copy is hidden. Nothing here may touch the rest of the site.
+   Next keeps the page you left mounted as a hidden copy so Back can restore it: AwayFlag marks
+   html .dg-away while that copy is hidden, which keeps the page-level rules off every other route.
+   (Not :has(.d-grid:not([style*=…])): `style` inside :has() restyles the whole document on every
+   inline style write.) Nothing here may touch the rest of the site.
 
    Spec (the brief I set myself):
    - Paper: bone #ECE9E1, graphite ink #17181A; brand red #E21F26 is the only signal colour
@@ -26,27 +27,27 @@
 
 /* ---------- The route: paper, and the site's own chrome put away ---------- */
 
-html:has(.d-grid:not([style*="display"])) {
+html:has(.d-grid):not(.dg-away) {
   background: #ece9e1;
   color: #17181a;
   color-scheme: light;
   scroll-padding-top: 5rem;
 }
-html:has(.d-grid:not([style*="display"])) body {
+html:has(.d-grid):not(.dg-away) body {
   background: #ece9e1;
 }
 /* The site header and its glass, the phone Menu pill, the site footer and the WebGL water (its
    canvas and its CSS fallback). The draft brings its own header, index and footer; the water is
    told to stop drawing (setWaterCovered) by the draft's chrome. */
-html:has(.d-grid:not([style*="display"])) .site-header,
-html:has(.d-grid:not([style*="display"])) .site-header-glass,
-html:has(.d-grid:not([style*="display"])) .water-fallback,
-html:has(.d-grid:not([style*="display"])) body > canvas,
-html:has(.d-grid:not([style*="display"])) body > footer,
-html:has(.d-grid:not([style*="display"])) body > button[style*="menu-pill"] {
+html:has(.d-grid):not(.dg-away) .site-header,
+html:has(.d-grid):not(.dg-away) .site-header-glass,
+html:has(.d-grid):not(.dg-away) .water-fallback,
+html:has(.d-grid):not(.dg-away) body > canvas,
+html:has(.d-grid):not(.dg-away) body > footer,
+html:has(.d-grid):not(.dg-away) body > button[style*="menu-pill"] {
   display: none !important;
 }
-html:has(.d-grid:not([style*="display"])) ::selection {
+html:has(.d-grid):not(.dg-away) ::selection {
   background: #e21f26;
   color: #fff;
 }

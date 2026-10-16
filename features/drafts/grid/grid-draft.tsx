@@ -18,6 +18,7 @@ import { gridMono, gridSans } from "./fonts";
 import { HeroWave } from "./hero-wave";
 import { IndexTable, type IndexRow } from "./index-table";
 import { AfterPaint } from "./after-paint";
+import { AwayFlag } from "./away-flag";
 import { LogoParts } from "./logo-parts";
 import { LoopVideo } from "./loop-video";
 import { Balloon, Fig, SheetHead, pad } from "./parts";
@@ -159,6 +160,7 @@ export function GridDraft() {
 
   return (
     <div className={`d-grid ${gridSans.variable} ${gridMono.variable}`}>
+      <AwayFlag />
       <SheetChrome sheets={sheets} />
       <Ripples />
 

@@ -3,6 +3,7 @@ import { TEAM, creditsFor } from "@/content/team";
 import { CASE_STUDIES, visibleTestimonial } from "@/content/work";
 import { toCard } from "@/content/work/cards";
 import { WaterPause } from "@/features/water/water-pause";
+import { AwayFlag } from "./away-flag";
 import { Colophon } from "./colophon";
 import { serif } from "./fonts";
 import { Hero } from "./hero";
@@ -62,6 +63,7 @@ export function Monograph() {
     <PageFlow>
       <div className={`d-monograph ${serif.variable}`}>
         <WaterPause />
+        <AwayFlag />
         <Ripple />
         <Masthead />
         <main id="main" className="m-main">
