@@ -1,0 +1,2305 @@
+/* ==========================================================================
+   Draft 2 · DEEP WATER
+   Every rule is scoped under .d-deep, or (for the page chrome) under html:has(.d-deep):not(.dd-left):
+   this file stays loaded after a client navigation away from the draft, and Next keeps the page it
+   left in the DOM as a hidden copy so Back can restore it. The draft puts .dd-left on <html> when it
+   unmounts or is hidden (water-rest.tsx), so none of these rules reach the next page.
+
+   Spec
+   - Palette by depth: surface light #0A3A52 → twilight #05203A → deep #031427 → abyss #010409.
+     Paper #EEF5F6 (≥ 8.5:1 on every band), text-2 #C3D3DA (≥ 7:1), signal teal #5FE0DA.
+     Brand red #E21F26 only on Set sail, Start a project and the header's signal dot.
+   - Type: Sofia Sans Extra Condensed (title cards, 800; numerals, 200) + Stack Sans Text (text, 300–600).
+   - Motion: slow and weighted (cubic-bezier(0.22, 1, 0.36, 1), 0.9–1.6 s). Scroll-driven where the
+     browser supports it, compositor-only (transform, opacity). Reduced motion = still frames.
+   ========================================================================== */
+
+/* ---------- The site chrome steps aside on this route ---------- */
+
+html:has(.d-deep):not(.dd-left) {
+  background: #010409;
+}
+html:has(.d-deep):not(.dd-left) body > .site-header,
+html:has(.d-deep):not(.dd-left) body > .site-header-glass,
+html:has(.d-deep):not(.dd-left) body > footer,
+html:has(.d-deep):not(.dd-left) body > button[aria-haspopup="dialog"],
+html:has(.d-deep):not(.dd-left) body > .water-fallback,
+html:has(.d-deep):not(.dd-left) body > canvas {
+  display: none;
+}
+
+.d-deep {
+  --dd-abyss: #010409;
+  --dd-ink: #02070e;
+  --dd-deep: #031427;
+  --dd-twilight: #05203a;
+  --dd-shallow: #072c44;
+  --dd-surface: #0a3a52;
+  --dd-paper: #eef5f6;
+  --dd-text-2: #c3d3da;
+  --dd-text-3: #a9bfc9;
+  --dd-teal: #5fe0da;
+  --dd-red: #e21f26;
+  --dd-line: rgb(238 245 246 / 0.14);
+  --dd-line-strong: rgb(238 245 246 / 0.3);
+
+  --dd-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --dd-ease-io: cubic-bezier(0.65, 0, 0.35, 1);
+  --dd-gutter: max(clamp(1.25rem, 4.5vw, 4.5rem), env(safe-area-inset-left), env(safe-area-inset-right));
+  --dd-bar: 4.25rem;
+  --dd-space: clamp(5.5rem, 9vw, 9rem);
+
+  --dd-display: var(--dd-font-display), "Arial Narrow", sans-serif;
+  --dd-text: var(--font-text);
+
+  position: relative;
+  color: var(--dd-paper);
+  font-family: var(--dd-text);
+  font-size: 1rem;
+  line-height: 1.55;
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+
+  & :focus-visible {
+    outline: 2px solid var(--dd-teal);
+    outline-offset: 3px;
+  }
+  & ::selection {
+    background: var(--dd-teal);
+    color: var(--dd-abyss);
+  }
+  & .dd-cover {
+    object-fit: cover;
+  }
+  & .dd-main {
+    position: relative;
+  }
+  & .dd-section {
+    position: relative;
+    padding: var(--dd-space) var(--dd-gutter);
+  }
+  & .dd-label {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    line-height: 1.2;
+    text-transform: uppercase;
+    color: var(--dd-teal);
+  }
+  & .dd-label::before {
+    content: "";
+    width: 2.25rem;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.7;
+  }
+}
+
+/* ---------- Buttons: sharp-edged, like a title sequence's ---------- */
+
+.d-deep {
+  & .dd-btn,
+  & .dd-sail .sail-button,
+  & .dd-reel {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    min-height: 2.875rem;
+    padding: 0 1.375rem;
+    border: 1px solid var(--dd-line-strong);
+    border-radius: 2px;
+    background: transparent;
+    color: var(--dd-paper);
+    font-family: var(--dd-text);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    letter-spacing: 0.005em;
+    line-height: 1.2;
+    white-space: nowrap;
+    text-decoration: none;
+    cursor: pointer;
+    transition:
+      color 500ms var(--dd-ease),
+      border-color 500ms var(--dd-ease),
+      scale 200ms var(--dd-ease);
+  }
+  /* Light wipes across from the left, like a lamp coming up. */
+  & .dd-btn::before,
+  & .dd-sail .sail-button::before,
+  & .dd-reel::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    width: auto;
+    height: auto;
+    top: 0;
+    left: 0;
+    border-radius: 0;
+    background: var(--dd-paper);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 700ms var(--dd-ease);
+  }
+  /* Its own block: beside `transform`, the minifier folds `translate` into it, and the site's .btn
+     focus/hover rule (translate: 0 -100%) would then lift the wipe out of the button. */
+  & :is(.dd-btn, .dd-reel, .dd-sail .sail-button)::before {
+    translate: none;
+  }
+  & .dd-btn:active,
+  & .dd-sail .sail-button:active,
+  & .dd-reel:active {
+    scale: 0.97;
+  }
+  @media (hover: hover) {
+    & .dd-btn:hover,
+    & .dd-reel:hover {
+      color: var(--dd-abyss);
+      border-color: var(--dd-paper);
+    }
+    & .dd-btn:hover::before,
+    & .dd-reel:hover::before {
+      transform: scaleX(1);
+    }
+  }
+  & .dd-btn:focus-visible,
+  & .dd-reel:focus-visible {
+    color: var(--dd-abyss);
+  }
+  & .dd-btn:focus-visible::before,
+  & .dd-reel:focus-visible::before {
+    transform: scaleX(1);
+  }
+  & .dd-btn--lg,
+  & .dd-sail .sail-button {
+    min-height: 3.5rem;
+    padding: 0 1.75rem;
+    font-size: 1rem;
+  }
+
+  /* Red: Set sail and Start a project only. White on #E21F26 is 4.7:1. */
+  & .dd-btn--red,
+  & .dd-sail .sail-button {
+    background: var(--dd-red);
+    border-color: var(--dd-red);
+    color: #fff;
+  }
+  & .dd-btn--red::before,
+  & .dd-sail .sail-button::before {
+    background: #b3141a;
+  }
+  @media (hover: hover) {
+    & .dd-btn--red:hover,
+    & .dd-sail .sail-button:hover {
+      color: #fff;
+      border-color: var(--dd-red);
+    }
+    & .dd-sail .sail-button:hover::before {
+      transform: scaleX(1);
+    }
+  }
+  & .dd-btn--red:focus-visible,
+  & .dd-sail .sail-button:focus-visible {
+    color: #fff;
+  }
+  & .dd-sail .sail-button:focus-visible::before {
+    transform: scaleX(1);
+  }
+
+  /* A client's own colour on its case-study link. */
+  & .dd-btn--accent {
+    background: var(--accent);
+    border-color: color-mix(in oklab, var(--accent), var(--dd-paper) 35%);
+    color: var(--on-accent);
+  }
+  & .dd-btn--accent::before {
+    background: var(--dd-paper);
+  }
+  @media (hover: hover) {
+    & .dd-btn--accent:hover {
+      color: var(--dd-abyss);
+    }
+  }
+}
+
+/* ---------- The sea (fixed, behind everything) ---------- */
+
+.d-deep {
+  & .dd-sea {
+    position: fixed;
+    inset: 0 0 auto;
+    height: 100lvh;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+    background: var(--dd-abyss);
+  }
+  & .dd-sea__band {
+    position: absolute;
+    inset: 0;
+  }
+  & .dd-sea__band--abyss {
+    background:
+      radial-gradient(70% 45% at 50% 115%, rgb(95 224 218 / 0.07), transparent 70%),
+      linear-gradient(180deg, var(--dd-ink), var(--dd-abyss));
+  }
+  & .dd-sea__band--deep {
+    background: linear-gradient(180deg, #04182d 0%, var(--dd-deep) 55%, #020c18 100%);
+  }
+  & .dd-sea__band--twilight {
+    background: linear-gradient(180deg, #072842 0%, var(--dd-twilight) 50%, #04172a 100%);
+  }
+  & .dd-sea__band--shallow {
+    background:
+      radial-gradient(90% 55% at 30% -10%, rgb(120 220 235 / 0.16), transparent 70%),
+      linear-gradient(180deg, var(--dd-surface) 0%, var(--dd-shallow) 48%, #052036 100%);
+  }
+
+  /* Shafts of sun from the surface: crisp-edged, slowly swaying, gone by the twilight. */
+  & .dd-sea__shafts {
+    position: absolute;
+    inset: -10% -10% 30%;
+    mask-image: linear-gradient(180deg, #000 0%, rgb(0 0 0 / 0.5) 45%, transparent 100%);
+  }
+  & .dd-sea__shafts span {
+    position: absolute;
+    top: -10%;
+    height: 120%;
+    width: var(--w, 5vw);
+    left: var(--x, 20%);
+    background: linear-gradient(90deg, transparent, rgb(170 240 245 / 0.07) 30%, rgb(205 250 252 / 0.2) 50%, rgb(170 240 245 / 0.07) 70%, transparent);
+    transform: rotate(var(--r, 16deg));
+    transform-origin: 50% 0;
+  }
+  & .dd-sea__shafts span:nth-child(1) {
+    --x: 12%;
+    --w: 7vw;
+    --r: 18deg;
+  }
+  & .dd-sea__shafts span:nth-child(2) {
+    --x: 31%;
+    --w: 2.5vw;
+    --r: 15deg;
+  }
+  & .dd-sea__shafts span:nth-child(3) {
+    --x: 47%;
+    --w: 10vw;
+    --r: 19deg;
+    opacity: 0.7;
+  }
+  & .dd-sea__shafts span:nth-child(4) {
+    --x: 68%;
+    --w: 3.5vw;
+    --r: 14deg;
+  }
+  & .dd-sea__shafts span:nth-child(5) {
+    --x: 84%;
+    --w: 6vw;
+    --r: 17deg;
+    opacity: 0.6;
+  }
+
+  /* Caustics: a pool-floor network of light (an SVG noise tile, drawn once), two layers drifting
+     against each other so the lines shimmer where they cross. Only the upper part of the frame. */
+  & .dd-sea__caustics {
+    position: absolute;
+    inset: -240px -240px auto -240px;
+    height: calc(58% + 480px);
+    opacity: 0.075;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='480'%3E%3Cfilter id='f' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='turbulence' baseFrequency='0.008 0.012' numOctaves='1' seed='9' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.75 0 0 0 0 0.97 0 0 0 0 1 -14 0 0 0 1.3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+    background-size: 480px 480px;
+    mask-image: linear-gradient(180deg, #000 0%, rgb(0 0 0 / 0.4) 50%, transparent 100%);
+  }
+  & .dd-sea__caustics--b {
+    opacity: 0.055;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='480'%3E%3Cfilter id='f' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='turbulence' baseFrequency='0.0104 0.0083' numOctaves='1' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.75 0 0 0 0 0.97 0 0 0 0 1 -16 0 0 0 1.35'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+    background-size: 480px 480px;
+    transform: scale(1.35);
+  }
+}
+
+/* Phones carry one layer of caustics and three shafts: the same light for a fraction of the GPU memory. */
+@media (max-width: 767px) {
+  .d-deep {
+    & .dd-sea__caustics {
+      inset: -240px -240px auto -240px;
+      height: calc(50% + 480px);
+      opacity: 0.09;
+    }
+    & .dd-sea__caustics--b,
+    & .dd-sea__shafts span:nth-child(n + 4) {
+      display: none;
+    }
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .d-deep {
+    & .dd-sea__caustics {
+      animation: dd-drift-a 26s linear infinite;
+      will-change: transform;
+    }
+    & .dd-sea__caustics--b {
+      animation: dd-drift-b 34s linear infinite;
+    }
+    & .dd-sea__shafts span {
+      animation: dd-sway 14s var(--dd-ease-io) infinite alternate;
+    }
+    & .dd-sea__shafts span:nth-child(2n) {
+      animation-duration: 19s;
+      animation-delay: -6s;
+    }
+  }
+}
+@keyframes dd-drift-a {
+  to {
+    transform: translate3d(240px, 240px, 0);
+  }
+}
+@keyframes dd-drift-b {
+  from {
+    transform: scale(1.35) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.35) translate3d(-240px, 160px, 0);
+  }
+}
+/* Individual transform properties, no custom properties in the keyframes: runs on the compositor. */
+@keyframes dd-sway {
+  to {
+    rotate: -4deg;
+    translate: 1.5vw 0;
+  }
+}
+
+/* The dive: each band fades out as its section leaves, revealing the deeper water beneath. Opacity
+   only (a colour change, not movement), so it runs with reduced motion too. */
+@supports (timeline-scope: --a) and (animation-timeline: view()) {
+  .d-deep {
+    timeline-scope: --dd-studio, --dd-more, --dd-services, --dd-people;
+    & .dd-studio {
+      view-timeline: --dd-studio block;
+    }
+    & .dd-more {
+      view-timeline: --dd-more block;
+    }
+    & .dd-services {
+      view-timeline: --dd-services block;
+    }
+    & .dd-cast {
+      view-timeline: --dd-people block;
+    }
+    & .dd-sea__band--shallow {
+      animation: dd-fade-out linear both;
+      animation-timeline: --dd-studio;
+      animation-range: exit 0% exit 100%;
+    }
+    & .dd-sea__band--twilight {
+      animation: dd-fade-out linear both;
+      animation-timeline: --dd-services;
+      animation-range: entry 0% entry 100%;
+    }
+    & .dd-sea__band--deep {
+      animation: dd-fade-out linear both;
+      animation-timeline: --dd-people;
+      animation-range: entry 0% entry 100%;
+    }
+  }
+}
+/* Without scroll timelines the page rests at mid-depth. */
+@supports not ((timeline-scope: --a) and (animation-timeline: view())) {
+  .d-deep .dd-sea__band--shallow {
+    opacity: 0.55;
+  }
+}
+@keyframes dd-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* Content rises into place as it enters (movement only; text keeps full contrast throughout). */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .d-deep .dd-rise {
+      animation: dd-rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 70%;
+    }
+  }
+}
+@keyframes dd-rise {
+  from {
+    transform: translate3d(0, 3.5rem, 0);
+  }
+}
+
+/* ---------- Header: the top bar of the letterbox ---------- */
+
+.d-deep {
+  & .dd-header {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    height: var(--dd-bar);
+    padding: 0 var(--dd-gutter);
+    border-bottom: 1px solid transparent;
+    transition:
+      transform 900ms var(--dd-ease),
+      background-color 600ms var(--dd-ease),
+      border-color 600ms var(--dd-ease);
+  }
+  /* Over the opening shot, a soft scrim keeps the links legible on any frame. */
+  & .dd-header:not([data-solid]) {
+    background: linear-gradient(180deg, rgb(1 4 9 / 0.62), rgb(1 4 9 / 0));
+  }
+  & .dd-header[data-solid] {
+    background: rgb(1 4 9 / 0.92);
+    border-color: var(--dd-line);
+  }
+  & .dd-header[data-tucked] {
+    transform: translateY(-100%);
+  }
+  & .dd-header__logo {
+    display: flex;
+    align-items: center;
+    min-height: 2.75rem;
+    flex-shrink: 0;
+  }
+  & .dd-header__logo img {
+    width: auto;
+    height: 1.75rem;
+  }
+  & .dd-header__nav {
+    display: none;
+    align-items: center;
+    gap: 2.25rem;
+  }
+  & .dd-header__link {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: var(--dd-text-2);
+    transition: color 400ms var(--dd-ease);
+  }
+  & .dd-header__link::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0.6rem;
+    height: 1px;
+    background: var(--dd-teal);
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 600ms var(--dd-ease);
+  }
+  @media (hover: hover) {
+    & .dd-header__link:hover {
+      color: var(--dd-paper);
+    }
+    & .dd-header__link:hover::after {
+      transform: scaleX(1);
+      transform-origin: left;
+    }
+  }
+  & .dd-header__cta {
+    min-height: 2.5rem;
+    padding: 0 1rem;
+    font-size: 0.8125rem;
+    margin-left: 0.5rem;
+  }
+  & .dd-signal {
+    width: 0.4375rem;
+    height: 0.4375rem;
+    border-radius: 50%;
+    background: var(--dd-red);
+    box-shadow: 0 0 0 3px rgb(226 31 38 / 0.25);
+  }
+  & .dd-header__menu {
+    min-width: 5.5rem;
+    min-height: 2.75rem;
+    padding: 0 1.25rem;
+    border: 1px solid var(--dd-line-strong);
+    border-radius: 2px;
+    background: rgb(1 4 9 / 0.5);
+    color: var(--dd-paper);
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  @media (min-width: 768px) {
+    & .dd-header__nav {
+      display: flex;
+    }
+    & .dd-header__menu {
+      display: none;
+    }
+    & .dd-header__logo img {
+      height: 2rem;
+    }
+  }
+
+  /* The phone menu sheet */
+  & .dd-sheet {
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 1rem;
+    font-family: var(--dd-text);
+  }
+  & .dd-sheet__link {
+    display: flex;
+    align-items: center;
+    min-height: 3.75rem;
+    border-bottom: 1px solid var(--dd-line);
+    font-family: var(--dd-display);
+    font-size: 3rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.005em;
+    color: var(--dd-paper);
+  }
+  & .dd-sheet__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 2rem;
+  }
+}
+
+/* ---------- Hero: the opening shot ---------- */
+
+.d-deep {
+  & .dd-hero {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 100svh;
+    padding-top: var(--dd-bar);
+    background: var(--dd-abyss);
+    isolation: isolate;
+  }
+  & .dd-hero__frame {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: max(52svh, 18rem);
+    overflow: hidden;
+    background: #031220;
+  }
+  & .dd-hero__shot,
+  & .dd-hero__poster,
+  & .dd-hero__poster img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  & .dd-hero__poster img {
+    object-fit: cover;
+    object-position: 50% 62%;
+  }
+  /* The grade: the picture itself is already cooled toward deep teal (baked into the file); here the
+     blacks are crushed toward the title and the corners vignetted. */
+  & .dd-hero__grade {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(120% 95% at 55% 30%, transparent 38%, rgb(1 4 9 / 0.7) 100%),
+      linear-gradient(180deg, rgb(1 4 9 / 0.5) 0%, rgb(1 4 9 / 0.05) 28%, rgb(2 12 24 / 0.45) 58%, rgb(1 4 9 / 0.95) 100%),
+      linear-gradient(90deg, rgb(1 4 9 / 0.6) 0%, rgb(1 4 9 / 0) 62%);
+  }
+  & .dd-hero__title {
+    position: absolute;
+    left: var(--dd-gutter);
+    right: var(--dd-gutter);
+    bottom: clamp(1rem, 3.2svh, 2.5rem);
+    margin: 0;
+    font-family: var(--dd-display);
+    font-weight: 800;
+    font-size: min(15.5vw, 31svh);
+    line-height: 0.8;
+    letter-spacing: -0.012em;
+    color: var(--dd-paper);
+    text-wrap: nowrap;
+  }
+  & .dd-hero__line--b {
+    font-weight: 250;
+    letter-spacing: -0.02em;
+  }
+
+  /* The bar under the frame: subtitles, then the way in. */
+  & .dd-hero__deck {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+    padding: clamp(1.25rem, 2.6svh, 2rem) var(--dd-gutter) clamp(1.5rem, 3.4svh, 2.5rem);
+  }
+  & .dd-hero__subs {
+    text-align: center;
+  }
+  & .dd-hero__sub {
+    margin: 0 auto;
+    max-width: 52ch;
+    font-size: clamp(1.0625rem, 1.45vw, 1.375rem);
+    font-weight: 500;
+    line-height: 1.38;
+    color: var(--dd-paper);
+    text-wrap: balance;
+  }
+  & .dd-hero__sub--b {
+    color: var(--dd-text-2);
+    font-weight: 400;
+  }
+  & .dd-hero__intro {
+    margin: 0;
+    max-width: 44ch;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--dd-text-2);
+  }
+  & .dd-hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.5rem;
+  }
+  & .dd-hero__aside {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1.25rem;
+  }
+  & .dd-hero__down {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--dd-paper);
+    text-decoration: underline;
+    text-decoration-color: rgb(238 245 246 / 0.35);
+    text-underline-offset: 0.4em;
+    transition: text-decoration-color 400ms var(--dd-ease);
+  }
+  @media (hover: hover) {
+    & .dd-hero__down:hover {
+      text-decoration-color: var(--dd-teal);
+    }
+  }
+
+  /* Set sail: red, and glowing like a lamp under water. The glow is its own layer (opacity only). */
+  & .dd-sail > div {
+    gap: 0.625rem;
+  }
+  /* Clipped a little outside its edges: room for the glow, but the wake never crosses the sound switch. */
+  & .dd-sail .sail-button {
+    overflow: clip;
+    overflow-clip-margin: 14px;
+    box-shadow: 0 0 0 1px rgb(226 31 38 / 0.6);
+  }
+  & .dd-sail .sail-button::after {
+    content: "";
+    position: absolute;
+    inset: -14px;
+    z-index: -2;
+    border-radius: 6px;
+    background: radial-gradient(closest-side, rgb(226 31 38 / 0.55), rgb(226 31 38 / 0));
+    pointer-events: none;
+  }
+  & .dd-sail .sail-button__wake {
+    overflow: hidden;
+    border-radius: 2px;
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.28), transparent);
+  }
+  & .dd-sail .sail-sound {
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 2px;
+    background: transparent;
+    color: var(--dd-text-2);
+    box-shadow: inset 0 0 0 1px var(--dd-line-strong);
+    backdrop-filter: none;
+  }
+  & .dd-sail .sail-sound[aria-pressed="true"] {
+    color: var(--dd-teal);
+    box-shadow: inset 0 0 0 1px var(--dd-teal);
+  }
+  & .dd-sail p {
+    color: var(--dd-text-2);
+  }
+  & .dd-reel {
+    padding-left: 0.75rem;
+  }
+  & .dd-reel > span:first-child {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 2px;
+    background: var(--dd-paper);
+    color: var(--dd-abyss);
+    font-size: 0.55rem;
+  }
+  & .dd-reel > span:last-child {
+    color: var(--dd-text-3);
+  }
+  @media (hover: hover) {
+    & .dd-reel:hover > span:last-child {
+      color: var(--dd-abyss);
+    }
+    & .dd-reel:hover > span:first-child {
+      background: var(--dd-abyss);
+      color: var(--dd-paper);
+    }
+  }
+
+  /* Phones and portrait tablets: vertical cinema. The frame runs up behind the header; the title
+     takes two lines in the lower part of it, inside the thumb's reach. */
+  @media (orientation: portrait), (max-width: 767px) {
+    & .dd-hero {
+      padding-top: 0;
+    }
+    & .dd-hero__title {
+      font-size: min(41vw, 22svh);
+      line-height: 0.78;
+      text-wrap: wrap;
+    }
+    & .dd-hero__line {
+      display: block;
+    }
+    & .dd-hero__poster img {
+      object-position: 50% 45%;
+    }
+    & .dd-hero__subs {
+      text-align: left;
+    }
+    & .dd-hero__sub {
+      margin: 0;
+    }
+    & .dd-sail > div {
+      width: 100%;
+    }
+    & .dd-sail .sail-button {
+      flex: 1;
+    }
+  }
+  @media (max-width: 767px) {
+    & .dd-hero__deck {
+      gap: 1.25rem;
+    }
+    & .dd-hero__sub {
+      font-size: 1.0625rem;
+    }
+    & .dd-sail {
+      width: 100%;
+    }
+  }
+
+  /* Landscape: the deck is a two-column strip — intro left, the ways in right; subtitles centred. */
+  @media (orientation: landscape) and (min-width: 768px) {
+    & .dd-hero__deck {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      column-gap: 3rem;
+      row-gap: clamp(1rem, 2.4svh, 1.75rem);
+    }
+    & .dd-hero__subs {
+      grid-column: 1 / -1;
+    }
+    & .dd-hero__actions {
+      justify-content: flex-end;
+    }
+  }
+}
+
+/* Opening: the letterbox draws open, the picture pushes in slowly, the title card fades up, and the
+   two subtitles follow, one after the other. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-motion="on"] .d-deep {
+    & .dd-hero__frame::before,
+    & .dd-hero__frame::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      z-index: 3;
+      height: 22%;
+      background: var(--dd-abyss);
+      animation: dd-bar-open 1100ms var(--dd-ease) both;
+    }
+    & .dd-hero__frame::before {
+      top: 0;
+      transform-origin: top;
+    }
+    & .dd-hero__frame::after {
+      bottom: 0;
+      transform-origin: bottom;
+    }
+    & .dd-hero__poster {
+      animation: dd-push 1800ms var(--dd-ease) both;
+    }
+    & .dd-hero__title {
+      animation: dd-card 1200ms var(--dd-ease) 250ms both;
+    }
+    & .dd-hero__sub {
+      animation: dd-subtitle 800ms var(--dd-ease) 700ms both;
+    }
+    & .dd-hero__sub--b {
+      animation-delay: 1150ms;
+    }
+    & .dd-sail .sail-button::after {
+      animation: dd-breathe 4.2s var(--dd-ease-io) infinite alternate;
+    }
+  }
+}
+@keyframes dd-bar-open {
+  from {
+    transform: scaleY(1);
+  }
+  to {
+    transform: scaleY(0);
+  }
+}
+/* The camera settles as the bars open, then holds: a still frame, not a drifting one. */
+@keyframes dd-push {
+  from {
+    transform: scale(1.07);
+  }
+}
+/* The title card is painted from the first frame (the bars uncover it); it only rises into place. */
+@keyframes dd-card {
+  from {
+    transform: translate3d(0, 0.14em, 0);
+  }
+}
+@keyframes dd-subtitle {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0.5rem, 0);
+  }
+}
+@keyframes dd-breathe {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* As the visitor dives, the opening shot sinks away beneath them. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .d-deep .dd-hero__shot {
+      animation: dd-sink linear both;
+      animation-timeline: view();
+      animation-range: exit 0% exit 100%;
+    }
+  }
+}
+@keyframes dd-sink {
+  to {
+    transform: translate3d(0, 22%, 0);
+    opacity: 0.35;
+  }
+}
+
+/* ---------- The studio (just under the surface) ---------- */
+
+.d-deep {
+  /* The waterline: where the opening shot ends and the dive begins. */
+  & .dd-studio {
+    padding-bottom: calc(var(--dd-space) + 14vh);
+  }
+  /* The light goes as the scenes approach: the shallows darken into the theatre below. */
+  & .dd-studio::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0;
+    height: 30vh;
+    background: linear-gradient(180deg, rgb(2 7 14 / 0), var(--dd-ink));
+    pointer-events: none;
+  }
+  & .dd-studio::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgb(190 245 245 / 0.45) 30%, rgb(190 245 245 / 0.45) 70%, transparent);
+  }
+  & .dd-studio__statement {
+    margin: 1.75rem 0 0;
+    max-width: 21ch;
+    font-size: clamp(2.125rem, 5vw, 5.25rem);
+    font-weight: 300;
+    line-height: 1.04;
+    letter-spacing: -0.035em;
+    text-wrap: balance;
+  }
+  & .dd-em {
+    font-weight: 600;
+    color: #fff;
+  }
+  & .dd-studio__sub {
+    margin: clamp(1.5rem, 2.5vw, 2.25rem) 0 0;
+    max-width: 34ch;
+    font-size: clamp(1.125rem, 1.7vw, 1.5rem);
+    line-height: 1.4;
+    color: var(--dd-text-2);
+  }
+  /* Wide: the statement takes the left two-thirds; its sub-line answers from the right, on the
+     statement's last line. */
+  @media (min-width: 1024px) {
+    & .dd-studio {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+      column-gap: clamp(2rem, 5vw, 6rem);
+    }
+    & .dd-studio > .dd-label,
+    & .dd-stats,
+    & .dd-proof {
+      grid-column: 1 / -1;
+    }
+    & .dd-studio__statement {
+      grid-column: 1;
+    }
+    & .dd-studio__sub {
+      grid-column: 2;
+      align-self: end;
+      margin: 0 0 0.6rem;
+      padding-left: 1.25rem;
+      border-left: 1px solid var(--dd-teal);
+    }
+  }
+  & .dd-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin: clamp(4.5rem, 9vw, 8rem) 0 0;
+    border-top: 1px solid var(--dd-line);
+  }
+  & .dd-stats__item {
+    display: flex;
+    flex-direction: column-reverse;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1.5rem clamp(0.75rem, 2vw, 2rem) 0;
+    border-left: 1px solid var(--dd-line);
+  }
+  & .dd-stats__item:first-child {
+    border-left: 0;
+    padding-left: 0;
+  }
+  & .dd-stats__value {
+    margin: 0;
+    font-family: var(--dd-display);
+    font-size: clamp(4.75rem, 13vw, 13rem);
+    font-weight: 200;
+    line-height: 0.82;
+    letter-spacing: -0.02em;
+    color: #fff;
+  }
+  & .dd-stats__label {
+    max-width: 16ch;
+    font-size: clamp(0.8125rem, 1.1vw, 1rem);
+    line-height: 1.35;
+    color: var(--dd-text-2);
+  }
+
+  /* Clients and recognition: quiet, in the same frame language. */
+  & .dd-proof {
+    margin-top: clamp(4.5rem, 8vw, 7rem);
+    border-top: 1px solid var(--dd-line);
+    padding-top: 1.75rem;
+  }
+  & .dd-proof .label {
+    font-family: var(--dd-text);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    color: var(--dd-teal);
+  }
+  & .dd-proof .logo-current__toggle {
+    min-height: 2.75rem;
+    border-radius: 2px;
+    border-color: var(--dd-line-strong);
+    font-family: var(--dd-text);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    color: var(--dd-text-2);
+  }
+  & .dd-proof .logo-current__toggle[aria-pressed="true"] {
+    color: var(--dd-teal);
+    border-color: var(--dd-teal);
+  }
+  & .dd-proof .logo-current__logo {
+    opacity: 0.86;
+  }
+  & .dd-proof__awards {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--dd-line);
+  }
+  & .dd-proof__awards p {
+    font-family: var(--dd-text);
+  }
+  & .dd-proof__awards .text-paper\/70 {
+    color: var(--dd-text-2);
+  }
+}
+
+/* ---------- Selected work: the scenes ---------- */
+
+.d-deep {
+  & .dd-work {
+    position: relative;
+    background: var(--dd-ink);
+  }
+
+  & .dd-intertitle {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.75rem;
+    min-height: 78svh;
+    padding: var(--dd-space) var(--dd-gutter);
+    text-align: center;
+    background:
+      radial-gradient(60% 50% at 50% 50%, rgb(95 224 218 / 0.07), transparent 70%),
+      var(--dd-ink);
+  }
+  & .dd-intertitle .dd-label::after {
+    content: "";
+    width: 2.25rem;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.7;
+  }
+  & .dd-intertitle__title {
+    margin: 0;
+    font-family: var(--dd-display);
+    font-size: clamp(4.5rem, 14vw, 17rem);
+    font-weight: 800;
+    line-height: 0.82;
+    letter-spacing: -0.012em;
+    text-wrap: balance;
+  }
+  & .dd-intertitle__cue {
+    display: none;
+  }
+
+  & .dd-work__scenes {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* One scene: the client's light in the water, the screen, the title card and its subtitle. */
+  & .dd-scene {
+    --light: color-mix(in oklab, var(--accent), white 22%);
+    /* The client's colour lifted for small text on the dark scene (4.5:1 or better on every theme). */
+    --light-text: color-mix(in oklab, var(--accent), white 52%);
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    flex-direction: column;
+    min-height: 100svh;
+    padding: calc(var(--dd-bar) + 1.5rem) var(--dd-gutter) 2.5rem;
+    overflow: hidden;
+    background: #020a14;
+  }
+  & .dd-scene__light {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    /* Each scene's light fades out at its edges, so one scene cuts to the next through darkness. */
+    mask-image: linear-gradient(180deg, transparent 0%, #000 14%, #000 82%, transparent 100%);
+    background:
+      radial-gradient(65% 45% at 70% 42%, color-mix(in oklab, var(--light) 34%, transparent), transparent 72%),
+      radial-gradient(90% 40% at 50% 112%, color-mix(in oklab, var(--light) 22%, transparent), transparent 70%),
+      linear-gradient(180deg, #020a14, #031427 60%, #020a14);
+  }
+  & .dd-scene__meta {
+    order: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 1rem;
+    margin: 0;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: var(--dd-text-2);
+  }
+  & .dd-scene__count {
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    color: var(--light-text);
+    font-variant-numeric: tabular-nums;
+  }
+  & .dd-scene__media {
+    order: 1;
+    position: relative;
+    margin: 1.5rem 0 0;
+  }
+  & .dd-scene__screen {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: #000;
+    box-shadow:
+      0 0 0 1px rgb(238 245 246 / 0.14),
+      0 40px 120px -30px color-mix(in oklab, var(--light) 45%, transparent);
+  }
+  & .dd-scene__screen--stills {
+    aspect-ratio: 16 / 10;
+  }
+  & .dd-scene__frame,
+  & .dd-scene__video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+  }
+  & .dd-scene__video {
+    opacity: 0;
+    transition: opacity 900ms var(--dd-ease);
+  }
+  & .dd-scene__video[data-live] {
+    opacity: 1;
+  }
+  & .dd-scene__screen--stills .dd-scene__frame:not(:first-child) {
+    opacity: 0;
+  }
+
+  & .dd-scene__companion {
+    position: absolute;
+    z-index: 2;
+    pointer-events: none;
+  }
+  & .dd-scene__companion img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  /* A production still beside the screen: the real product, in its real place. */
+  & .dd-scene[data-kind="still"] .dd-scene__companion {
+    right: 0;
+    bottom: -16%;
+    width: 33%;
+    box-shadow:
+      0 0 0 1px rgb(238 245 246 / 0.2),
+      0 30px 60px -10px rgb(0 0 0 / 0.75);
+  }
+  & .dd-scene[data-kind="crew"] .dd-scene__companion {
+    left: 4%;
+    right: 4%;
+    bottom: -26%;
+  }
+  & .dd-scene[data-kind="phone"] .dd-scene__companion {
+    right: 0;
+    bottom: -14%;
+    width: 27%;
+    padding: 0.3rem;
+    border-radius: 1.1rem;
+    background: #0b0d10;
+    box-shadow:
+      0 0 0 1px rgb(238 245 246 / 0.18),
+      0 30px 60px -10px rgb(0 0 0 / 0.7);
+  }
+  & .dd-scene[data-kind="phone"] .dd-scene__companion img {
+    border-radius: 0.85rem;
+    aspect-ratio: 9 / 19.5;
+    object-fit: cover;
+    object-position: top;
+  }
+
+  & .dd-scene__title {
+    order: 2;
+    margin: clamp(3rem, 9vw, 4.5rem) 0 0;
+    font-family: var(--dd-display);
+    font-size: clamp(4rem, 19vw, 9rem);
+    font-weight: 800;
+    line-height: 0.82;
+    letter-spacing: -0.01em;
+    overflow-wrap: anywhere;
+  }
+  /* The study's line, set as a subtitle. */
+  & .dd-scene__line {
+    order: 3;
+    margin: 1rem 0 0;
+    max-width: 34ch;
+    font-size: clamp(1.0625rem, 1.5vw, 1.375rem);
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--dd-paper);
+    text-wrap: pretty;
+  }
+  & .dd-scene__metrics {
+    order: 4;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem 2rem;
+    margin: 1.75rem 0 0;
+  }
+  & .dd-scene__metric {
+    flex: 1 1 9rem;
+    padding-top: 0.875rem;
+    border-top: 1px solid var(--dd-line-strong);
+  }
+  & .dd-scene__metric dd {
+    margin: 0;
+  }
+  & .dd-scene__value {
+    display: block;
+    font-family: var(--dd-display);
+    font-size: clamp(2.25rem, 3.4vw, 3.5rem);
+    font-weight: 600;
+    line-height: 0.95;
+    white-space: nowrap;
+    color: #fff;
+  }
+  & .dd-scene__unit {
+    display: block;
+    margin-top: 0.375rem;
+    max-width: 24ch;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: var(--dd-text-2);
+  }
+  & .dd-scene__quote {
+    order: 5;
+    margin: 1.5rem 0 0;
+    max-width: 46ch;
+    font-size: 0.9375rem;
+    font-style: italic;
+    color: var(--dd-text-2);
+  }
+  & .dd-scene__cta {
+    order: 6;
+    align-self: stretch;
+    margin-top: 1.75rem;
+  }
+
+  @media (min-width: 640px) {
+    & .dd-scene__cta {
+      align-self: flex-start;
+    }
+  }
+  /* Phones and tablets: each scene is a full screen, its shot centred in the frame; the title card
+     gets no screen of its own. */
+  @media (max-width: 1023px) {
+    & .dd-intertitle {
+      min-height: 0;
+      padding-bottom: calc(var(--dd-space) * 0.6);
+    }
+    & .dd-scene {
+      justify-content: center;
+      padding-top: calc(var(--dd-bar) + 2.5rem);
+      padding-bottom: 4rem;
+    }
+  }
+  @media (min-width: 768px) and (max-width: 1023px) {
+    & .dd-scene__title {
+      font-size: clamp(5rem, 15vw, 9rem);
+    }
+  }
+}
+
+/* DNMS has no loop: its real screens take turns, only while its scene is on. */
+@media (prefers-reduced-motion: no-preference) {
+  .d-deep .dd-scene__screen--stills .dd-scene__frame {
+    animation: dd-stills 12s var(--dd-ease-io) infinite;
+    animation-delay: calc(var(--k) * 4s - 0.5s);
+    animation-play-state: paused;
+  }
+  .d-deep .dd-scene[data-playing] .dd-scene__screen--stills .dd-scene__frame {
+    animation-play-state: running;
+  }
+  .d-deep .dd-scene__screen--stills .dd-scene__frame:first-child {
+    animation-delay: -0.5s;
+  }
+}
+@keyframes dd-stills {
+  0% {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+  6%,
+  33% {
+    opacity: 1;
+  }
+  39%,
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+/* Wide screens: the scenes are pinned and the camera pans across them, holding on each. */
+@media (min-width: 1024px) {
+  .d-deep {
+    /* The frame: the screen on the right, a little above centre, with its subtitle centred beneath
+       it; the title card and its numbers in the left third, centred on the same line. */
+    & .dd-scene {
+      --sw: min(54vw, 62rem, calc((100vh - 19rem) / var(--ratio, 0.5625)));
+      --lift: 1.75rem;
+      display: grid;
+      grid-template-columns: minmax(0, calc(100% - var(--sw) - clamp(2.5rem, 5vw, 5.5rem)));
+      grid-template-rows: auto minmax(0, 1fr) auto auto auto auto minmax(0, 1fr);
+      height: 100vh;
+      min-height: 40rem;
+      padding: calc(var(--dd-bar) + 1.75rem) var(--dd-gutter) clamp(2rem, 5vh, 3.5rem);
+    }
+    & .dd-scene__meta {
+      grid-row: 1;
+    }
+    & .dd-scene__title {
+      grid-row: 3;
+      margin: 0;
+      font-size: clamp(4.5rem, 8.4vw, 11rem);
+      overflow-wrap: normal;
+      text-wrap: balance;
+    }
+    & .dd-scene__metrics {
+      grid-row: 4;
+      margin-top: clamp(1.5rem, 3.5vh, 2.5rem);
+    }
+    & .dd-scene__quote {
+      grid-row: 5;
+    }
+    & .dd-scene__cta {
+      grid-row: 6;
+      justify-self: start;
+      margin-top: clamp(1.5rem, 3.5vh, 2.5rem);
+    }
+    & .dd-scene__media {
+      position: absolute;
+      top: 50%;
+      right: var(--dd-gutter);
+      width: var(--sw);
+      margin: 0;
+      transform: translateY(calc(-50% - var(--lift)));
+    }
+    /* The subtitle, centred under the picture. */
+    & .dd-scene__line {
+      position: absolute;
+      top: calc(50% - var(--lift) + var(--sw) * var(--ratio, 0.5625) / 2 + clamp(1.5rem, 4vh, 2.5rem));
+      right: var(--dd-gutter);
+      width: var(--sw);
+      max-width: none;
+      margin: 0;
+      padding: 0 calc(var(--sw) * 0.08);
+      text-align: center;
+      font-size: clamp(1.125rem, 1.45vw, 1.5rem);
+      text-wrap: balance;
+    }
+    & .dd-scene__line::before {
+      content: "— ";
+      color: var(--light-text);
+    }
+    /* GENEe's crew stands on the top edge of the screen. */
+    & .dd-scene[data-kind="crew"] .dd-scene__companion {
+      top: auto;
+      /* The render has clear space under the crew's feet (about a fifth of its height). */
+      bottom: calc(100% - var(--sw) * 0.042);
+      left: 0;
+      right: auto;
+      width: 50%;
+    }
+    & .dd-scene[data-kind="still"] .dd-scene__companion {
+      right: -4%;
+      bottom: -14%;
+      width: 27%;
+    }
+    & .dd-scene:is([data-kind="still"], [data-kind="phone"]) .dd-scene__line {
+      padding: 0 calc(var(--sw) * 0.27) 0 calc(var(--sw) * 0.04);
+    }
+    & .dd-scene[data-kind="phone"] .dd-scene__companion {
+      right: -3%;
+      bottom: -16%;
+      width: 18%;
+    }
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (min-width: 1024px) and (min-height: 600px) and (prefers-reduced-motion: no-preference) {
+    [data-motion="on"] .d-deep {
+      & .dd-work__pin {
+        view-timeline: --dd-pan block;
+        height: calc(100vh + (var(--panels) - 1) * 85vh);
+      }
+      & .dd-work__stage {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow: clip;
+        container-type: inline-size;
+      }
+      & .dd-work__track {
+        display: flex;
+        width: max-content;
+        height: 100%;
+        animation: dd-pan linear both;
+        animation-timeline: --dd-pan;
+        animation-range: contain 0% contain 100%;
+        will-change: transform;
+      }
+      & .dd-work__scenes {
+        display: flex;
+        height: 100%;
+      }
+      & .dd-intertitle,
+      & .dd-scene {
+        width: 100cqw;
+        height: 100vh;
+        min-height: 0;
+        flex: none;
+      }
+      & .dd-intertitle__cue {
+        display: block;
+        position: absolute;
+        right: var(--dd-gutter);
+        bottom: 3rem;
+        font-size: 2rem;
+        color: var(--dd-teal);
+      }
+      & .dd-intertitle__cue span {
+        display: block;
+        animation: dd-nudge 2.4s var(--dd-ease-io) infinite;
+      }
+      /* The client's piece drifts against the screen as the camera passes: a little parallax. */
+      & .dd-scene__companion {
+        animation: dd-parallax linear both;
+        animation-timeline: --dd-pan;
+        animation-range: var(--drift-range);
+      }
+    }
+  }
+}
+@keyframes dd-parallax {
+  from {
+    transform: translate3d(14cqw, 0, 0);
+  }
+  to {
+    transform: translate3d(-14cqw, 0, 0);
+  }
+}
+@keyframes dd-nudge {
+  50% {
+    transform: translateX(0.75rem);
+  }
+}
+
+/* ---------- More work: credits and the film strip ---------- */
+
+.d-deep {
+  & .dd-more__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1.5rem;
+  }
+  & .dd-more__title {
+    margin: 1.25rem 0 0;
+    font-family: var(--dd-display);
+    font-size: clamp(3.75rem, 9vw, 9.5rem);
+    font-weight: 800;
+    line-height: 0.85;
+    letter-spacing: -0.01em;
+  }
+  & .dd-more__all {
+    display: none;
+  }
+  & .dd-more__all--foot {
+    display: flex;
+    width: 100%;
+    margin-top: 2.5rem;
+  }
+  & .dd-credits {
+    margin-top: clamp(2.5rem, 5vw, 4.5rem);
+  }
+  & .dd-credits__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1px solid var(--dd-line);
+  }
+  & .dd-credits__item {
+    border-bottom: 1px solid var(--dd-line);
+  }
+  & .dd-credits__row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 5.5rem minmax(0, 1fr) auto;
+    grid-template-areas:
+      "thumb client arrow"
+      "thumb meta arrow";
+    align-items: center;
+    column-gap: 1rem;
+    row-gap: 0.25rem;
+    padding: 1rem 0;
+    color: var(--dd-paper);
+    text-decoration: none;
+  }
+  & .dd-credits__thumb {
+    grid-area: thumb;
+    position: relative;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    border: 1px solid var(--dd-line-strong);
+    background: #000;
+  }
+  & .dd-credits__index {
+    display: none;
+  }
+  & .dd-credits__client {
+    grid-area: client;
+    font-family: var(--dd-display);
+    font-size: clamp(2rem, 4.8vw, 4.75rem);
+    font-weight: 700;
+    line-height: 0.92;
+    letter-spacing: -0.005em;
+    transition: transform 700ms var(--dd-ease);
+  }
+  & .dd-credits__meta {
+    grid-area: meta;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.125rem 1.25rem;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--dd-text-2);
+  }
+  & .dd-credits__metric {
+    color: var(--dd-text-3);
+  }
+  & .dd-credits__value {
+    font-weight: 600;
+    color: var(--dd-paper);
+  }
+  & .dd-credits__arrow {
+    grid-area: arrow;
+    font-size: 1.25rem;
+    color: var(--dd-text-3);
+    transition:
+      transform 700ms var(--dd-ease),
+      color 400ms var(--dd-ease);
+  }
+  & .dd-strip {
+    display: none;
+  }
+
+  @media (min-width: 1024px) {
+    & .dd-more__all {
+      display: inline-flex;
+    }
+    & .dd-more__all--foot {
+      display: none;
+    }
+    & .dd-credits {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) clamp(20rem, 32vw, 32rem);
+      gap: clamp(2rem, 5vw, 6rem);
+      align-items: stretch;
+    }
+    & .dd-credits__row {
+      grid-template-columns: 3.5rem minmax(0, 1fr) auto;
+      grid-template-areas:
+        "index client arrow"
+        "index meta arrow";
+      padding: 1.5rem 0;
+    }
+    & .dd-credits__thumb {
+      display: none;
+    }
+    & .dd-credits__index {
+      display: block;
+      grid-area: index;
+      align-self: start;
+      padding-top: 0.6rem;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      color: var(--dd-text-3);
+      font-variant-numeric: tabular-nums;
+    }
+    & .dd-credits__item .dd-credits__client::after {
+      content: "";
+      display: inline-block;
+      width: 0.16em;
+      height: 0.16em;
+      margin-left: 0.2em;
+      border-radius: 50%;
+      background: color-mix(in oklab, var(--accent), white 35%);
+      opacity: 0;
+      transform: scale(0.4);
+      transition:
+        opacity 500ms var(--dd-ease),
+        transform 700ms var(--dd-ease);
+    }
+    & .dd-credits[data-active="0"] .dd-credits__item[data-i="0"],
+    & .dd-credits[data-active="1"] .dd-credits__item[data-i="1"],
+    & .dd-credits[data-active="2"] .dd-credits__item[data-i="2"],
+    & .dd-credits[data-active="3"] .dd-credits__item[data-i="3"],
+    & .dd-credits[data-active="4"] .dd-credits__item[data-i="4"],
+    & .dd-credits[data-active="5"] .dd-credits__item[data-i="5"],
+    & .dd-credits[data-active="6"] .dd-credits__item[data-i="6"],
+    & .dd-credits[data-active="7"] .dd-credits__item[data-i="7"] {
+      & .dd-credits__client {
+        transform: translateX(0.75rem);
+      }
+      & .dd-credits__client::after {
+        opacity: 1;
+        transform: none;
+      }
+      & .dd-credits__arrow {
+        color: var(--dd-teal);
+        transform: translateX(0.375rem);
+      }
+      & .dd-credits__index {
+        color: var(--dd-teal);
+      }
+    }
+
+    /* The strip: perforations down both edges, one frame per study, the active one in the gate. */
+    & .dd-strip {
+      --frame: clamp(11.5rem, 19vw, 19rem);
+      --gap: 1.75rem;
+      position: relative;
+      display: block;
+      padding: 0 1.75rem;
+      background: #05080c;
+      box-shadow: 0 0 0 1px rgb(238 245 246 / 0.08);
+      overflow: clip;
+    }
+    & .dd-strip::before,
+    & .dd-strip::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      z-index: 2;
+      width: 0.75rem;
+      background-image: linear-gradient(180deg, rgb(238 245 246 / 0.16) 0 0.875rem, transparent 0.875rem 1.5rem);
+      background-size: 100% 1.5rem;
+      border-radius: 1px;
+    }
+    & .dd-strip::before {
+      left: 0.5rem;
+    }
+    & .dd-strip::after {
+      right: 0.5rem;
+    }
+    & .dd-strip__gate {
+      position: absolute;
+      inset: 0 1.75rem;
+      mask-image: linear-gradient(180deg, transparent 0%, #000 22%, #000 78%, transparent 100%);
+    }
+    & .dd-strip__reel {
+      display: flex;
+      flex-direction: column;
+      gap: var(--gap);
+      transform: translate3d(0, calc(50cqh - var(--frame) / 2 - var(--active) * (var(--frame) + var(--gap))), 0);
+      transition: transform 1100ms var(--dd-ease);
+    }
+    & .dd-strip__gate {
+      container-type: size;
+    }
+    & .dd-strip__frame {
+      position: relative;
+      flex: none;
+      height: var(--frame);
+      background: #000;
+      opacity: 0.3;
+      transition: opacity 900ms var(--dd-ease);
+    }
+    & .dd-strip__frame img {
+      object-position: top;
+    }
+    /* Edge code, printed in the gap under each frame like the numbers on a negative. */
+    & .dd-strip__code {
+      position: absolute;
+      left: 0;
+      top: calc(100% + 0.45rem);
+      font-size: 0.625rem;
+      font-weight: 600;
+      letter-spacing: 0.24em;
+      line-height: 1;
+      color: rgb(255 196 120 / 0.8);
+    }
+    & .dd-credits[data-active="0"] .dd-strip__frame[data-i="0"],
+    & .dd-credits[data-active="1"] .dd-strip__frame[data-i="1"],
+    & .dd-credits[data-active="2"] .dd-strip__frame[data-i="2"],
+    & .dd-credits[data-active="3"] .dd-strip__frame[data-i="3"],
+    & .dd-credits[data-active="4"] .dd-strip__frame[data-i="4"],
+    & .dd-credits[data-active="5"] .dd-strip__frame[data-i="5"],
+    & .dd-credits[data-active="6"] .dd-strip__frame[data-i="6"],
+    & .dd-credits[data-active="7"] .dd-strip__frame[data-i="7"] {
+      opacity: 1;
+    }
+  }
+}
+
+/* ---------- Services: one projection screen, six reels ---------- */
+
+.d-deep {
+  & .dd-services__title {
+    margin: 1.25rem 0 0;
+    max-width: 13ch;
+    font-family: var(--dd-display);
+    font-size: clamp(3.5rem, 9vw, 9.5rem);
+    font-weight: 200;
+    line-height: 0.86;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+  & .dd-services__body {
+    margin-top: clamp(2.5rem, 5vw, 4.5rem);
+  }
+  & .dd-services__stage {
+    display: none;
+  }
+  /* Phones and tablets: a row of frames to swipe. */
+  & .dd-services__list {
+    display: flex;
+    gap: 1rem;
+    margin: 0 calc(var(--dd-gutter) * -1);
+    padding: 0 var(--dd-gutter) 0.5rem;
+    list-style: none;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: var(--dd-gutter);
+    scrollbar-width: none;
+  }
+  & .dd-service {
+    /* Positioned, so the visually hidden "Proof:" stays inside the scroller instead of widening the page. */
+    position: relative;
+    flex: none;
+    width: min(84vw, 26rem);
+    scroll-snap-align: start;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: 0.875rem;
+    align-content: start;
+  }
+  & .dd-service__pic {
+    grid-column: 1 / -1;
+    position: relative;
+    aspect-ratio: 3 / 2;
+    overflow: hidden;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 0 0 1px var(--dd-line);
+  }
+  & .dd-service__index {
+    padding-top: 0.45rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    color: var(--dd-teal);
+    font-variant-numeric: tabular-nums;
+  }
+  & .dd-service__title {
+    margin: 0;
+    font-family: var(--dd-display);
+    font-size: clamp(2rem, 3.4vw, 3.5rem);
+    font-weight: 700;
+    line-height: 0.95;
+  }
+  & .dd-service__link {
+    display: inline-block;
+    /* 44 px to the thumb. */
+    padding-block: 0.5rem;
+    color: var(--dd-paper);
+    text-decoration: none;
+    background-image: linear-gradient(var(--dd-teal), var(--dd-teal));
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    background-size: 0% 2px;
+    transition: background-size 700ms var(--dd-ease);
+  }
+  @media (hover: hover) {
+    & .dd-service__link:hover {
+      background-size: 100% 2px;
+    }
+  }
+  & .dd-service__line,
+  & .dd-service__proof {
+    grid-column: 2;
+  }
+  & .dd-service__line {
+    margin: 0.75rem 0 0;
+    font-size: 1.0625rem;
+    line-height: 1.45;
+    color: var(--dd-text-2);
+  }
+  & .dd-service__proof {
+    margin: 0.75rem 0 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 1.6;
+    color: var(--dd-text-3);
+  }
+
+  @media (min-width: 1024px) {
+    & .dd-services__body {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+      gap: clamp(3rem, 6vw, 7rem);
+      align-items: start;
+    }
+    & .dd-services__stage {
+      display: block;
+      position: sticky;
+      top: calc(var(--dd-bar) + 4vh);
+    }
+    & .dd-services__screen {
+      position: relative;
+      aspect-ratio: 3 / 2;
+      max-height: calc(100vh - var(--dd-bar) - 10vh);
+      overflow: hidden;
+      background: #000;
+      box-shadow:
+        0 0 0 1px var(--dd-line),
+        0 50px 120px -40px rgb(95 224 218 / 0.35);
+    }
+    & .dd-services__shot {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transform: scale(1.06);
+      transition:
+        opacity 1100ms var(--dd-ease),
+        transform 1600ms var(--dd-ease);
+    }
+    & .dd-services__body[data-active="0"] .dd-services__shot[data-i="0"],
+    & .dd-services__body[data-active="1"] .dd-services__shot[data-i="1"],
+    & .dd-services__body[data-active="2"] .dd-services__shot[data-i="2"],
+    & .dd-services__body[data-active="3"] .dd-services__shot[data-i="3"],
+    & .dd-services__body[data-active="4"] .dd-services__shot[data-i="4"],
+    & .dd-services__body[data-active="5"] .dd-services__shot[data-i="5"],
+    & .dd-services__body[data-active="6"] .dd-services__shot[data-i="6"],
+    & .dd-services__body[data-active="7"] .dd-services__shot[data-i="7"] {
+      opacity: 1;
+      transform: none;
+    }
+    & .dd-services__count {
+      position: absolute;
+      left: 1.25rem;
+      bottom: 1rem;
+      margin: 0;
+      padding: 0.25rem 0.5rem;
+      background: rgb(1 4 9 / 0.7);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      color: var(--dd-text-2);
+      font-variant-numeric: tabular-nums;
+    }
+    & .dd-services__now {
+      color: var(--dd-paper);
+    }
+    & .dd-services__list {
+      display: block;
+      margin: 0;
+      padding: 0;
+      overflow: visible;
+      border-top: 1px solid var(--dd-line);
+    }
+    & .dd-service {
+      width: auto;
+      padding: clamp(2rem, 5vh, 3.25rem) 0;
+      border-bottom: 1px solid var(--dd-line);
+      column-gap: 1.5rem;
+    }
+    /* Off the screen, a service steps back in colour, never below 4.5:1. */
+    & .dd-service__link,
+    & .dd-service__line,
+    & .dd-service__index {
+      transition: color 700ms var(--dd-ease);
+    }
+    & .dd-service:not([data-on]) .dd-service__link {
+      color: #8aa1ac;
+    }
+    & .dd-service:not([data-on]) .dd-service__line {
+      color: #92a8b2;
+    }
+    & .dd-service:not([data-on]) .dd-service__index {
+      color: var(--dd-text-3);
+    }
+    & .dd-service__pic {
+      display: none;
+    }
+
+  }
+}
+
+/* ---------- Client voices (shown only when there are approved quotes) ---------- */
+
+.d-deep {
+  & .dd-voices__title {
+    margin: 1.25rem 0 0;
+    font-family: var(--dd-display);
+    font-size: clamp(3.5rem, 8vw, 8rem);
+    font-weight: 800;
+    line-height: 0.86;
+  }
+  & .dd-voices__list {
+    display: grid;
+    gap: 3rem;
+    margin: clamp(2.5rem, 5vw, 4rem) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  & .dd-voice {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding-top: 1.75rem;
+    border-top: 1px solid var(--dd-line);
+  }
+  & .dd-voice__draft {
+    margin: 0 0 1rem;
+    padding: 0.25rem 0.625rem;
+    border: 1px dashed var(--dd-line-strong);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--dd-text-2);
+  }
+  & .dd-voice figure {
+    margin: 0;
+  }
+  & .dd-voice__quote {
+    margin: 0;
+    font-size: clamp(1.375rem, 2.2vw, 2rem);
+    font-weight: 300;
+    line-height: 1.3;
+    letter-spacing: -0.015em;
+  }
+  & .dd-voice__who {
+    margin-top: 1.25rem;
+    font-size: 0.875rem;
+    color: var(--dd-text-2);
+  }
+  & .dd-voice__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    margin-top: 1rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--dd-paper);
+    text-decoration: underline;
+    text-decoration-color: rgb(238 245 246 / 0.35);
+    text-underline-offset: 0.35em;
+  }
+  @media (min-width: 768px) {
+    & .dd-voices__list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 4rem 3rem;
+    }
+  }
+}
+
+/* ---------- The people: closing credits ---------- */
+
+.d-deep {
+  & .dd-cast {
+    padding-left: 0;
+    padding-right: 0;
+    padding-bottom: calc(var(--dd-space) * 0.6);
+  }
+  & .dd-cast__head {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 0 var(--dd-gutter);
+    text-align: center;
+  }
+  & .dd-cast__head .dd-label::after {
+    content: "";
+    width: 2.25rem;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.7;
+  }
+  & .dd-cast__title {
+    margin: 0;
+    font-family: var(--dd-display);
+    font-size: clamp(4.5rem, 13vw, 15rem);
+    font-weight: 800;
+    line-height: 0.82;
+    letter-spacing: -0.012em;
+  }
+  & .dd-cast__shot {
+    position: relative;
+    margin-top: clamp(2.5rem, 5vw, 4.5rem);
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    border-block: 1px solid var(--dd-line);
+  }
+  & .dd-cast__shot img {
+    object-position: 50% 30%;
+  }
+  /* The wide shot settles into the dark at its edges, like the last frame before the credits. */
+  & .dd-cast__shot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, rgb(1 4 9 / 0.35) 0%, rgb(1 4 9 / 0) 22%, rgb(1 4 9 / 0) 70%, rgb(1 4 9 / 0.85) 100%),
+      radial-gradient(120% 100% at 50% 40%, transparent 55%, rgb(1 4 9 / 0.45) 100%);
+    pointer-events: none;
+  }
+  & .dd-cast__roll {
+    display: grid;
+    gap: 2.25rem;
+    margin: clamp(3.5rem, 7vw, 6rem) 0 0;
+    padding: 0 var(--dd-gutter);
+    list-style: none;
+    text-align: center;
+  }
+  & .dd-cast__credit {
+    display: grid;
+    gap: 0.375rem;
+  }
+  & .dd-cast__role {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--dd-teal);
+  }
+  & .dd-cast__name {
+    margin: 0;
+    font-family: var(--dd-display);
+    font-size: clamp(2.25rem, 3.6vw, 3.25rem);
+    font-weight: 700;
+    line-height: 0.95;
+  }
+  & .dd-cast__shipped {
+    margin: 0.5rem auto 0;
+    max-width: 40ch;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--dd-text-2);
+  }
+  & .dd-cast__foot {
+    display: flex;
+    justify-content: center;
+    margin-top: clamp(3rem, 6vw, 5rem);
+    padding: 0 var(--dd-gutter);
+  }
+
+  /* Wider: the classic credit roll — roles right-aligned, names left-aligned, on one centre line. */
+  @media (min-width: 768px) {
+    & .dd-cast__shot {
+      aspect-ratio: 2.39 / 1;
+    }
+    & .dd-cast__roll {
+      gap: 2rem;
+      text-align: left;
+    }
+    & .dd-cast__credit {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      column-gap: clamp(1.5rem, 3vw, 3rem);
+      align-items: baseline;
+    }
+    & .dd-cast__role {
+      text-align: right;
+    }
+    & .dd-cast__shipped {
+      margin-left: 0;
+    }
+  }
+}
+
+/* ---------- Footer: the last card ---------- */
+
+.d-deep {
+  & .dd-footer {
+    position: relative;
+    padding: var(--dd-space) var(--dd-gutter) calc(2.5rem + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--dd-line);
+    background: radial-gradient(70% 60% at 15% 100%, rgb(226 31 38 / 0.08), transparent 70%);
+  }
+  & .dd-footer__cta {
+    padding-bottom: clamp(4rem, 9vw, 7rem);
+  }
+  & .dd-footer__title {
+    margin: 1.25rem 0 0;
+    max-width: 14ch;
+    font-family: var(--dd-display);
+    font-size: clamp(3.75rem, 10vw, 12rem);
+    font-weight: 800;
+    line-height: 0.84;
+    letter-spacing: -0.012em;
+    text-wrap: balance;
+  }
+  & .dd-footer__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: clamp(2rem, 4vw, 3rem);
+  }
+  & .dd-footer__links {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2rem 1.5rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--dd-line);
+    font-size: 0.875rem;
+  }
+  & .dd-footer__col {
+    display: flex;
+    flex-direction: column;
+  }
+  & .dd-footer__link,
+  & .dd-footer__copy {
+    display: flex;
+    align-items: center;
+    min-height: 2.75rem;
+    color: var(--dd-text-2);
+  }
+  & .dd-footer__link {
+    gap: 0.375rem;
+    transition: color 400ms var(--dd-ease);
+  }
+  @media (hover: hover) {
+    & .dd-footer__link:hover {
+      color: var(--dd-paper);
+    }
+  }
+  @media (min-width: 640px) {
+    & .dd-footer__actions {
+      flex-direction: row;
+      flex-wrap: wrap;
+    }
+  }
+  @media (min-width: 768px) {
+    & .dd-footer__links {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    & .dd-footer__col--end {
+      align-items: flex-end;
+      text-align: right;
+    }
+  }
+  @media (pointer: fine) and (min-width: 768px) {
+    & .dd-footer__link,
+    & .dd-footer__copy {
+      min-height: 2.25rem;
+    }
+    & .dd-footer__col {
+      align-items: flex-start;
+    }
+    & .dd-footer__col--end {
+      align-items: flex-end;
+    }
+  }
+}
+
+/* ---------- Depth gauge (wide screens with a mouse) ---------- */
+
+.d-deep {
+  & .dd-gauge {
+    display: none;
+  }
+  @media (min-width: 1024px) and (pointer: fine) {
+    & .dd-gauge {
+      position: fixed;
+      right: clamp(0.75rem, 1.4vw, 1.5rem);
+      top: 50%;
+      z-index: 30;
+      display: block;
+      height: 34vh;
+      translate: 0 -50%;
+      pointer-events: none;
+    }
+    & .dd-gauge__rail {
+      position: relative;
+      width: 1px;
+      height: 100%;
+      container-type: size;
+      background: repeating-linear-gradient(180deg, rgb(238 245 246 / 0.35) 0 1px, transparent 1px 10%);
+      box-shadow: 0 0 0 0.5px rgb(238 245 246 / 0.08);
+    }
+    & .dd-gauge__rail::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgb(238 245 246 / 0.14);
+    }
+    & .dd-gauge__marker {
+      position: absolute;
+      top: 0;
+      left: -4px;
+      width: 9px;
+      height: 1px;
+      background: var(--dd-red);
+      will-change: transform;
+    }
+    & .dd-gauge__readout {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      translate: 0 -50%;
+      font-size: 0.625rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      white-space: nowrap;
+      color: var(--dd-text-2);
+      font-variant-numeric: tabular-nums;
+    }
+  }
+}
+
+/* ---------- Reduced motion: still frames ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .d-deep {
+    & .dd-sea__caustics,
+    & .dd-sea__shafts span,
+    & .dd-hero__poster,
+    & .dd-hero__title,
+    & .dd-hero__sub,
+    & .dd-rise,
+    & .dd-scene__companion,
+    & .dd-intertitle__cue span,
+    & .dd-sail .sail-button::after {
+      animation: none !important;
+    }
+    & .dd-strip__reel,
+    & .dd-services__shot,
+    & .dd-credits__client {
+      transition-duration: 1ms !important;
+    }
+  }
+}
