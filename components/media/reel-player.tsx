@@ -200,7 +200,7 @@ export function ReelPopup({ reel, className = "" }: { reel: ReelData; className?
         <span aria-hidden className="grid size-6 place-items-center rounded-full bg-teal text-[0.55rem] text-ink">
           ▶
         </span>
-        Play reel <span className="font-mono text-xs text-paper/60">{reel.length}</span>
+        Play reel <span className="font-mono text-xs text-(--text-3)">{reel.length}</span>
       </button>
       <LiquidSurface open={open} onClose={() => setOpen(false)} origin="bottom" size="full" tone="cinema" label="Showreel">
         <div className="grid min-h-[calc(100svh-7rem)] content-center">

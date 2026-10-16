@@ -42,7 +42,7 @@ export function SailIntro({ data }: { data: WorldData }) {
   }, [data]);
 
   if (!supported) {
-    return <p className="max-w-[34ch] text-sm text-paper/70">This browser can&apos;t draw our 3D world; every project in it is below.</p>;
+    return <p className="max-w-[34ch] text-sm text-(--text-3)">This browser can&apos;t draw our 3D world; every project in it is below.</p>;
   }
 
   return (

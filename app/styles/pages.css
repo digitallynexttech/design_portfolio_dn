@@ -156,7 +156,7 @@
 .reel__head {
   grid-area: head;
 }
-.reel__stage {
+.reel__top > .reel__stage {
   grid-area: stage;
   margin-top: 2rem;
 }
