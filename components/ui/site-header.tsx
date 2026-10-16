@@ -33,13 +33,22 @@ export function SiteHeader() {
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
+  const tuck = tucked ? "translateY(calc(-100% - 2rem))" : "none";
+
   return (
     <>
+      {/* The header's glass sits beside it, not inside: the header's view-transition-name makes it
+          a backdrop root, and a blur inside it could only see the header itself. */}
+      <div
+        aria-hidden
+        className="site-header-glass transition-transform duration-(--dur-4) ease-flow"
+        style={{ viewTransitionName: "site-header-glass", transform: tuck }}
+      />
       <header
         className="site-header fixed inset-x-0 top-0 z-40 px-(--gutter) pt-5 transition-transform duration-(--dur-4) ease-flow"
         // A keyboard user tabbing into a tucked header brings it back.
         onFocusCapture={() => setHidden(false)}
-        style={{ viewTransitionName: "site-header", transform: tucked ? "translateY(calc(-100% - 2rem))" : "none" }}
+        style={{ viewTransitionName: "site-header", transform: tuck }}
       >
         <div className="flex h-9.5 items-center justify-between gap-6">
           {/* py-2 makes the tap area 44px; -my-2 gives the height back, so the bar doesn't grow. */}

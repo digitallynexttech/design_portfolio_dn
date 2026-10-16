@@ -481,14 +481,17 @@ body {
 }
 
 /* The header is the fixed point: it never moves or blinks while the page changes under it. */
-::view-transition-group(site-header) {
+::view-transition-group(site-header),
+::view-transition-group(site-header-glass) {
   animation: none;
   z-index: 100;
 }
-::view-transition-old(site-header) {
+::view-transition-old(site-header),
+::view-transition-old(site-header-glass) {
   display: none;
 }
-::view-transition-new(site-header) {
+::view-transition-new(site-header),
+::view-transition-new(site-header-glass) {
   animation: none;
 }
 /* The phone's Menu pill is chrome too: pinned, never blinking out between pages. */
@@ -651,13 +654,14 @@ body:has(.study[data-scheme="light"]) .site-header {
   color: var(--ink);
 }
 /* A permanent scrim, so the links read over any water, poster or client page. Pages may set
-   --chrome-bg to their own background colour. */
-.site-header::before {
+   --chrome-bg to their own background colour. Its own element under the header (see
+   site-header.tsx), so the glass can blur the page rather than only the header. */
+.site-header-glass {
   --scrim: var(--chrome-bg, var(--chrome-auto, var(--ink)));
-  content: "";
-  position: absolute;
-  inset: 0 0 -1.75rem;
-  z-index: -1;
+  position: fixed;
+  inset: 0 0 auto;
+  height: calc(var(--header-h) + 1.75rem);
+  z-index: 39;
   pointer-events: none;
   background: linear-gradient(
     to bottom,
@@ -728,6 +732,7 @@ body:has(.study[data-scheme="light"]) .site-header .logo-on-light {
     animation: 150ms ease both vt-fade-in !important;
   }
   ::view-transition-new(site-header),
+  ::view-transition-new(site-header-glass),
   ::view-transition-new(menu-pill) {
     animation: none !important;
   }
