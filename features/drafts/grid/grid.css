@@ -1,0 +1,2832 @@
+/* =====================================================================================
+   Draft 4 · "Spec Sheet". A precise engineering document for a studio that builds things.
+
+   Scope: every selector starts with .d-grid, or with html:has(.d-grid:not([style*="display"]))
+   for the few page-level rules. CSS imported by a page stays loaded after client navigation, and
+   Next keeps the page you left mounted as a hidden copy (style="display: none !important" on the
+   .d-grid root) so Back can restore it: the :not() keeps the page-level rules off every other
+   route while that copy is hidden. Nothing here may touch the rest of the site.
+
+   Spec (the brief I set myself):
+   - Paper: bone #ECE9E1, graphite ink #17181A; brand red #E21F26 is the only signal colour
+     (Set sail, active rows, hover fills, focus, the level line). Small red text uses #B8161C (5.6:1).
+   - Grid: 4 / 8 / 12 columns at 0 / 640 / 1024 px; margins clamp(16–36 px); gutters clamp(14–24 px).
+     The columns are printed on the paper (a background "film"), so rules and type sit on them and
+     mounted plates (media) cover them. From 1200 px a 72 px gauge rail takes the left margin.
+   - Type: Inter Tight for display and text, JetBrains Mono for labels, data and numbers. Tabular
+     figures wherever numbers appear. One dramatic jump (the title, ~17% of the measure); everything
+     else on a tight scale: h2 32–52, h3 30–46, lead 18–30, body 16, data 13, labels 11.
+   - Components: title blocks (rule + registration marks + balloon), plates with crop marks and
+     dimension lines, spec bars, metric tables, an index with a viewer, a matrix, a credits table,
+     and a title-block footer. Square corners throughout; 1 px rules.
+   - Motion: the water line through the title (canvas), ripple rings and a coordinate readout on
+     click, a level gauge and a running head, sheets that stack like a drawing set, tank-fill
+     buttons, and scroll-driven rule draws. All of it off or still under reduced motion.
+   ===================================================================================== */
+
+/* ---------- The route: paper, and the site's own chrome put away ---------- */
+
+html:has(.d-grid:not([style*="display"])) {
+  background: #ece9e1;
+  color: #17181a;
+  color-scheme: light;
+  scroll-padding-top: 5rem;
+}
+html:has(.d-grid:not([style*="display"])) body {
+  background: #ece9e1;
+}
+/* The site header and its glass, the phone Menu pill, the site footer and the WebGL water (its
+   canvas and its CSS fallback). The draft brings its own header, index and footer; the water is
+   told to stop drawing (setWaterCovered) by the draft's chrome. */
+html:has(.d-grid:not([style*="display"])) .site-header,
+html:has(.d-grid:not([style*="display"])) .site-header-glass,
+html:has(.d-grid:not([style*="display"])) .water-fallback,
+html:has(.d-grid:not([style*="display"])) body > canvas,
+html:has(.d-grid:not([style*="display"])) body > footer,
+html:has(.d-grid:not([style*="display"])) body > button[style*="menu-pill"] {
+  display: none !important;
+}
+html:has(.d-grid:not([style*="display"])) ::selection {
+  background: #e21f26;
+  color: #fff;
+}
+
+/* ---------- Tokens ---------- */
+
+.d-grid {
+  --g-paper: #ece9e1;
+  --g-paper-rgb: 236 233 225;
+  --g-plate: #f6f4ef;
+  --g-shade: #e2ded3;
+  --g-ink: #17181a;
+  --g-ink-rgb: 23 24 26;
+  --g-ink-2: #43454a;
+  --g-ink-3: #595b60;
+  --g-hair: rgb(23 24 26 / 0.16);
+  --g-line: rgb(23 24 26 / 0.9);
+  --g-col: rgb(23 24 26 / 0.065);
+  --g-red: #e21f26;
+  --g-red-ink: #b8161c;
+  --g-ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --m: clamp(1rem, 2.5vw, 2.25rem);
+  --gap: clamp(0.875rem, 1.7vw, 1.5rem);
+  --cols: 4;
+  --rail: 0px;
+  --top-h: 3.25rem;
+  --sp: clamp(4.5rem, 9vw, 8rem);
+
+  /* The printed column grid: one tile per column + gutter, a hairline at each column edge. */
+  --g-film: linear-gradient(
+    to right,
+    var(--g-col) 0 1px,
+    transparent 1px calc(100% - var(--gap) - 1px),
+    var(--g-col) calc(100% - var(--gap) - 1px) calc(100% - var(--gap)),
+    transparent calc(100% - var(--gap))
+  );
+
+  position: relative;
+  min-height: 100svh;
+  overflow-x: clip;
+  background: var(--g-paper);
+  color: var(--g-ink);
+  font-family: var(--dg-sans), "Helvetica Neue", Arial, sans-serif;
+  font-size: 1rem;
+  line-height: 1.5;
+  font-feature-settings: "cv11";
+}
+@media (min-width: 640px) {
+  .d-grid {
+    --cols: 8;
+  }
+}
+@media (min-width: 1024px) {
+  .d-grid {
+    --cols: 12;
+    --top-h: 3.5rem;
+  }
+}
+@media (min-width: 1200px) {
+  .d-grid {
+    --rail: 4.5rem;
+  }
+}
+
+/* The reel viewer is a dialog inside this tree: it keeps the site's own type and ink. */
+.d-grid .liquid {
+  font-family: var(--font-text), system-ui, sans-serif;
+  font-feature-settings: normal;
+  letter-spacing: normal;
+}
+
+.d-grid :focus-visible:not(.liquid *) {
+  outline: 2px solid var(--g-red);
+  outline-offset: 3px;
+}
+
+/* ---------- Primitives ---------- */
+
+.d-grid .dg-main,
+.d-grid .dg-foot {
+  padding-left: calc(var(--rail) + var(--m));
+  padding-right: var(--m);
+  background: var(--g-film) 0 0 / calc((100% + var(--gap)) / var(--cols)) 100% repeat-x;
+  background-origin: content-box;
+  background-clip: content-box;
+}
+
+.d-grid .dg-g {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  column-gap: var(--gap);
+}
+
+.d-grid .dg-num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Labels: mono, small, uppercase, spaced. */
+.d-grid .dg-k {
+  margin: 0;
+  font-family: var(--dg-mono), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--g-ink-3);
+}
+.d-grid .dg-k--ink {
+  color: var(--g-ink);
+}
+
+.d-grid .dg-cover {
+  object-fit: cover;
+}
+.d-grid .dg-cover--top {
+  object-position: 50% 0;
+}
+.d-grid .dg-contain {
+  object-fit: contain;
+}
+/* A plate that arrives after the first paint develops in, rather than popping. */
+@media (prefers-reduced-motion: no-preference) {
+  .d-grid .dg-develop {
+    animation: dg4-develop 0.9s var(--g-ease) both;
+  }
+}
+@keyframes dg4-develop {
+  from {
+    opacity: 0;
+    filter: grayscale(1) contrast(0.6);
+  }
+}
+.d-grid video.dg-cover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* The strong rule that opens a sheet, with registration marks centred in each margin. */
+.d-grid .dg-rule {
+  position: relative;
+  height: 1px;
+  background: var(--g-line);
+  transform-origin: left;
+}
+.d-grid .dg-rule::before,
+.d-grid .dg-rule::after {
+  content: "";
+  position: absolute;
+  top: -7px;
+  width: 15px;
+  height: 15px;
+  background:
+    radial-gradient(circle, transparent 3.5px, var(--g-ink) 3.5px 4.5px, transparent 4.5px),
+    linear-gradient(var(--g-ink), var(--g-ink)) center / 1px 100% no-repeat,
+    linear-gradient(var(--g-ink), var(--g-ink)) center / 100% 1px no-repeat;
+}
+.d-grid .dg-rule::before {
+  left: calc(-0.5 * var(--m) - 7.5px);
+}
+.d-grid .dg-rule::after {
+  right: calc(-0.5 * var(--m) - 7.5px);
+}
+@media (min-width: 1200px) {
+  /* Wide screens: the left mark sits on the rail's edge. */
+  .d-grid .dg-main .dg-rule::before,
+  .d-grid .dg-foot .dg-rule::before {
+    left: calc(-1 * var(--m) - 7.5px);
+  }
+}
+
+/* Engineering balloon: a circled reference number. */
+.d-grid .dg-balloon {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid var(--g-ink);
+  border-radius: 50%;
+  font-family: var(--dg-mono), ui-monospace, monospace;
+  font-size: 0.75rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* ---------- Buttons: rectangles that fill like a tank ---------- */
+
+.d-grid .dg-btn {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border: 1px solid var(--g-ink);
+  background: transparent;
+  color: var(--g-ink);
+  font-family: var(--dg-sans), sans-serif;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.1;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.3s var(--g-ease);
+}
+.d-grid .dg-btn::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: var(--g-ink);
+  transform: scaleY(0);
+  transform-origin: 50% 100%;
+  transition: transform 0.5s var(--g-ease);
+}
+.d-grid .dg-btn > span[aria-hidden] {
+  font-family: var(--dg-mono), monospace;
+  transition: transform 0.4s var(--g-ease);
+}
+@media (hover: hover) {
+  .d-grid .dg-btn:hover {
+    color: var(--g-paper);
+  }
+  .d-grid .dg-btn:hover::before {
+    transform: scaleY(1);
+  }
+  .d-grid .dg-btn:hover > span[aria-hidden] {
+    transform: translateX(3px);
+  }
+}
+.d-grid .dg-btn:focus-visible {
+  color: var(--g-paper);
+}
+.d-grid .dg-btn:focus-visible::before {
+  transform: scaleY(1);
+}
+.d-grid .dg-btn--ink {
+  background: var(--g-ink);
+  color: var(--g-paper);
+}
+.d-grid .dg-btn--ink::before {
+  background: var(--g-red);
+}
+.d-grid .dg-btn--ink:hover,
+.d-grid .dg-btn--ink:focus-visible {
+  color: #fff;
+  border-color: var(--g-red);
+}
+.d-grid .dg-btn--lg {
+  min-height: 3.25rem;
+  padding: 0 1.25rem;
+  font-size: 1rem;
+}
+.d-grid .dg-btn--sm {
+  min-height: 2.25rem;
+  padding: 0 0.875rem;
+  font-size: 0.8125rem;
+}
+@media (pointer: coarse) {
+  .d-grid .dg-btn--sm {
+    min-height: 2.75rem;
+  }
+}
+.d-grid .dg-btn--block {
+  width: 100%;
+}
+
+.d-grid .dg-textlink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  color: var(--g-ink);
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.3em;
+  text-decoration-color: var(--g-hair);
+  transition: text-decoration-color 0.25s var(--g-ease);
+}
+.d-grid .dg-textlink:hover {
+  text-decoration-color: var(--g-red);
+}
+
+/* ---------- Header: the running head ---------- */
+
+.d-grid .dg-top {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--g-paper);
+}
+.d-grid .dg-top__bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  height: var(--top-h);
+  padding: 0 var(--m);
+  border-bottom: 1px solid var(--g-line);
+}
+.d-grid .dg-top__logo {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  min-height: 2.75rem;
+}
+.d-grid .dg-top__logo img {
+  display: block;
+  width: auto;
+  height: 1.375rem;
+}
+.d-grid .dg-top__run {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-family: var(--dg-mono), monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--g-ink-2);
+}
+.d-grid .dg-top__runno {
+  color: var(--g-ink);
+  font-variant-numeric: tabular-nums;
+}
+.d-grid .dg-top__runname {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.d-grid .dg-top__runpct {
+  display: none;
+  font-variant-numeric: tabular-nums;
+}
+/* A table-of-contents leader between the sheet's name and the reading. */
+.d-grid .dg-top__leader {
+  display: none;
+  flex: 1;
+  min-width: 2rem;
+  align-self: center;
+  height: 1px;
+  background: radial-gradient(circle, var(--g-ink-3) 0.6px, transparent 0.9px) 0 50% / 5px 1px repeat-x;
+}
+.d-grid .dg-top__nav {
+  display: none;
+  align-items: center;
+  gap: 0.25rem;
+}
+.d-grid .dg-top__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--g-ink);
+  text-decoration: none;
+  background: linear-gradient(var(--g-red), var(--g-red)) 0.75rem calc(100% - 0.75rem) / 0 1px no-repeat;
+  transition: background-size 0.35s var(--g-ease);
+}
+.d-grid .dg-top__link:hover {
+  background-size: calc(100% - 1.5rem) 1px;
+}
+.d-grid .dg-top__nav .dg-btn {
+  margin-left: 0.75rem;
+}
+.d-grid .dg-top__menu {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  margin-right: -0.5rem;
+  padding: 0 0.5rem;
+  border: 0;
+  background: none;
+  color: var(--g-ink);
+  font-family: var(--dg-mono), monospace;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.d-grid .dg-top__menuicon {
+  width: 1.125rem;
+  height: 0.5625rem;
+  border-block: 1px solid currentColor;
+  background: linear-gradient(currentColor, currentColor) center / 100% 1px no-repeat;
+}
+@media (min-width: 768px) {
+  .d-grid .dg-top__nav {
+    display: flex;
+  }
+  .d-grid .dg-top__menu {
+    display: none;
+  }
+  .d-grid .dg-top__runpct {
+    display: inline;
+  }
+  .d-grid .dg-top__leader {
+    display: block;
+  }
+  .d-grid .dg-top__run {
+    padding-left: 1rem;
+    margin-left: 0.25rem;
+    border-left: 1px solid var(--g-hair);
+    align-self: stretch;
+    align-items: center;
+  }
+  .d-grid .dg-top__runpct {
+    padding-right: 1rem;
+  }
+}
+/* The level line: how far down the document you are, in red. */
+.d-grid .dg-top__level {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  pointer-events: none;
+}
+.d-grid .dg-top__level > span {
+  display: block;
+  height: 100%;
+  background: var(--g-red);
+  transform-origin: 0 50%;
+  transform: scaleX(var(--p, 0));
+}
+@supports (animation-timeline: scroll()) {
+  .d-grid .dg-top__level > span {
+    transform: none;
+    animation: dg4-level linear both;
+    animation-timeline: scroll(root);
+  }
+}
+@keyframes dg4-level {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* ---------- The gauge rail (wide screens) ---------- */
+
+.d-grid .dg-rail {
+  display: none;
+}
+@media (min-width: 1200px) {
+  .d-grid .dg-rail {
+    --track-top: 2rem;
+    --track-bottom: 3.5rem;
+    display: block;
+    position: fixed;
+    z-index: 30;
+    left: 0;
+    top: var(--top-h);
+    bottom: 0;
+    width: var(--rail);
+    border-right: 1px solid var(--g-hair);
+    background: var(--g-paper);
+    contain: layout paint;
+  }
+  .d-grid .dg-rail__scale {
+    position: absolute;
+    top: var(--track-top);
+    bottom: var(--track-bottom);
+    right: 0;
+    width: 0.75rem;
+    background:
+      repeating-linear-gradient(to bottom, var(--g-ink) 0 1px, transparent 1px 10%) right top / 0.75rem 100% no-repeat,
+      repeating-linear-gradient(to bottom, var(--g-ink-3) 0 1px, transparent 1px 2%) right top / 0.375rem 100% no-repeat;
+  }
+  .d-grid .dg-rail__scale::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: -1px;
+    width: 0.75rem;
+    height: 1px;
+    background: var(--g-ink);
+  }
+  .d-grid .dg-rail__marks {
+    position: absolute;
+    inset: var(--track-top) 0 var(--track-bottom);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .d-grid .dg-rail__mark {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(var(--at, 0) * 100%);
+    height: 0;
+  }
+  .d-grid .dg-rail__link {
+    position: absolute;
+    left: 0.875rem;
+    top: -0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 1.5rem;
+    padding-right: 0.25rem;
+    font-family: var(--dg-mono), monospace;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--g-ink-3);
+    text-decoration: none;
+  }
+  .d-grid .dg-rail__link::before {
+    content: "";
+    width: 0.375rem;
+    height: 1px;
+    background: currentColor;
+  }
+  .d-grid .dg-rail__mark[data-on] .dg-rail__link,
+  .d-grid .dg-rail__link:hover {
+    color: var(--g-ink);
+  }
+  .d-grid .dg-rail__mark[data-on] .dg-rail__link::before {
+    width: 0.75rem;
+    background: var(--g-red);
+  }
+  /* The level: a red line across the rail, the water-level mark, the reading. */
+  .d-grid .dg-rail__level {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(var(--track-top) + var(--p, 0) * (100% - var(--track-top) - var(--track-bottom)));
+    height: 0;
+    pointer-events: none;
+  }
+  .d-grid .dg-rail__level::before {
+    content: "";
+    position: absolute;
+    left: 2.5rem;
+    right: 0;
+    top: 0;
+    height: 1px;
+    background: var(--g-red);
+  }
+  .d-grid .dg-rail__tri {
+    position: absolute;
+    right: 0.875rem;
+    top: -0.6rem;
+    width: 0.625rem;
+    height: 0.5rem;
+    background: var(--g-red);
+    clip-path: polygon(0 0, 100% 0, 50% 100%);
+  }
+  .d-grid .dg-rail__read {
+    position: absolute;
+    left: 0.875rem;
+    bottom: 0.625rem;
+    display: grid;
+    font-family: var(--dg-mono), monospace;
+    font-size: 0.625rem;
+    font-weight: 500;
+    line-height: 1.25;
+    font-variant-numeric: tabular-nums;
+    color: var(--g-ink-3);
+  }
+  .d-grid .dg-rail__read [data-level] {
+    color: var(--g-red-ink);
+  }
+}
+
+/* ---------- The phone index (a modal dialog) ---------- */
+
+.d-grid .dg-menu {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--g-ink);
+}
+.d-grid .dg-menu::backdrop {
+  background: rgb(23 24 26 / 0.35);
+}
+.d-grid .dg-menu__sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  min-height: 100%;
+  padding: 0 var(--m) calc(1.5rem + env(safe-area-inset-bottom));
+  background: var(--g-film) var(--m) 0 / calc((100% - 2 * var(--m) + var(--gap)) / var(--cols)) 100% repeat-x, var(--g-paper);
+}
+.d-grid .dg-menu__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--top-h);
+  border-bottom: 1px solid var(--g-line);
+}
+.d-grid .dg-menu__close {
+  min-height: 2.75rem;
+  margin-right: -0.5rem;
+  padding: 0 0.5rem;
+  border: 0;
+  background: none;
+  color: var(--g-ink);
+  font-family: var(--dg-mono), monospace;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.d-grid .dg-menu__sheets {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--g-hair);
+}
+.d-grid .dg-menu__sheet-link {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  min-height: 3.25rem;
+  padding: 0.625rem 0;
+  border-bottom: 1px solid var(--g-hair);
+  color: var(--g-ink);
+  font-size: 1.5rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+}
+.d-grid .dg-menu__no {
+  width: 2rem;
+  font-family: var(--dg-mono), monospace;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--g-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.d-grid .dg-menu__site {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid var(--g-line);
+  border-bottom: 1px solid var(--g-hair);
+}
+.d-grid .dg-menu__link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 3rem;
+  padding: 0 0.75rem 0 0;
+  color: var(--g-ink);
+  font-weight: 500;
+  text-decoration: none;
+}
+.d-grid .dg-menu__link + .dg-menu__link {
+  padding-left: 0.75rem;
+  border-left: 1px solid var(--g-hair);
+}
+.d-grid .dg-menu__cta {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: auto;
+}
+
+/* ---------- Plates: crop marks and dimension lines ---------- */
+
+.d-grid .dg-fig {
+  margin: 0;
+}
+.d-grid .dg-frame {
+  --crop: var(--g-ink);
+  position: relative;
+  aspect-ratio: var(--ar);
+  background: var(--g-shade);
+}
+.d-grid .dg-frame--plate {
+  background: var(--g-plate);
+}
+.d-grid .dg-frame__media {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+/* Crop marks: eight ticks just outside the corners. */
+.d-grid .dg-frame::after {
+  content: "";
+  position: absolute;
+  inset: -0.75rem;
+  pointer-events: none;
+  --t: linear-gradient(var(--crop), var(--crop));
+  background:
+    var(--t) left 0 top 0.75rem / 0.5rem 1px no-repeat,
+    var(--t) left 0.75rem top 0 / 1px 0.5rem no-repeat,
+    var(--t) right 0 top 0.75rem / 0.5rem 1px no-repeat,
+    var(--t) right 0.75rem top 0 / 1px 0.5rem no-repeat,
+    var(--t) left 0 bottom 0.75rem / 0.5rem 1px no-repeat,
+    var(--t) left 0.75rem bottom 0 / 1px 0.5rem no-repeat,
+    var(--t) right 0 bottom 0.75rem / 0.5rem 1px no-repeat,
+    var(--t) right 0.75rem bottom 0 / 1px 0.5rem no-repeat;
+  transition: inset 0.45s var(--g-ease);
+}
+.d-grid .dg-fig:hover .dg-frame::after {
+  inset: -1.125rem;
+}
+/* Dimension lines: the source's pixel width above, its height at the right. */
+.d-grid .dg-dim {
+  position: absolute;
+  pointer-events: none;
+  font-family: var(--dg-mono), monospace;
+  font-size: 0.625rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--g-ink-2);
+}
+.d-grid .dg-dim--w {
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 1.25rem);
+  height: 0.5rem;
+  border-inline: 1px solid var(--g-ink-3);
+}
+.d-grid .dg-dim--w::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: var(--g-ink-3);
+}
+.d-grid .dg-dim--w .dg-dim__v {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  padding: 0 0.375rem;
+  background: var(--g-paper);
+}
+.d-grid .dg-dim--h {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .d-grid .dg-dim--h {
+    display: block;
+    top: 0;
+    bottom: 0;
+    left: calc(100% + 1.25rem);
+    width: 0.5rem;
+    border-block: 1px solid var(--g-ink-3);
+  }
+  .d-grid .dg-dim--h::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 1px;
+    background: var(--g-ink-3);
+  }
+  .d-grid .dg-dim--h .dg-dim__v {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+    padding: 0.375rem 0;
+    background: var(--g-paper);
+    writing-mode: vertical-rl;
+  }
+}
+.d-grid .dg-cap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.875rem;
+  margin-top: 0.875rem;
+  font-family: var(--dg-mono), monospace;
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  color: var(--g-ink-2);
+}
+.d-grid .dg-cap__no {
+  color: var(--g-ink);
+  font-weight: 500;
+}
+.d-grid .dg-cap__dim {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Sheet heads ---------- */
+
+.d-grid .dg-sec {
+  padding-top: var(--sp);
+}
+/* Long sheets below the title are laid out and painted only as they near the screen, so the first
+   paint lays out one screen of document, not twelve. The box reaches into the margins so the
+   registration marks, crop marks and dimension lines that sit there are not clipped by the
+   containment. */
+.d-grid .dg-cv {
+  --bleed: calc(var(--m) + 0.75rem);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 1800px;
+  margin-inline: calc(-1 * var(--bleed));
+  padding-inline: var(--bleed);
+}.d-grid .dg-head__row {
+  row-gap: 1rem;
+  padding-top: 1.25rem;
+}
+.d-grid .dg-head__id {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0;
+}
+.d-grid .dg-head__name {
+  color: var(--g-ink);
+}
+.d-grid .dg-h2 {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: clamp(2rem, 3.6vw, 3.25rem);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+.d-grid .dg-head__aside {
+  grid-column: 1 / -1;
+  align-self: end;
+}
+@media (min-width: 640px) {
+  .d-grid .dg-head__id {
+    grid-column: 1 / span 2;
+    align-self: start;
+  }
+  .d-grid .dg-h2 {
+    grid-column: 3 / span 6;
+  }
+  .d-grid .dg-head__aside {
+    grid-column: 3 / span 6;
+  }
+}
+@media (min-width: 1024px) {
+  .d-grid .dg-head__id {
+    grid-column: 1 / span 3;
+  }
+  .d-grid .dg-h2 {
+    grid-column: 4 / span 6;
+  }
+  .d-grid .dg-head__aside {
+    grid-column: 10 / span 3;
+    justify-self: end;
+    text-align: right;
+  }
+}
+
+/* ---------- 00 Title ---------- */
+
+.d-grid .dg-hero {
+  padding-top: 0;
+}
+.d-grid .dg-meta {
+  display: flex;
+  gap: 0;
+  margin: 0;
+  border-bottom: 1px solid var(--g-hair);
+  font-family: var(--dg-mono), monospace;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--g-ink-2);
+}
+.d-grid .dg-meta__cell {
+  padding: 0.875rem 0.875rem 0.875rem 0;
+  margin-right: 0.875rem;
+  border-right: 1px solid var(--g-hair);
+}
+.d-grid .dg-meta__cell:last-child {
+  margin-right: 0;
+  border-right: 0;
+}
+.d-grid .dg-meta__cell:not(.dg-meta__cell--datum, .dg-meta__cell--time) {
+  display: none;
+}
+.d-grid .dg-meta__cell--time {
+  margin-left: auto;
+  border-right: 0;
+  padding-right: 0;
+  margin-right: 0;
+}
+.d-grid .dg-gridspec::after {
+  content: "4 col · grid";
+}
+@media (min-width: 640px) {
+  .d-grid .dg-meta__cell:not(.dg-meta__cell--datum, .dg-meta__cell--time) {
+    display: block;
+  }
+  .d-grid .dg-meta__cell--time {
+    margin-left: 0;
+    border-right: 1px solid var(--g-hair);
+    padding-right: 0.875rem;
+    margin-right: 0.875rem;
+  }
+  .d-grid .dg-meta__cell--spec {
+    margin-left: auto;
+  }
+  .d-grid .dg-gridspec::after {
+    content: "8 col · grid";
+  }
+}
+@media (min-width: 640px) and (max-width: 1023px) {
+  .d-grid .dg-meta__cell:first-child {
+    display: none;
+  }
+}
+@media (min-width: 1024px) {
+  .d-grid .dg-gridspec::after {
+    content: "12 col · grid";
+  }
+}
+
+.d-grid .dg-ruler {
+  padding-top: 0.5rem;
+  font-family: var(--dg-mono), monospace;
+  font-size: 0.5625rem;
+  line-height: 1;
+  color: var(--g-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.d-grid .dg-ruler > span {
+  padding: 0.125rem 0 0.25rem 0.3125rem;
+  border-left: 1px solid var(--g-ink-3);
+}
+.d-grid .dg-ruler > span:nth-child(n + 5) {
+  display: none;
+}
+@media (min-width: 640px) {
+  .d-grid .dg-ruler > span:nth-child(n + 5) {
+    display: block;
+  }
+  .d-grid .dg-ruler > span:nth-child(n + 9) {
+    display: none;
+  }
+}
+@media (min-width: 1024px) {
+  .d-grid .dg-ruler > span:nth-child(n + 9) {
+    display: block;
+  }
+}
+
+/* The title: the solid title, the water canvas over it, and an outline copy over that. */
+.d-grid .dg-hero__title {
+  --dg-level: 0.795;
+  margin-top: clamp(1.75rem, 5vw, 3.75rem);
+  container-type: inline-size;
+}
+.d-grid .dg-hero__fit {
+  width: fit-content;
+  max-width: 100%;
+}
+.d-grid .dg-hero__type {
+  position: relative;
+}
+/* The water at first paint: a flat surface and its hatching, drawn in CSS between the solid title
+   and its outline, so the very first frame already shows the title half sunk. The canvas takes over
+   (data-sized) in the same frame it first draws the moving surface. */
+.d-grid .dg-hero__type::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: calc(var(--dg-level) * 100%);
+  bottom: 0;
+  left: calc(-1 * (var(--rail) + var(--m)));
+  width: 100vw;
+  border-top: 1.5px solid var(--g-ink);
+  background:
+    linear-gradient(to bottom, transparent, color-mix(in srgb, var(--g-paper) 80%, transparent)),
+    repeating-linear-gradient(to bottom, transparent 0 5px, rgb(23 24 26 / 0.18) 5px 6px),
+    var(--g-paper);
+  pointer-events: none;
+}
+.d-grid .dg-hero__type[data-sized]::after {
+  display: none;
+}
+.d-grid .dg-measure {
+  position: relative;
+  height: 0.5rem;
+  margin: 0 0 clamp(0.75rem, 2vw, 1.5rem);
+  border-inline: 1px solid var(--g-ink-3);
+  font-family: var(--dg-mono), monospace;
+  font-size: 0.625rem;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--g-ink-2);
+}
+.d-grid .dg-measure::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: var(--g-ink-3);
+}
+.d-grid .dg-measure__v {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  padding: 0 0.5rem;
+  background: var(--g-paper);
+  white-space: nowrap;
+}
+.d-grid .dg-h1 {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  font-family: var(--dg-sans), sans-serif;
+  font-size: 33.5cqi;
+  font-weight: 600;
+  line-height: 0.84;
+  letter-spacing: -0.055em;
+  color: var(--g-ink);
+}
+.d-grid .dg-h1__text {
+  display: inline-block;
+}
+/* Painted from the first frame (it sits exactly on the solid title until the water rises), so the
+   title's largest paint is never a late one. */
+.d-grid .dg-h1__outline {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  color: transparent;
+  -webkit-text-stroke: 1.25px var(--g-ink);
+  pointer-events: none;
+  user-select: none;
+}
+/* Edge to edge: HeroWave sets its left offset and width from the viewport, and only then shows it,
+   so the canvas never moves after it appears (no layout shift). */
+.d-grid .dg-wave {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: 0;
+  display: none;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.d-grid .dg-hero__type[data-sized] .dg-wave {
+  display: block;
+}
+@media (min-width: 640px) {
+  .d-grid .dg-hero__title {
+    --dg-level: 0.6;
+  }
+  .d-grid .dg-h1 {
+    font-size: 18.4cqi;
+    white-space: nowrap;
+  }
+}
+
+.d-grid .dg-hero__body {
+  row-gap: 2.25rem;
+  margin-top: clamp(1.75rem, 4.5vw, 3.5rem);
+}
+.d-grid .dg-specs {
+  grid-column: 1 / -1;
+  align-self: start;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-bottom: 1px solid var(--g-hair);
+}
+.d-grid .dg-spec {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  align-items: baseline;
+  padding: 0.875rem 0 1rem;
+  border-top: 1px solid var(--g-hair);
+}
+.d-grid .dg-spec:first-child {
+  border-top-color: var(--g-line);
+}
+.d-grid .dg-spec__no {
+  font-family: var(--dg-mono), monospace;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--g-red-ink);
+}
+.d-grid .dg-spec__lead,
+.d-grid .dg-spec__text {
+  margin: 0;
+  text-wrap: balance;
+}
+.d-grid .dg-spec__lead {
+  font-size: clamp(1.5rem, 2.3vw, 2.125rem);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+.d-grid .dg-spec__text {
+  font-size: clamp(1.125rem, 1.45vw, 1.375rem);
+  font-weight: 400;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  color: var(--g-ink-2);
+}
+.d-grid .dg-abstract {
+  grid-column: 1 / -1;
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+}
+.d-grid .dg-abstract__text {
+  max-width: 40ch;
+  margin: 0;
+  font-size: 1.0625rem;
+  line-height: 1.5;
+  color: var(--g-ink-2);
+}
+.d-grid .dg-hero__fig {
+  grid-column: 1 / -1;
+  margin-top: 1.25rem;
+}
+@media (min-width: 640px) {
+  .d-grid .dg-specs {
+    grid-column: 1 / span 4;
+  }
+  .d-grid .dg-abstract {
+    grid-column: 5 / span 4;
+  }
+}
+@media (min-width: 1024px) {
+  .d-grid .dg-specs {
+    grid-column: 1 / span 4;
+  }
+  .d-grid .dg-abstract {
+    grid-column: 5 / span 4;
+  }
+  .d-grid .dg-hero__fig {
+    grid-column: 9 / span 4;
+    margin-top: 1.5rem;
+    margin-right: 2.25rem;
+  }
+}
+
+/* Commands: Set sail (red), the sound switch, Play reel, and the way down. */
+.d-grid .dg-cmds {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+.d-grid .dg-cmds__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+}
+.d-grid .dg-sail > div {
+  gap: 0.5rem !important;
+}
+.d-grid .dg-sail p {
+  color: var(--g-ink-2);
+}
+.d-grid .dg-sail .sail-button {
+  --btn-fill: var(--g-ink);
+  --btn-on-fill: #fff;
+  flex: 1;
+  justify-content: space-between;
+  min-height: 3.375rem;
+  padding: 0 1.25rem;
+  border: 0;
+  border-radius: 0;
+  background: var(--g-red);
+  color: #fff;
+  box-shadow: none;
+  font-family: var(--dg-sans), sans-serif;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.d-grid .dg-sail .sail-button::before {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  transform: scaleY(0);
+  transform-origin: 50% 100%;
+  translate: none;
+  transition: transform 0.5s var(--g-ease);
+}
+@media (hover: hover) {
+  .d-grid .dg-sail .sail-button:hover::before {
+    translate: none;
+    transform: scaleY(1);
+  }
+}
+.d-grid .dg-sail .sail-button:focus-visible::before {
+  translate: none;
+  transform: scaleY(1);
+}
+.d-grid .dg-sail .sail-button__wake {
+  display: none;
+}
+.d-grid .dg-sail .sail-sound {
+  flex: none;
+  width: 3.375rem;
+  height: 3.375rem;
+  border-radius: 0;
+  background: transparent;
+  color: var(--g-ink);
+  box-shadow: inset 0 0 0 1px var(--g-ink);
+  backdrop-filter: none;
+}
+.d-grid .dg-sail .sail-sound:hover {
+  color: var(--g-ink);
+  box-shadow: inset 0 0 0 1px var(--g-ink), inset 0 -3px 0 var(--g-ink);
+}
+.d-grid .dg-sail .sail-sound[aria-pressed="true"] {
+  color: var(--g-red-ink);
+  box-shadow: inset 0 0 0 1px var(--g-red);
+}
+.d-grid .dg-reel > .btn {
+  --btn-fill: var(--g-ink);
+  --btn-on-fill: var(--g-paper);
+  min-height: 2.75rem;
+  padding: 0 0.875rem 0 0.5rem;
+  gap: 0.625rem;
+  border: 1px solid var(--g-ink);
+  border-radius: 0;
+  color: var(--g-ink);
+  font-family: var(--dg-sans), sans-serif;
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+.d-grid .dg-reel > .btn::before {
+  border-radius: 0;
+}
+.d-grid .dg-reel > .btn > span:first-child {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0;
+  background: var(--g-ink);
+  color: var(--g-paper);
+}
+.d-grid .dg-reel > .btn > span:last-child {
+  color: inherit;
+  opacity: 0.7;
+  font-family: var(--dg-mono), monospace;
+}
+.d-grid .dg-down {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  font-family: var(--dg-mono), monospace;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--g-ink);
+  text-decoration: underline;
+  text-decoration-color: var(--g-hair);
+  text-underline-offset: 0.45em;
+}
+.d-grid .dg-down:hover {
+  text-decoration-color: var(--g-red);
+}
+.d-grid .dg-down span {
+  display: inline-block;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .d-grid .dg-down:hover span {
+    animation: dg4-bob 1.2s var(--g-ease) 2;
+  }
+}
+@keyframes dg4-bob {
+  0%,
+  60%,
+  100% {
+    transform: none;
+  }
+  30% {
+    transform: translateY(3px);
+  }
+}
+
+/* ---------- 01 The studio ---------- */
+
+.d-grid .dg-head--statement .dg-h2 {
+  font-size: clamp(1.875rem, 3.5vw, 3.25rem);
+  line-height: 1.04;
+  letter-spacing: -0.032em;
+  max-width: 24ch;
+}
+.d-grid .dg-sub {
+  margin: 0;
+  font-size: clamp(1.125rem, 1.6vw, 1.5rem);
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+  color: var(--g-ink-2);
+  text-wrap: balance;
+}
+@media (min-width: 1024px) {
+  .d-grid .dg-head--statement .dg-h2 {
+    grid-column: 4 / span 8;
+  }
+  .d-grid .dg-head--statement .dg-head__aside {
+    grid-column: 4 / span 5;
+    justify-self: start;
+    text-align: left;
+  }
+}
+
+.d-grid .dg-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: clamp(3rem, 6vw, 5rem) 0 0;
+  border-top: 1px solid var(--g-line);
+  border-bottom: 1px solid var(--g-hair);
+}
+.d-grid .dg-stat {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.75rem 0.75rem 1.25rem 0;
+}
+.d-grid .dg-stat + .dg-stat {
+  padding-left: 0.75rem;
+  border-left: 1px solid var(--g-hair);
+}
+.d-grid .dg-stat__label {
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  color: var(--g-ink-2);
+  text-wrap: balance;
+}
+.d-grid .dg-stat__value {
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+}
+.d-grid .dg-stat__fig {
+  font-size: clamp(2.75rem, 10vw, 8.5rem);
+  font-weight: 500;
+  line-height: 0.82;
+  letter-spacing: -0.06em;
+}
+@media (min-width: 1024px) {
+  .d-grid .dg-stats {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--gap);
+  }
+  .d-grid .dg-stat {
+    grid-column: span 3;
+    padding: 1rem 0 1.5rem;
+  }
+  .d-grid .dg-stat:first-child {
+    grid-column: 4 / span 3;
+  }
+  .d-grid .dg-stat + .dg-stat {
+    padding-left: var(--gap);
+    margin-left: calc(-1 * var(--gap));
+  }
+  .d-grid .dg-stat__label {
+    max-width: 16ch;
+    font-size: 0.9375rem;
+  }
+}
+
+.d-grid .dg-parts {
+  margin-top: clamp(3rem, 6vw, 5rem);
+}
+.d-grid .dg-parts__head {
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 0.75rem;
+}
+.d-grid .dg-parts__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--g-line);
+  border-left: 1px solid var(--g-hair);
+}
+.d-grid .dg-part {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: clamp(4.25rem, 8vw, 6.5rem);
+  padding: 1.25rem 0.75rem 0.75rem;
+  border-right: 1px solid var(--g-hair);
+  border-bottom: 1px solid var(--g-hair);
+  transition: background-color 0.3s var(--g-ease);
+}
+.d-grid .dg-part__no {
+  position: absolute;
+  left: 0.4375rem;
+  top: 0.375rem;
+  font-family: var(--dg-mono), monospace;
+  font-size: 0.5625rem;
+  color: var(--g-ink-3);
+}
+/* Before the logos arrive (and without script): the client's name, set as a part label. */
+.d-grid .dg-part__name {
+  max-width: 100%;
+  font-family: var(--dg-mono), monospace;
+  font-size: 0.6875rem;
+  line-height: 1.3;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--g-ink-2);
+}
+.d-grid .dg-part__logo {
+  width: auto;
+  max-width: 100%;
+  height: clamp(1.05rem, calc(var(--k) * 1.35rem), 1.9rem);
+  object-fit: contain;
+  filter: brightness(0);
+  opacity: 0.8;
+  transition: opacity 0.3s var(--g-ease);
+}
+.d-grid .dg-part:hover {
+  background: var(--g-plate);
+}
+.d-grid .dg-part:hover .dg-part__logo {
+  opacity: 1;
+}
+.d-grid .dg-part:hover .dg-part__no {
+  color: var(--g-red-ink);
+}
+@media (min-width: 640px) {
+  .d-grid .dg-parts__grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1024px) {
+  .d-grid .dg-parts__grid {
+    grid-template-columns: repeat(9, minmax(0, 1fr));
+  }
+  .d-grid .dg-part__logo {
+    height: clamp(1.15rem, calc(var(--k) * 1.6rem), 2.25rem);
+  }
+}
+
+.d-grid .dg-recog {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 2.5rem;
+}
+.d-grid .dg-recog__list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--g-line);
+}
+.d-grid .dg-recog__item {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  align-items: start;
+  gap: 0.875rem 1rem;
+  padding: 1.25rem 0;
+  border-bottom: 1px solid var(--g-hair);
+}
+.d-grid .dg-recog__item > .dg-k {
+  grid-row: 1 / span 2;
+  padding-top: 0.25rem;
+}
+.d-grid .dg-recog__mark {
+  width: auto;
+  max-width: 100%;
+  height: 2.25rem;
+  object-fit: contain;
+  object-position: left;
+}
+.d-grid .dg-recog__item--badge .dg-recog__mark {
+  height: 3.75rem;
+}
+.d-grid .dg-recog__text {
+  display: grid;
+  gap: 0.125rem;
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.35;
+}
+.d-grid .dg-recog__title {
+  font-weight: 500;
+}
+.d-grid .dg-recog__detail {
+  color: var(--g-ink-2);
+}
+@media (min-width: 640px) {
+  .d-grid .dg-recog__list {
+    grid-template-columns: 1fr 1fr;
+    column-gap: var(--gap);
+  }
+}
+@media (min-width: 1024px) {
+  .d-grid .dg-recog {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--gap);
+    align-items: start;
+  }
+  .d-grid .dg-recog > .dg-k {
+    grid-column: 1 / span 3;
+    padding-top: 1rem;
+  }
+  .d-grid .dg-recog__list {
+    grid-column: 4 / span 9;
+  }
+}
+
+/* ---------- 02 Selected work: the sheets ---------- */
+
+.d-grid .dg-sheets {
+  margin: clamp(2.5rem, 5vw, 4rem) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.d-grid .dg-sheet {
+  --bar-h: 3.25rem;
+  background:
+    var(--g-film) 0 0 / calc((100% + var(--gap)) / var(--cols)) 100% repeat-x,
+    var(--g-paper);
+}
+.d-grid .dg-sheet + .dg-sheet {
+  margin-top: clamp(3rem, 6vw, 4.5rem);
+}
+.d-grid .dg-sheet__paper {
+  padding-bottom: clamp(2rem, 4vw, 3.5rem);
+}
+/* The spec bar: No., industry, year, stack, disciplines, the client's accent. */
+.d-grid .dg-bar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  column-gap: var(--gap);
+  margin: 0;
+  border-top: 1px solid var(--g-line);
+  border-bottom: 1px solid var(--g-hair);
+  background: var(--g-paper);
+}
+.d-grid .dg-bar__cell {
+  display: grid;
+  align-content: start;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.625rem 0 0.75rem;
+}
+.d-grid .dg-bar__cell dd {
+  margin: 0;
+  font-family: var(--dg-mono), monospace;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.d-grid .dg-bar__cell--no dd {
+  color: var(--g-red-ink);
+}
+.d-grid .dg-bar__cell--ind {
+  grid-column: span 3;
+}
+.d-grid .dg-bar__cell--stack {
+  grid-column: span 3;
+}
+.d-grid .dg-bar__cell--disc,
+.d-grid .dg-bar__cell--accent {
+  display: none;
+}
+.d-grid .dg-swatch {
+  display: inline-block;
+  width: 0.625rem;
+  height: 0.625rem;
+  margin-right: 0.375rem;
+  vertical-align: -0.0625rem;
+  box-shadow: inset 0 0 0 1px rgb(23 24 26 / 0.25);
+}
+@media (min-width: 640px) {
+  .d-grid .dg-bar {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+  .d-grid .dg-bar__cell--disc {
+    display: grid;
+    grid-column: span 5;
+  }
+  .d-grid .dg-bar__cell--accent {
+    display: grid;
+    grid-column: span 3;
+  }
+}
+@media (min-width: 1024px) {
+  .d-grid .dg-bar {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    height: var(--bar-h);
+  }
+  .d-grid .dg-bar__cell--disc {
+    grid-column: span 3;
+  }
+  .d-grid .dg-bar__cell--accent {
+    grid-column: span 1;
+  }
+  .d-grid .dg-bar__cell {
+    padding: 0.5rem 0 0;
+  }
+  .d-grid .dg-bar__cell dd {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.d-grid .dg-sheet__body {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  column-gap: var(--gap);
+  row-gap: 2.5rem;
+  padding-top: 3rem;
+}
+.d-grid .dg-sheet__main {
+  grid-column: 1 / -1;
+}
+.d-grid .dg-sheet__detail {
+  display: none;
+}
+.d-grid .dg-sheet__spec {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.d-grid .dg-h3 {
+  margin: 0;
+  font-size: clamp(2rem, 3.4vw, 3rem);
+  font-weight: 600;
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+}
+.d-grid .dg-sheet__line {
+  max-width: 30ch;
+  margin: 0.875rem 0 0;
+  font-size: clamp(1.125rem, 1.4vw, 1.3125rem);
+  line-height: 1.3;
+  letter-spacing: -0.012em;
+  color: var(--g-ink-2);
+  text-wrap: pretty;
+}
+.d-grid .dg-metrics {
+  align-self: stretch;
+  margin: 1.75rem 0 0;
+  border-top: 1px solid var(--g-line);
+}
+.d-grid .dg-metric {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--g-hair);
+}
+.d-grid .dg-metric__label {
+  display: grid;
+  gap: 0.125rem;
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  color: var(--g-ink-2);
+}
+.d-grid .dg-metric__value {
+  margin: 0;
+  font-size: clamp(1.5rem, 2.3vw, 2.125rem);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  text-align: right;
+  white-space: nowrap;
+}
+.d-grid .dg-quote {
+  margin: 1.5rem 0 0;
+}
+.d-grid .dg-quote blockquote {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  line-height: 1.45;
+  color: var(--g-ink-2);
+}
+.d-grid .dg-sheet__cta {
+  margin-top: 1.75rem;
+}
+.d-grid .dg-sheet__foot {
+  display: none;
+}
+@media (min-width: 640px) {
+  .d-grid .dg-sheet__detail {
+    display: block;
+    grid-column: 6 / span 3;
+    grid-row: 2;
+    align-self: start;
+    margin-top: 1.5rem;
+  }
+  .d-grid .dg-sheet__spec {
+    grid-column: 1 / span 5;
+    grid-row: 2;
+  }
+}
+@media (min-width: 1024px) {
+  .d-grid .dg-sheet__body {
+    padding-top: 3.25rem;
+    align-items: start;
+  }
+  .d-grid .dg-sheet__main {
+    grid-column: 1 / span 7;
+  }
+  .d-grid .dg-sheet__detail {
+    display: none;
+  }
+  .d-grid .dg-sheet__spec {
+    grid-column: 8 / span 5;
+    grid-row: 1;
+    padding-left: 1.75rem;
+  }
+}
+@media (min-width: 1280px) {
+  .d-grid .dg-sheet__main {
+    grid-column: 1 / span 6;
+  }
+  .d-grid .dg-sheet__detail {
+    display: block;
+    grid-column: 7 / span 2;
+    grid-row: 1;
+    align-self: end;
+    margin: 0 0 0 1rem;
+  }
+  .d-grid .dg-sheet__detail .dg-cap__dim {
+    display: none;
+  }
+  .d-grid .dg-sheet__spec {
+    grid-column: 9 / span 4;
+    padding-left: 0;
+  }
+}
+/* Very wide: the loops are 640 px recordings, so their frame stays near that size. */
+@media (min-width: 1600px) {
+  .d-grid .dg-sheet__main {
+    grid-column: 1 / span 5;
+  }
+  .d-grid .dg-sheet__detail {
+    grid-column: 6 / span 2;
+  }
+}
+/* A drawing set: on tall wide screens each sheet pins under the header, a bar lower than the one
+   before, so the sheets already read stay stacked behind, their bars showing like tabs. */
+@media (min-width: 1024px) and (min-height: 860px) {
+  .d-grid .dg-sheet {
+    position: sticky;
+    z-index: 2;
+    top: calc(var(--top-h) + (var(--z) - 1) * var(--bar-h));
+  }
+  .d-grid .dg-sheet + .dg-sheet {
+    margin-top: 0;
+  }
+  .d-grid .dg-sheet__paper {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100svh - var(--top-h) - (var(--z) - 1) * var(--bar-h));
+    padding-bottom: 0;
+  }
+  .d-grid .dg-sheet__foot {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin: auto 0 0;
+    padding: 2rem 0 1rem;
+    font-family: var(--dg-mono), monospace;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--g-ink-3);
+  }
+  .d-grid .dg-sheet__foot > span:first-child {
+    color: var(--g-ink);
+  }
+  .d-grid .dg-sheet__leader {
+    flex: 1;
+    height: 1px;
+    background: var(--g-hair);
+  }
+}
+
+/* ---------- 03 More work: the index and its viewer ---------- */
+
+.d-grid .dg-more__all-top {
+  display: none;
+}
+.d-grid .dg-more__all-end {
+  margin-top: 2rem;
+}
+@media (min-width: 1024px) {
+  .d-grid .dg-more__all-top {
+    display: inline-flex;
+  }
+  .d-grid .dg-more__all-end {
+    display: none;
+  }
+}
+.d-grid .dg-index {
+  margin-top: clamp(2.5rem, 5vw, 4rem);
+}
+.d-grid .dg-index__cols {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.75rem;
+}
+.d-grid .dg-index__cols::before {
+  content: "Sort";
+  margin-right: 0.25rem;
+  font-family: var(--dg-mono), monospace;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--g-ink-3);
+}
+.d-grid .dg-index__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--g-hair);
+  background: none;
+  color: var(--g-ink);
+  font-family: var(--dg-mono), monospace;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.d-grid .dg-index__sort[aria-pressed="true"] {
+  border-color: var(--g-ink);
+  background: var(--g-ink);
+  color: var(--g-paper);
+}
+.d-grid .dg-index__arrow {
+  font-size: 0.75rem;
+}
+.d-grid .dg-index__colhead {
+  display: none;
+}
+.d-grid .dg-index__rows {
+  display: grid;
+  gap: 2.25rem var(--gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--g-line);
+  padding-top: 1.5rem;
+}
+.d-grid .dg-index__link {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr) auto;
+  align-items: baseline;
+  column-gap: 0.75rem;
+  row-gap: 0.25rem;
+  color: var(--g-ink);
+  text-decoration: none;
+}
+.d-grid .dg-index__media {
+  grid-column: 1 / -1;
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 10;
+  margin-bottom: 0.875rem;
+  overflow: hidden;
+  background: var(--g-shade);
+}
+.d-grid .dg-index__no {
+  grid-row: 2;
+  font-family: var(--dg-mono), monospace;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--g-red-ink);
+}
+.d-grid .dg-index__client {
+  grid-row: 2;
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+.d-grid .dg-index__industry {
+  grid-column: 2 / -1;
+  font-family: var(--dg-mono), monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--g-ink-3);
+}
+.d-grid .dg-index__result {
+  grid-column: 2 / -1;
+  display: flex;
+  align-items: baseline;
+  gap: 0.625rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--g-hair);
+  font-size: 0.875rem;
+  line-height: 1.35;
+  color: var(--g-ink-2);
+}
+.d-grid .dg-index__value {
+  flex: none;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--g-ink);
+}
+.d-grid .dg-index__go {
+  grid-row: 2;
+  grid-column: 3;
+  font-family: var(--dg-mono), monospace;
+  transition: transform 0.35s var(--g-ease);
+}
+.d-grid .dg-index__link:hover .dg-index__go {
+  transform: translateX(4px);
+  color: var(--g-red-ink);
+}
+.d-grid .dg-viewer {
+  display: none;
+}
+@media (min-width: 640px) {
+  .d-grid .dg-index__rows {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (min-width: 1024px) {
+  .d-grid .dg-index {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--gap);
+    align-items: start;
+  }
+  .d-grid .dg-index__table {
+    grid-column: 1 / span 8;
+  }
+  .d-grid .dg-index__cols,
+  .d-grid .dg-index__link {
+    display: grid;
+    grid-template-columns: 3.25rem minmax(0, 1.1fr) minmax(0, 1.05fr) minmax(0, 1.55fr) 1.5rem;
+    column-gap: 1rem;
+    align-items: baseline;
+  }
+  .d-grid .dg-index__cols {
+    gap: 0 1rem;
+    padding: 0;
+    border-top: 1px solid var(--g-line);
+    border-bottom: 1px solid var(--g-hair);
+  }
+  .d-grid .dg-index__cols::before {
+    content: none;
+  }
+  .d-grid .dg-index__sort {
+    justify-content: flex-start;
+    min-height: 2.5rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--g-ink-3);
+  }
+  .d-grid .dg-index__sort[aria-pressed="true"] {
+    background: none;
+    color: var(--g-ink);
+  }
+  .d-grid .dg-index__sort[aria-pressed="true"] .dg-index__arrow {
+    color: var(--g-red-ink);
+  }
+  .d-grid .dg-index__colhead {
+    display: block;
+    font-family: var(--dg-mono), monospace;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--g-ink-3);
+  }
+  .d-grid .dg-index__rows {
+    display: block;
+    border-top: 0;
+    padding-top: 0;
+  }
+  .d-grid .dg-index__row {
+    position: relative;
+    border-bottom: 1px solid var(--g-hair);
+    transition: background-color 0.3s var(--g-ease);
+  }
+  .d-grid .dg-index__row::before {
+    content: "";
+    position: absolute;
+    left: calc(-1 * var(--m) * 0.5 - 1.5px);
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--g-red);
+    transform: scaleY(0);
+    transition: transform 0.4s var(--g-ease);
+  }
+  .d-grid .dg-index__row[data-on] {
+    background: var(--g-plate);
+  }
+  .d-grid .dg-index__row[data-on]::before {
+    transform: scaleY(1);
+  }
+  .d-grid .dg-index__link {
+    min-height: 5.5rem;
+    padding: 1.375rem 0;
+  }
+  .d-grid .dg-index__media {
+    display: none;
+  }
+  .d-grid .dg-index__no,
+  .d-grid .dg-index__client,
+  .d-grid .dg-index__industry,
+  .d-grid .dg-index__result,
+  .d-grid .dg-index__go {
+    grid-row: 1;
+    grid-column: auto;
+  }
+  .d-grid .dg-index__no {
+    padding-left: 0.25rem;
+    color: var(--g-ink-3);
+  }
+  .d-grid .dg-index__row[data-on] .dg-index__no {
+    color: var(--g-red-ink);
+  }
+  .d-grid .dg-index__client {
+    font-size: clamp(1.375rem, 1.9vw, 1.75rem);
+  }
+  .d-grid .dg-index__industry {
+    font-size: 0.6875rem;
+    line-height: 1.4;
+  }
+  .d-grid .dg-index__result {
+    flex-direction: column;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: 0.8125rem;
+  }
+  .d-grid .dg-index__value {
+    font-size: clamp(1.25rem, 1.6vw, 1.5rem);
+  }
+  .d-grid .dg-index__go {
+    justify-self: end;
+  }
+
+  /* The viewer: fixed beside the table while it scrolls. */
+  .d-grid .dg-viewer {
+    display: block;
+    grid-column: 9 / span 4;
+    align-self: stretch;
+  }
+  .d-grid .dg-viewer__inner {
+    position: sticky;
+    top: calc(var(--top-h) + 2rem);
+    padding-top: 2.5rem;
+  }
+  .d-grid .dg-viewer__head {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+  }
+  .d-grid .dg-viewer__layer {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    clip-path: inset(0 0 100% 0);
+    transition:
+      opacity 0s linear 0.5s,
+      clip-path 0.55s var(--g-ease);
+  }
+  .d-grid .dg-viewer__layer[data-on] {
+    z-index: 1;
+    opacity: 1;
+    clip-path: inset(0);
+    transition:
+      opacity 0s,
+      clip-path 0.55s var(--g-ease);
+  }
+  .d-grid .dg-viewer__cap {
+    display: flex;
+    gap: 0.875rem;
+    margin: 0.875rem 0 0;
+    font-family: var(--dg-mono), monospace;
+    font-size: 0.6875rem;
+    color: var(--g-ink-2);
+  }
+  .d-grid .dg-viewer__cap span:last-child {
+    margin-left: auto;
+  }
+  .d-grid .dg-viewer__client {
+    margin: 1.5rem 0 0;
+    font-size: 1.375rem;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+  }
+  .d-grid .dg-viewer__line {
+    margin: 0.375rem 0 0;
+    font-size: 1rem;
+    line-height: 1.4;
+    color: var(--g-ink-2);
+  }
+  .d-grid .dg-viewer__platform {
+    margin-top: 0.75rem;
+  }
+}
+
+/* ---------- 04 How we adapt: the matrix ---------- */
+
+.d-grid .dg-matrix-wrap {
+  display: none;
+}
+@media (max-width: 1023px) {
+  /* The "6 × 10 matrix" note belongs to the matrix, which only wide screens draw. */
+  .d-grid .dg-services .dg-head__aside {
+    display: none;
+  }
+}
+.d-grid .dg-svcs {
+  display: grid;
+  margin: clamp(2.5rem, 5vw, 4rem) 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--g-line);
+}
+.d-grid .dg-svc {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 7.5rem) minmax(0, 1fr);
+  gap: 1rem;
+  padding: 1.125rem 0;
+  border-bottom: 1px solid var(--g-hair);
+}
+.d-grid .dg-svc__plate {
+  position: relative;
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
+  background: var(--g-shade);
+}
+.d-grid .dg-svc__text {
+  display: grid;
+  align-content: start;
+  gap: 0.25rem;
+}
+.d-grid .dg-svc__title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+.d-grid .dg-svc__link {
+  color: inherit;
+  text-decoration: none;
+}
+/* The whole record is the tap target. */
+.d-grid .dg-svc__link::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.d-grid .dg-svc__link::after {
+  content: " →";
+  font-family: var(--dg-mono), monospace;
+  font-size: 0.875em;
+}
+.d-grid .dg-svc__line {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  color: var(--g-ink-2);
+}
+.d-grid .dg-svc__proof {
+  margin: 0.375rem 0 0;
+  font-family: var(--dg-mono), monospace;
+  font-size: 0.6875rem;
+  line-height: 1.5;
+  color: var(--g-ink-3);
+}
+@media (min-width: 640px) {
+  .d-grid .dg-svcs {
+    grid-template-columns: 1fr 1fr;
+    column-gap: var(--gap);
+  }
+  .d-grid .dg-svc {
+    grid-template-columns: minmax(0, 9rem) minmax(0, 1fr);
+  }
+}
+@media (min-width: 1024px) {
+  .d-grid .dg-svcs {
+    display: none;
+  }
+  .d-grid .dg-matrix-wrap {
+    display: block;
+    margin-top: clamp(2.5rem, 5vw, 4rem);
+  }
+  .d-grid .dg-matrix {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+  .d-grid .dg-matrix th,
+  .d-grid .dg-matrix td {
+    padding: 0;
+    font-weight: inherit;
+    text-align: left;
+  }
+  .d-grid .dg-matrix thead tr {
+    border-bottom: 1px solid var(--g-line);
+  }
+  .d-grid .dg-matrix__corner {
+    width: 42%;
+    vertical-align: bottom;
+    padding-bottom: 0.75rem !important;
+  }
+  .d-grid .dg-matrix__corner {
+    display: table-cell;
+  }
+  .d-grid .dg-matrix__corner .dg-k + .dg-k {
+    float: right;
+    margin-right: 1rem;
+  }
+  .d-grid .dg-matrix__col {
+    position: relative;
+    height: 11.5rem;
+    vertical-align: bottom;
+    border-left: 1px solid var(--g-hair);
+    transition: background-color 0.25s var(--g-ease);
+  }
+  .d-grid .dg-matrix__colname {
+    position: absolute;
+    left: 50%;
+    bottom: 2.25rem;
+    writing-mode: vertical-rl;
+    rotate: 180deg;
+    translate: -50% 0;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+    letter-spacing: -0.005em;
+  }
+  .d-grid .dg-matrix__colno {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0.625rem;
+    text-align: center;
+    font-family: var(--dg-mono), monospace;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--g-ink-3);
+  }
+  .d-grid .dg-matrix tbody tr {
+    border-bottom: 1px solid var(--g-hair);
+    transition: background-color 0.25s var(--g-ease);
+  }
+  .d-grid .dg-matrix__svc {
+    display: grid;
+    grid-template-columns: 7.5rem 2.75rem minmax(0, 1fr);
+    align-items: center;
+    gap: 0 1rem;
+    padding: 0.875rem 1rem 0.875rem 0 !important;
+  }
+  .d-grid .dg-matrix__plate {
+    position: relative;
+    aspect-ratio: 3 / 2;
+    overflow: hidden;
+    background: var(--g-shade);
+  }
+  .d-grid .dg-matrix__sno {
+    font-family: var(--dg-mono), monospace;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--g-ink-3);
+  }
+  .d-grid .dg-matrix__text {
+    display: grid;
+    gap: 0.25rem;
+  }
+  .d-grid .dg-matrix__title {
+    justify-self: start;
+    font-size: clamp(1.125rem, 1.45vw, 1.375rem);
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    color: var(--g-ink);
+    text-decoration: none;
+  }
+  .d-grid .dg-matrix__title::after {
+    content: "  →";
+    font-family: var(--dg-mono), monospace;
+    font-size: 0.8em;
+    opacity: 0;
+    transition: opacity 0.25s var(--g-ease);
+  }
+  .d-grid .dg-matrix__title:hover::after,
+  .d-grid .dg-matrix__title:focus-visible::after {
+    opacity: 1;
+  }
+  .d-grid .dg-matrix__line {
+    font-size: 0.875rem;
+    line-height: 1.35;
+    color: var(--g-ink-2);
+  }
+  /* A bus line runs through each row; the proof sits on it as dots. */
+  .d-grid .dg-matrix__cell {
+    position: relative;
+    border-left: 1px solid var(--g-hair);
+    background: linear-gradient(var(--g-hair), var(--g-hair)) center / 100% 1px no-repeat;
+    transition: background-color 0.25s var(--g-ease);
+  }
+  .d-grid .dg-dot {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 0.75rem;
+    height: 0.75rem;
+    margin: -0.375rem 0 0 -0.375rem;
+    border-radius: 50%;
+    background: var(--g-ink);
+    transition:
+      background-color 0.25s var(--g-ease),
+      scale 0.35s var(--g-ease);
+  }
+  .d-grid .dg-matrix tbody tr:hover {
+    background-color: var(--g-plate);
+  }
+  .d-grid .dg-matrix tbody tr:hover .dg-matrix__cell {
+    background-image: linear-gradient(var(--g-red), var(--g-red));
+  }
+  .d-grid .dg-matrix tbody tr:hover .dg-dot {
+    background: var(--g-red);
+    scale: 1.35;
+  }
+  .d-grid .dg-matrix tbody tr:hover .dg-matrix__sno {
+    color: var(--g-red-ink);
+  }
+  /* Column read-across: hover a client and its column lights. */
+  .d-grid .dg-matrix:has([data-c="0"]:hover) [data-c="0"],
+  .d-grid .dg-matrix:has([data-c="1"]:hover) [data-c="1"],
+  .d-grid .dg-matrix:has([data-c="2"]:hover) [data-c="2"],
+  .d-grid .dg-matrix:has([data-c="3"]:hover) [data-c="3"],
+  .d-grid .dg-matrix:has([data-c="4"]:hover) [data-c="4"],
+  .d-grid .dg-matrix:has([data-c="5"]:hover) [data-c="5"],
+  .d-grid .dg-matrix:has([data-c="6"]:hover) [data-c="6"],
+  .d-grid .dg-matrix:has([data-c="7"]:hover) [data-c="7"],
+  .d-grid .dg-matrix:has([data-c="8"]:hover) [data-c="8"],
+  .d-grid .dg-matrix:has([data-c="9"]:hover) [data-c="9"],
+  .d-grid .dg-matrix:has([data-c="10"]:hover) [data-c="10"],
+  .d-grid .dg-matrix:has([data-c="11"]:hover) [data-c="11"] {
+    background-color: var(--g-shade);
+  }
+}
+
+/* ---------- 05 Client voices ---------- */
+
+.d-grid .dg-voices__list {
+  display: grid;
+  gap: 0 var(--gap);
+  margin: clamp(2.5rem, 5vw, 4rem) 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--g-line);
+}
+.d-grid .dg-voice {
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+  padding: 1.25rem 0 1.5rem;
+  border-bottom: 1px solid var(--g-hair);
+}
+.d-grid .dg-voice__draft {
+  justify-self: start;
+  padding: 0.25rem 0.5rem;
+  border: 1px dashed var(--g-ink-3);
+}
+.d-grid .dg-voice__fig {
+  margin: 0;
+}
+.d-grid .dg-voice__quote {
+  margin: 0;
+  font-size: clamp(1.25rem, 1.8vw, 1.625rem);
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+.d-grid .dg-voice__by {
+  margin-top: 0.75rem;
+  font-family: var(--dg-mono), monospace;
+  font-size: 0.75rem;
+  color: var(--g-ink-2);
+}
+@media (min-width: 1024px) {
+  .d-grid .dg-voices__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ---------- 06 The people ---------- */
+
+.d-grid .dg-people__top {
+  row-gap: 2.5rem;
+  margin-top: clamp(3rem, 6vw, 4.5rem);
+}
+.d-grid .dg-people__fig {
+  grid-column: 1 / -1;
+}
+.d-grid .dg-people__side {
+  grid-column: 1 / -1;
+  display: grid;
+  align-content: end;
+  justify-items: start;
+  gap: 0.25rem;
+}
+.d-grid .dg-people__count {
+  margin: 0.25rem 0 0;
+  font-size: clamp(4rem, 9vw, 7.5rem);
+  font-weight: 500;
+  line-height: 0.85;
+  letter-spacing: -0.06em;
+}
+.d-grid .dg-people__side .dg-btn {
+  margin-top: 1.5rem;
+}
+@media (min-width: 1024px) {
+  .d-grid .dg-people__fig {
+    grid-column: 1 / span 8;
+    margin-right: 2.25rem;
+  }
+  .d-grid .dg-people__side {
+    grid-column: 10 / span 3;
+  }
+}
+.d-grid .dg-credits {
+  margin-top: clamp(2.5rem, 5vw, 4rem);
+}
+.d-grid .dg-credits__head {
+  display: none;
+}
+.d-grid .dg-credits__rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--g-line);
+}
+.d-grid .dg-credit {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  column-gap: 0.75rem;
+  row-gap: 0.25rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--g-hair);
+  transition: background-color 0.25s var(--g-ease);
+}
+.d-grid .dg-credit__no {
+  grid-row: 1 / span 3;
+  padding-top: 0.375rem;
+  font-family: var(--dg-mono), monospace;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--g-ink-3);
+}
+.d-grid .dg-credit__name {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+.d-grid .dg-credit__title {
+  margin: 0;
+  font-family: var(--dg-mono), monospace;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--g-ink-2);
+}
+.d-grid .dg-credit__shipped {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--g-ink-2);
+}
+.d-grid .dg-credit:hover {
+  background: var(--g-plate);
+}
+.d-grid .dg-credit:hover .dg-credit__no {
+  color: var(--g-red-ink);
+}
+@media (min-width: 1024px) {
+  .d-grid .dg-credits__head,
+  .d-grid .dg-credit {
+    display: grid;
+    grid-template-columns: 3.25rem minmax(0, 3fr) minmax(0, 2fr) minmax(0, 6fr);
+    column-gap: 1rem;
+    align-items: baseline;
+  }
+  .d-grid .dg-credits__head {
+    padding-bottom: 0.625rem;
+    font-family: var(--dg-mono), monospace;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--g-ink-3);
+  }
+  .d-grid .dg-credit {
+    padding: 1.125rem 0;
+  }
+  .d-grid .dg-credit__no,
+  .d-grid .dg-credit__name,
+  .d-grid .dg-credit__title,
+  .d-grid .dg-credit__shipped {
+    grid-row: 1;
+    grid-column: auto;
+    margin: 0;
+    padding: 0;
+  }
+  .d-grid .dg-credit__no {
+    padding-left: 0.25rem;
+  }
+  .d-grid .dg-credit__name {
+    font-size: clamp(1.25rem, 1.6vw, 1.5rem);
+  }
+}
+
+/* ---------- Footer: the title block ---------- */
+
+.d-grid .dg-foot {
+  padding-top: var(--sp);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.d-grid .dg-foot__cta {
+  row-gap: 1.25rem;
+  padding: 1.25rem 0 clamp(3.5rem, 7vw, 6rem);
+}
+.d-grid .dg-foot__cta .dg-head__id {
+  grid-column: 1 / -1;
+}
+.d-grid .dg-foot__title {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: clamp(2.5rem, 6.4vw, 6rem);
+  font-weight: 600;
+  line-height: 0.92;
+  letter-spacing: -0.05em;
+  text-wrap: balance;
+}
+.d-grid .dg-foot__btns {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+@media (max-width: 639px) {
+  .d-grid .dg-foot__btns .dg-btn {
+    width: 100%;
+  }
+}
+@media (min-width: 640px) {
+  .d-grid .dg-foot__cta .dg-head__id {
+    grid-column: 1 / span 2;
+    align-self: start;
+  }
+  .d-grid .dg-foot__title,
+  .d-grid .dg-foot__btns {
+    grid-column: 3 / -1;
+  }
+}
+@media (min-width: 1024px) {
+  .d-grid .dg-foot__cta .dg-head__id {
+    grid-column: 1 / span 3;
+  }
+  .d-grid .dg-foot__title {
+    grid-column: 4 / span 9;
+  }
+  .d-grid .dg-foot__btns {
+    grid-column: 4 / span 9;
+  }
+}
+.d-grid .dg-tb {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid var(--g-line);
+  border-left: 1px solid var(--g-hair);
+}
+.d-grid .dg-tb__cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 2rem 0.75rem 0.75rem;
+  border-right: 1px solid var(--g-hair);
+  border-bottom: 1px solid var(--g-hair);
+  font-size: 0.9375rem;
+}
+.d-grid .dg-tb__ref {
+  position: absolute;
+  left: 0.5rem;
+  top: 0.5rem;
+}
+.d-grid .dg-tb__link {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 2.75rem;
+  color: var(--g-ink);
+  text-decoration: none;
+}
+.d-grid .dg-tb__link span {
+  font-family: var(--dg-mono), monospace;
+  font-size: 0.8125rem;
+  color: var(--g-ink-3);
+}
+.d-grid .dg-tb__link:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--g-red);
+  text-underline-offset: 0.3em;
+}
+.d-grid .dg-tb__copy {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  color: var(--g-ink-2);
+}
+@media (pointer: fine) {
+  .d-grid .dg-tb__link,
+  .d-grid .dg-tb__copy {
+    align-self: flex-start;
+    min-height: 2rem;
+  }
+}
+@media (min-width: 1024px) {
+  .d-grid .dg-tb {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .d-grid .dg-tb__cell {
+    padding: 2.25rem 1rem 1rem;
+  }
+}
+.d-grid .dg-foot__strip {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  padding: 1rem 0 1.5rem;
+  font-family: var(--dg-mono), monospace;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--g-ink-3);
+}
+
+/* ---------- Ripples ---------- */
+
+.d-grid .dg-ripples {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* ---------- Scroll-driven drafting: rules draw in as they enter ---------- */
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    html[data-motion="on"] .d-grid .dg-main .dg-rule,
+    html[data-motion="on"] .d-grid .dg-foot .dg-rule {
+      animation: dg4-draw linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 22%;
+    }
+    html[data-motion="on"] .d-grid .dg-stat__fig,
+    html[data-motion="on"] .d-grid .dg-people__count {
+      animation: dg4-rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 100%;
+    }
+    /* A row's proof dots land together as the row comes fully into view. */
+    html[data-motion="on"] .d-grid .dg-matrix tbody tr {
+      view-timeline: --dg4-row block;
+    }
+    html[data-motion="on"] .d-grid .dg-dot {
+      animation: dg4-dot linear both;
+      animation-timeline: --dg4-row;
+      animation-range: entry 30% entry 100%;
+    }
+  }
+}
+@keyframes dg4-draw {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes dg4-rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.35em);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes dg4-dot {
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+/* ---------- Reduced motion: everything still, nothing hidden ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .d-grid :not(.liquid, .liquid *),
+  .d-grid :not(.liquid, .liquid *)::before,
+  .d-grid :not(.liquid, .liquid *)::after {
+    animation: none !important;
+  }
+  .d-grid .dg-viewer__layer,
+  .d-grid .dg-viewer__layer[data-on] {
+    clip-path: none;
+    transition: none;
+  }
+  /* The level line is a reading, not motion: it follows the scroll position from script. */
+  .d-grid .dg-top__level > span {
+    transform: scaleX(var(--p, 0));
+  }
+}
