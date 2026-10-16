@@ -34,7 +34,7 @@ const dnms: CaseStudy = {
     height: 1000,
   },
   exhibit: "dnms",
-  exhibitHint: "Press play and watch Claude answer a manager's question, one DNMS call at a time.",
+  exhibitHint: "Watch Claude answer a manager's question, one DNMS call at a time.",
   metrics: [
     {
       value: "304",

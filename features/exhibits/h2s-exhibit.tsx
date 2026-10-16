@@ -107,7 +107,7 @@ export default function H2sExhibit({ onReady }: ExhibitProps) {
               role="tab"
               aria-selected={tab === key}
               onClick={() => setTab(key)}
-              className="rounded-full border border-white/25 px-4 py-2 text-sm aria-selected:bg-white aria-selected:text-[#0A0A1F]"
+              className="hit rounded-full border border-white/25 px-4 py-2 text-sm aria-selected:bg-white aria-selected:text-[#0A0A1F]"
             >
               {key === "condition" ? "Condition the water" : "Check your home"}
             </button>
@@ -129,12 +129,17 @@ export default function H2sExhibit({ onReady }: ExhibitProps) {
             max={100}
             value={amount}
             onChange={(event) => setAmount(Number(event.target.value))}
-            className="w-full accent-[#FFD56A]"
+            className="h-11 w-full cursor-pointer accent-[#FFD56A]"
           />
           <p className="text-xs opacity-60">Illustration of conditioning, not a lab result.</p>
         </section>
 
-        <section className={`${tab === "check" ? "flex" : "hidden"} min-h-0 flex-1 flex-col gap-4 overflow-auto md:flex md:max-h-[80%]`} aria-label="Symptom check">
+        {/* A scroller clips at its edge, and a focus ring reaches 5px out (2px line, 3px offset): p-1.5
+            leaves room for it, and scroll-py-2 stops tabbing from scrolling a button flush to the edge. */}
+        <section
+          className={`${tab === "check" ? "flex" : "hidden"} min-h-0 flex-1 scroll-py-2 flex-col gap-4 overflow-auto p-1.5 md:flex md:max-h-[80%]`}
+          aria-label="Symptom check"
+        >
           <div className="flex items-center gap-5">
             <svg viewBox="0 0 120 120" className="size-28 shrink-0 -rotate-90" aria-hidden>
               <circle cx="60" cy="60" r="52" fill="none" stroke="rgb(255 255 255 / 0.15)" strokeWidth="10" />
@@ -158,6 +163,7 @@ export default function H2sExhibit({ onReady }: ExhibitProps) {
               <p className="text-lg">{level ? level.label : "Tap the signs you see at home"}</p>
             </div>
           </div>
+          {/* Touch: a one-line sign is still a 44px button (packed 6px apart, a hit area can't grow). */}
           <ul className="grid gap-1.5">
             {H2S_SYMPTOMS.map((symptom) => {
               const on = ticked.has(symptom.id);
@@ -174,7 +180,7 @@ export default function H2sExhibit({ onReady }: ExhibitProps) {
                         return next;
                       })
                     }
-                    className="w-full rounded-xl border border-white/15 px-3 py-2 text-left text-sm leading-snug transition-colors aria-pressed:border-[#FFD56A] aria-pressed:bg-white/10"
+                    className="w-full rounded-xl border border-white/15 px-3 py-2 text-left text-sm leading-snug transition-colors aria-pressed:border-[#FFD56A] aria-pressed:bg-white/10 pointer-coarse:min-h-11"
                   >
                     {symptom.label}
                   </button>

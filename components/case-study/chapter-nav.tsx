@@ -69,7 +69,9 @@ export function ChapterNav({ client, items }: { client: string; items: Item[] })
           href={items[0].href}
           direction="back"
           aria-label={`${client}: overview`}
-          className="shrink-0 rounded-sm font-(family-name:--c-display) text-base"
+          // Each client face draws 16px at its own size. Matching cap heights (not x-heights: SKELMET
+          // and DNMS are all capitals) makes every wordmark read at one size.
+          className="hit shrink-0 rounded-sm font-(family-name:--c-display) text-base [font-size-adjust:cap-height_0.7]"
         >
           {client}
         </FlowLink>
@@ -81,7 +83,7 @@ export function ChapterNav({ client, items }: { client: string; items: Item[] })
                 href={item.href}
                 direction={direction(i)}
                 aria-current={i === current ? "page" : undefined}
-                className="block rounded-full px-3 py-1.5 text-(--c-muted) transition-colors hover:text-(--c-text) aria-[current=page]:bg-(--c-accent) aria-[current=page]:text-(--c-on-accent)"
+                className="block rounded-full px-3 py-1.5 text-(--c-muted) transition-colors hover:text-(--c-text) aria-[current=page]:bg-(--c-accent) aria-[current=page]:text-(--c-on-accent) pointer-coarse:py-3"
               >
                 <span className="font-mono text-xs">{pad(i + 1)}</span> {item.label}
               </FlowLink>
@@ -89,16 +91,19 @@ export function ChapterNav({ client, items }: { client: string; items: Item[] })
           ))}
         </ol>
 
+        {/* The label truncates inside, so the button itself doesn't clip the 44px tap area (.hit). */}
         <button
           type="button"
           onClick={() => setOpen(true)}
           aria-haspopup="dialog"
-          className="ml-auto min-w-0 truncate rounded-full border border-(--c-line) px-3.5 py-1.5 text-sm lg:hidden"
+          className="hit ml-auto min-w-0 rounded-full border border-(--c-line) px-3.5 py-1.5 text-sm lg:hidden"
         >
-          <span className="font-mono text-xs">
-            {pad(current + 1)}/{pad(items.length)}
-          </span>{" "}
-          {items[current]?.label} <span aria-hidden>▾</span>
+          <span className="block truncate">
+            <span className="font-mono text-xs">
+              {pad(current + 1)}/{pad(items.length)}
+            </span>{" "}
+            {items[current]?.label} <span aria-hidden>▾</span>
+          </span>
         </button>
       </nav>
       <span aria-hidden className="absolute inset-x-0 bottom-0 block h-0.5 origin-left bg-(--c-accent)" ref={fill} style={{ transform: "scaleX(0)" }} />

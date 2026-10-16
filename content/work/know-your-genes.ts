@@ -25,6 +25,8 @@ const knowYourGenes: CaseStudy = {
     body: "figtree",
   },
   poster: { src: "/work/know-your-genes/hero-poster.webp", alt: "GENEe, the Know Your Genes mascot, standing beside an at-home genetic testing kit on a sunlit desk", width: 1384, height: 779 },
+  // GENEe stands at the right of the frame; a centre crop on a phone shows only the kit box.
+  posterFocus: "100% 50%",
   exhibit: "kyg",
   exhibitHint: "Meet GENEe, then tap Vita, Cardi, Dozy, Guard or Glow to see their signature moves.",
   metrics: [

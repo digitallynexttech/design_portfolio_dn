@@ -95,7 +95,7 @@ function BlockView({ block, level }: { block: Block; level: Level }) {
             {block.colors.map((color) => (
               <li
                 key={color.hex + color.name}
-                className="flex aspect-[4/3] flex-col justify-between rounded-xl p-4 ring-1 ring-black/10"
+                className="flex aspect-[4/3] flex-col justify-between rounded-xl p-4 ring-1 ring-(--c-line)"
                 style={{ background: color.hex, color: inkOn(color.hex) }}
               >
                 <span className="font-medium">{color.name}</span>
@@ -163,7 +163,8 @@ function BlockView({ block, level }: { block: Block; level: Level }) {
           <ol className="relative grid gap-5 border-l border-(--c-line) pl-6">
             {block.items.map((item) => (
               <li key={item.date + item.label} className="relative">
-                <span className="absolute top-2 -left-[1.72rem] size-2.5 rounded-full bg-(--c-accent)" aria-hidden />
+                {/* Centred on the 1px rule: back across the 1.5rem padding and half the rule. */}
+                <span className="absolute top-2 left-[calc(-1.5rem-0.5px)] size-2.5 -translate-x-1/2 rounded-full bg-(--c-accent)" aria-hidden />
                 <p className="font-mono text-xs text-(--c-muted)">{item.date}</p>
                 <p className="mt-1">{item.label}</p>
               </li>
@@ -179,9 +180,10 @@ function BlockView({ block, level }: { block: Block; level: Level }) {
       return (
         <section className="reveal my-12">
           {block.heading ? <H className="study-h3 mb-5">{block.heading}</H> : null}
+          {/* Filled, no border: a bordered pill means "you can press this" (.chip); a stack is a list. */}
           <ul className="flex flex-wrap gap-2">
             {block.items.map((item) => (
-              <li key={item} className="rounded-full border border-(--c-line) px-3.5 py-1.5 text-sm">
+              <li key={item} className="rounded-full bg-(--c-surface) px-3.5 py-1.5 text-sm">
                 {item}
               </li>
             ))}

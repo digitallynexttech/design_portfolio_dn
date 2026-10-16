@@ -222,6 +222,12 @@ html:not([data-header="hidden"]) .work-filter {
 
 /* ---------- Exhibits ---------- */
 
+/* An exhibit draws its own ground, which the client accent may not read on (H2S blue on its navy
+   water): the exhibit can name its own ring colour. */
+.exhibit__frame :focus-visible {
+  outline-color: var(--exhibit-focus, var(--c-accent));
+}
+
 /* A 2px line runs along the foot of the exhibit while the live version loads over its poster. */
 .exhibit__loading {
   position: absolute;
@@ -276,12 +282,17 @@ html:not([data-header="hidden"]) .work-filter {
 }
 .arch__link-label {
   fill: var(--c-muted);
-  font-size: 12px;
+  /* 13px drawn at no less than 0.94 scale (the diagram only shows from 1280px): 12px or more. */
+  font-size: 13px;
   /* A halo in the page colour keeps a label readable where links cross under it. */
   paint-order: stroke;
   stroke: var(--c-bg);
   stroke-width: 5px;
   stroke-linejoin: round;
+}
+/* An inline label (where its gap is full of links) sits on its own link; other links pass under. */
+.arch__knockout {
+  fill: var(--c-bg);
 }
 @supports (animation-timeline: view()) {
   [data-motion="on"] .arch__link {
@@ -295,7 +306,7 @@ html:not([data-header="hidden"]) .work-filter {
     stroke-dashoffset: 1;
   }
 }
-/* Phones: lanes stack, joined by a short accent connector. */
+/* Below 1280px: lanes stack, joined by a short accent connector. */
 .arch-stack__join {
   position: relative;
   display: block;

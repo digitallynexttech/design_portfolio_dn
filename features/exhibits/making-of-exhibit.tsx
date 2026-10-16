@@ -152,18 +152,29 @@ export default function MakingOfExhibit({ onReady }: ExhibitProps) {
   return (
     <div ref={host} className="absolute inset-0" style={{ background: "radial-gradient(80% 90% at 50% 30%, #0f2633, #05070a 75%)" }}>
       <canvas ref={canvas} className="absolute inset-0 h-full w-full" aria-label="A slice through the world's sea, with the boat floating on it" role="img" />
-      <div className="absolute inset-x-(--gutter) top-6 max-w-[42ch] text-(--c-text)">
+      {/* Phones: clear of the exhibit's More button in the top-right corner. */}
+      <div className="absolute inset-x-(--gutter) top-6 max-w-[42ch] text-(--c-text) max-md:pr-18">
         <p className="font-mono text-xs tracking-widest uppercase opacity-80">The sea, sliced</p>
         <p className="mt-2 text-lg leading-snug">The same function draws the water on the GPU and floats the boat on the CPU. Two dots: where the hull reads it.</p>
         <p className="mt-1 text-sm opacity-75">Heights shown five times taller than life.</p>
       </div>
-      <div className="absolute right-(--gutter) bottom-24 left-(--gutter) flex flex-wrap items-center gap-4 rounded-2xl bg-black/55 px-5 py-4 text-white backdrop-blur md:bottom-6 md:left-auto">
+      {/* Both controls are 44px tall to the touch; py-2 keeps the panel as compact as before. */}
+      <div className="absolute right-(--gutter) bottom-24 left-(--gutter) flex flex-wrap items-center gap-x-4 rounded-2xl bg-black/55 px-5 py-2 text-white backdrop-blur md:bottom-6 md:left-auto">
         <label className="flex items-center gap-3 text-sm">
           <span>Calm</span>
-          <input type="range" min={0.5} max={2.4} step={0.05} value={amp} onChange={(e) => setAmp(Number(e.target.value))} aria-label="Sea state, from calm to storm" />
+          <input
+            type="range"
+            min={0.5}
+            max={2.4}
+            step={0.05}
+            value={amp}
+            onChange={(e) => setAmp(Number(e.target.value))}
+            aria-label="Sea state, from calm to storm"
+            className="h-11 cursor-pointer"
+          />
           <span>Storm</span>
         </label>
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm">
           <input type="checkbox" checked={parts} onChange={(e) => setParts(e.target.checked)} />
           Show the four waves
         </label>

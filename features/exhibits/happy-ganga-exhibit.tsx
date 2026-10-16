@@ -31,11 +31,12 @@ export default function HappyGangaExhibit({ onReady }: ExhibitProps) {
 
   return (
     <div className="absolute inset-0 overflow-hidden" style={{ background: "radial-gradient(90% 80% at 50% 0%, #F5FCFD, #CDE9DC 60%, #0896AC)" }}>
-      <p className="absolute top-8 left-1/2 -translate-x-1/2 text-center font-display text-[clamp(1.6rem,4vw,3rem)] font-semibold whitespace-nowrap text-[#06222A]">
+      {/* Phones: the line runs nearly edge to edge, so it starts below the exhibit's More button. */}
+      <p className="absolute top-16 left-1/2 -translate-x-1/2 text-center font-display text-[clamp(1.6rem,4vw,3rem)] font-semibold whitespace-nowrap text-[#06222A] md:top-8">
         Healthy Families. Happy Rivers.
       </p>
 
-      <ul ref={row} className="absolute inset-x-0 top-[18%] mx-auto flex h-[46%] max-w-4xl items-end justify-center gap-[3vw] px-6">
+      <ul ref={row} className="absolute inset-x-0 top-[22%] mx-auto flex h-[46%] max-w-4xl items-end justify-center gap-[3vw] px-6 md:top-[18%]">
         {HG_PRODUCTS.slice(0, 4).map((product) => (
           <li key={product.name} className="relative h-full transition-transform duration-300 ease-out will-change-transform">
             <span className="absolute inset-x-[-12%] bottom-[-4%] h-[40%] rounded-full blur-2xl" style={{ background: product.color }} aria-hidden />
