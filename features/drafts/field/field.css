@@ -1,0 +1,2175 @@
+/* =====================================================================================
+   Draft 6 · "Field". The work is a space you explore.
+
+   Scope: every selector starts with .d-field, or with html:has(.d-field):not(.df-away) for the
+   few page-level rules. CSS imported by a page stays loaded after client navigation, and Next keeps
+   the page you left mounted as a hidden copy; AwayFlag marks html .df-away while that copy is
+   hidden, so the page-level rules never reach another route. Nothing here touches the rest of the
+   site. (No `style` inside :has(): inline styles are written on every frame of a pan.)
+
+   Spec:
+   - Ink #0A0A0A, paper #EDEDED at three strengths, 1 px hairlines. Brand red #E21F26 is the only
+     accent: the selection, the crosshair's centre, the primary button, full stops, numbers.
+   - Stack Sans Headline (500) for display, Stack Sans Text for reading, Geist Mono for every label,
+     coordinate and readout. Tabular figures wherever numbers sit in columns.
+   - The field: 1 fu = --s px (0.6 / 0.8 / 1 / 1.15 / 1.4 by width). The crosshair sits at
+     (--fx, --fy); the camera's point in the field is always under it.
+   - Square corners. No shadows, no blur, no gradients but the one scrim that keeps the title legible.
+   - Motion: transforms and opacity only. Off under html[data-motion="off"].
+   ===================================================================================== */
+
+/* ---------- The route: ink, and the site's own chrome put away ---------- */
+
+html:has(.d-field):not(.df-away) {
+  background: #0a0a0a;
+  scrollbar-gutter: stable;
+}
+html:has(.d-field):not(.df-away) body {
+  background: #0a0a0a;
+}
+html:has(.d-field):not(.df-away) .site-header,
+html:has(.d-field):not(.df-away) .site-header-glass,
+html:has(.d-field):not(.df-away) .water-fallback,
+html:has(.d-field):not(.df-away) body > canvas,
+html:has(.d-field):not(.df-away) body > footer,
+html:has(.d-field):not(.df-away) body > button[style*="menu-pill"] {
+  display: none !important;
+}
+html:has(.d-field):not(.df-away) ::selection {
+  background: #e21f26;
+  color: #fff;
+}
+/* An open sheet holds the page still behind it. */
+html:has(.d-field .df-sheet[open]):not(.df-away) {
+  overflow: hidden;
+}
+
+/* ---------- Tokens and base ---------- */
+
+.d-field {
+  --bg: #0a0a0a;
+  --bg-2: #111111;
+  --ink: #ededed;
+  --ink-2: rgb(237 237 237 / 0.68);
+  --ink-3: rgb(237 237 237 / 0.5);
+  --hair: rgb(237 237 237 / 0.1);
+  --hair-2: rgb(237 237 237 / 0.2);
+  --red: #e21f26;
+  /* Small red text on ink needs a lighter red to pass 4.5:1. */
+  --red-text: #ff5a5f;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --m: max(1rem, min(2.6vw, 2.5rem), env(safe-area-inset-left), env(safe-area-inset-right));
+  --top: 3.25rem;
+
+  position: relative;
+  min-height: 100svh;
+  overflow-x: clip;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-text), system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+@media (width >= 64rem) {
+  .d-field {
+    --top: 3.5rem;
+  }
+}
+.d-field *,
+.d-field *::before,
+.d-field *::after {
+  box-sizing: border-box;
+}
+.d-field :where(h1, h2, h3, p, dl, dd, ol, ul, figure) {
+  margin: 0;
+}
+.d-field :where(ol, ul) {
+  list-style: none;
+  padding: 0;
+}
+.d-field a {
+  color: inherit;
+  text-decoration: none;
+}
+.d-field :focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.d-field .df-wrap {
+  width: 100%;
+  max-width: 110rem;
+  margin-inline: auto;
+  padding-inline: var(--m);
+}
+.d-field .df-k {
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  line-height: 1.45;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.d-field .df-num {
+  font-variant-numeric: tabular-nums;
+}
+.d-field .df-stop {
+  color: var(--red);
+}
+.d-field .df-label {
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.d-field .df-label .df-num {
+  margin-right: 0.75em;
+  color: var(--red-text);
+}
+.d-field .df-lead {
+  font-size: clamp(1.0625rem, 1.25vw, 1.25rem);
+  line-height: 1.45;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.d-field .df-cover {
+  object-fit: cover;
+}
+
+/* ---------- Buttons: square, hairline; a fill rises on hover ---------- */
+
+.d-field .df-btn {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 3rem;
+  padding: 0 1.25rem;
+  border: 1px solid var(--hair-2);
+  background: rgb(10 10 10 / 0.5);
+  color: var(--ink);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color 0.4s var(--ease),
+    border-color 0.4s var(--ease);
+}
+.d-field .df-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--ink);
+  transform: scaleY(0);
+  transform-origin: 50% 100%;
+  transition: transform 0.5s var(--ease);
+}
+.d-field .df-btn > span[aria-hidden] {
+  display: inline-block;
+  transition: transform 0.5s var(--ease);
+}
+.d-field .df-btn--red {
+  border-color: var(--red);
+  background: var(--red);
+  color: #fff;
+}
+.d-field .df-btn--red::before {
+  background: #fff;
+}
+.d-field .df-btn--lg {
+  min-height: 3.5rem;
+  padding: 0 1.75rem;
+  font-size: 1rem;
+}
+.d-field .df-btn--block {
+  width: 100%;
+}
+@media (hover: hover) {
+  .d-field .df-btn:hover {
+    color: var(--bg);
+    border-color: var(--ink);
+  }
+  .d-field .df-btn--red:hover {
+    border-color: #fff;
+  }
+  .d-field .df-btn:hover::before {
+    transform: scaleY(1);
+  }
+  .d-field .df-btn:hover > span[aria-hidden] {
+    transform: translateX(3px);
+  }
+}
+
+/* ---------- Top bar ---------- */
+
+.d-field .df-top {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  height: var(--top);
+  padding-inline: var(--m);
+  border-bottom: 1px solid var(--hair);
+  background: var(--bg);
+}
+.d-field .df-top__logo {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.d-field .df-top__mark {
+  display: block;
+  width: auto;
+  height: 1.375rem;
+}
+.d-field .df-top__nav {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.d-field .df-top__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding-inline: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--ink-2);
+  transition: color 0.3s var(--ease);
+}
+.d-field .df-top__cta {
+  margin-left: 0.75rem;
+  padding-inline: 0.9rem;
+  border: 1px solid var(--hair-2);
+  min-height: 2.25rem;
+  color: var(--ink);
+}
+@media (hover: hover) {
+  .d-field .df-top__link:hover {
+    color: var(--ink);
+  }
+  .d-field .df-top__cta:hover {
+    border-color: var(--red);
+  }
+}
+@media (width < 40rem) {
+  .d-field .df-top__mark {
+    height: 1.125rem;
+  }
+  .d-field .df-top__cta {
+    display: none;
+  }
+  .d-field .df-top__link {
+    padding-inline: 0.45rem;
+    font-size: 0.8125rem;
+  }
+}
+@media (width >= 64rem) {
+  .d-field .df-top__mark {
+    height: 1.5rem;
+  }
+  .d-field .df-top__nav {
+    gap: 0.75rem;
+  }
+}
+
+/* ---------- Hero: the field ---------- */
+
+.d-field .df-hero {
+  position: relative;
+  height: 100svh;
+  min-height: 38rem;
+  max-height: 80rem;
+}
+
+.d-field .df-field {
+  /* Field units to pixels, and where the crosshair sits. */
+  --s: 0.6;
+  --fx: 50%;
+  --fy: 29%;
+  position: absolute;
+  inset: var(--top) 0 0;
+  z-index: 1;
+  overflow: hidden;
+  overflow: clip;
+  touch-action: pan-y;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+@media (width >= 40rem) {
+  .d-field .df-field {
+    --s: 0.8;
+    --fy: 34%;
+  }
+}
+@media (width >= 64rem) {
+  .d-field .df-field {
+    --s: 1;
+    --fx: 61%;
+    --fy: 40%;
+  }
+}
+@media (width >= 100rem) {
+  .d-field .df-field {
+    --s: 1.15;
+  }
+}
+@media (width >= 131.25rem) {
+  .d-field .df-field {
+    --s: 1.4;
+  }
+}
+.d-field .df-field[data-drag] {
+  cursor: grabbing;
+}
+.d-field .df-field:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: -2px;
+}
+
+/* The canvas: a dot every 50 fu, moved with the camera so empty space still reads as travel. */
+.d-field .df-grid {
+  --g: calc(50px * var(--s));
+  position: absolute;
+  inset: calc(-1 * var(--g)) 0 0 calc(-1 * var(--g));
+  background: radial-gradient(circle at 1px 1px, rgb(237 237 237 / 0.13) 0 1px, transparent 1.4px) 0 0 / var(--g) var(--g);
+  pointer-events: none;
+  will-change: transform;
+}
+.d-field .df-layer {
+  position: absolute;
+  inset: 0;
+  transform-origin: var(--fx) var(--fy);
+  transition: transform 0.7s var(--ease);
+}
+.d-field .df-field[data-drag] .df-layer {
+  transform: scale(0.985);
+}
+
+/* A frame. Positioned from the crosshair; the server's first frame comes from --dx/--dy, and the
+   engine then writes the transform directly. */
+.d-field .df-tile {
+  position: absolute;
+  left: var(--fx);
+  top: var(--fy);
+  display: block;
+  width: calc(var(--w) * var(--s) * 1px);
+  height: calc(var(--h) * var(--s) * 1px);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: inherit;
+  transform: translate3d(calc(var(--dx) * var(--s) * 1px), calc(var(--dy) * var(--s) * 1px), 0);
+  will-change: transform;
+  -webkit-tap-highlight-color: transparent;
+}
+.d-field .df-tile[data-target],
+.d-field .df-tile:hover,
+.d-field .df-tile:focus-visible {
+  z-index: 2;
+}
+.d-field .df-tile:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 5px;
+}
+.d-field .df-tile__frame {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--tone);
+  outline: 1px solid var(--hair);
+  animation: df-in 1s var(--ease) both;
+  animation-delay: var(--delay);
+  transition: outline-color 0.3s var(--ease);
+}
+.d-field .df-tile__img {
+  object-fit: cover;
+  pointer-events: none;
+  transition: transform 0.9s var(--ease);
+}
+.d-field .df-tile__loop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.6s var(--ease);
+}
+.d-field .df-tile[data-playing] .df-tile__loop {
+  opacity: 1;
+}
+@media (hover: hover) {
+  .d-field .df-tile:hover .df-tile__frame {
+    outline-color: var(--hair-2);
+  }
+  .d-field .df-tile:hover .df-tile__img {
+    transform: scale(1.035);
+  }
+}
+@keyframes df-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+
+/* Frame label, top-left, design-tool style: the code always; client and disciplines on hover or
+   while selected. */
+.d-field .df-tile__code,
+.d-field .df-tile__name {
+  position: absolute;
+  bottom: calc(100% + 0.4rem);
+  font-family: var(--mono);
+  font-size: 0.625rem;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.d-field .df-tile__code {
+  left: 0;
+  color: var(--ink-3);
+  animation: df-fade 1s var(--ease) both;
+  animation-delay: var(--delay);
+}
+.d-field .df-tile__name {
+  left: 3.4em;
+  padding: 0.2rem 0.35rem;
+  margin: -0.2rem 0 0 -0.35rem;
+  background: rgb(10 10 10 / 0.86);
+  color: var(--ink);
+  text-transform: uppercase;
+  opacity: 0;
+  transform: translateY(3px);
+  transition:
+    opacity 0.3s var(--ease),
+    transform 0.4s var(--ease);
+}
+.d-field .df-tile__disc {
+  color: var(--ink-2);
+}
+.d-field .df-tile[data-target] .df-tile__name,
+.d-field .df-tile:focus-visible .df-tile__name {
+  opacity: 1;
+  transform: none;
+}
+@media (hover: hover) {
+  .d-field .df-tile:hover .df-tile__name {
+    opacity: 1;
+    transform: none;
+  }
+}
+.d-field .df-tile[data-target] .df-tile__code {
+  color: var(--red-text);
+}
+@keyframes df-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* The selection: red bounds, four handles and the frame's pixel size, under the crosshair. */
+.d-field .df-tile__handles {
+  position: absolute;
+  inset: -1px;
+  border: 1px solid var(--red);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s var(--ease);
+}
+.d-field .df-tile__handles i {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--red);
+  background: var(--ink);
+}
+.d-field .df-tile__handles i:nth-child(1) {
+  left: -4px;
+  top: -4px;
+}
+.d-field .df-tile__handles i:nth-child(2) {
+  right: -4px;
+  top: -4px;
+}
+.d-field .df-tile__handles i:nth-child(3) {
+  left: -4px;
+  bottom: -4px;
+}
+.d-field .df-tile__handles i:nth-child(4) {
+  right: -4px;
+  bottom: -4px;
+}
+.d-field .df-tile__size {
+  position: absolute;
+  top: calc(100% + 0.55rem);
+  left: 50%;
+  padding: 0.2rem 0.35rem;
+  background: var(--red);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 0.625rem;
+  line-height: 1;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translate(-50%, -3px);
+  pointer-events: none;
+  transition:
+    opacity 0.25s var(--ease),
+    transform 0.4s var(--ease);
+}
+.d-field .df-tile[data-target] .df-tile__handles,
+.d-field .df-tile[data-target] .df-tile__size {
+  opacity: 1;
+}
+.d-field .df-tile[data-target] .df-tile__size {
+  transform: translate(-50%, 0);
+}
+
+/* The reel's frame: its "Play reel" covers the frame, label on a bar at the foot. */
+.d-field .df-tile__play {
+  position: absolute;
+  inset: 0;
+}
+.d-field .df-tile__play .df-reelbtn {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding: 0 0 0.65rem 0.65rem;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font-size: 0.8125rem;
+  cursor: inherit;
+}
+.d-field .df-tile__play .df-reelbtn::before {
+  inset: auto 0 0 0;
+  top: auto;
+  left: 0;
+  width: 100%;
+  height: 2.6rem;
+  border-radius: 0;
+  background: rgb(10 10 10 / 0.84);
+  translate: none;
+}
+
+/* "Play reel" wherever it appears on this draft: square, the red square for ▶. */
+.d-field .df-reelbtn {
+  border-radius: 0;
+  border-color: var(--hair-2);
+  color: var(--ink);
+}
+.d-field .df-reelbtn > span:first-child {
+  border-radius: 0;
+  background: var(--red);
+  color: #fff;
+}
+.d-field .df-reelbtn--lg {
+  min-height: 3.5rem;
+  padding-inline: 0.9rem 1.5rem;
+  font-size: 1rem;
+}
+
+/* Rulers along the field's top and left edges; ticks every 50 fu, a figure every 400. */
+.d-field .df-ruler {
+  position: absolute;
+  z-index: 3;
+  overflow: hidden;
+  pointer-events: none;
+  background: rgb(10 10 10 / 0.78);
+}
+.d-field .df-ruler--x {
+  inset: 0 0 auto 0;
+  height: 1.25rem;
+  border-bottom: 1px solid var(--hair);
+}
+.d-field .df-ruler--y {
+  inset: 1.25rem auto 0 0;
+  width: 1.25rem;
+  border-right: 1px solid var(--hair);
+}
+.d-field .df-ruler__strip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform;
+}
+.d-field .df-ruler--x .df-ruler__strip {
+  height: 100%;
+  width: calc(14 * 400px * var(--s));
+  background: repeating-linear-gradient(to right, var(--hair-2) 0 1px, transparent 1px calc(50px * var(--s))) 0 100% / 100% 4px no-repeat;
+}
+.d-field .df-ruler--y .df-ruler__strip {
+  width: 100%;
+  height: calc(10 * 400px * var(--s));
+  background: repeating-linear-gradient(to bottom, var(--hair-2) 0 1px, transparent 1px calc(50px * var(--s))) 100% 0 / 4px 100% no-repeat;
+}
+.d-field .df-ruler__strip span {
+  position: absolute;
+  font-family: var(--mono);
+  font-size: 0.5625rem;
+  line-height: 1;
+  color: var(--ink-3);
+}
+.d-field .df-ruler--x .df-ruler__strip span {
+  left: calc(var(--k) * 400px * var(--s));
+  top: 0;
+  height: 100%;
+  padding: 0.35rem 0 0 0.3rem;
+  border-left: 1px solid var(--ink-3);
+}
+.d-field .df-ruler--y .df-ruler__strip span {
+  top: calc(var(--k) * 400px * var(--s));
+  left: 0;
+  width: 100%;
+  padding: 0.3rem 0.35rem 0 0;
+  border-top: 1px solid var(--ink-3);
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  transform-origin: 50% 50%;
+  text-align: right;
+}
+
+/* Mouse only: what a press does here, beside the pointer. */
+.d-field .df-cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 7;
+  padding: 0.25rem 0.4rem;
+  background: var(--ink);
+  color: var(--bg);
+  font-family: var(--mono);
+  font-size: 0.625rem;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  will-change: transform;
+}
+.d-field .df-cursor[data-on="on"] {
+  opacity: 1;
+}
+@media (hover: none) {
+  .d-field .df-cursor {
+    display: none;
+  }
+}
+
+/* The crosshair: the camera's point in the field, with its coordinates. */
+.d-field .df-cross {
+  position: absolute;
+  left: var(--fx);
+  top: var(--fy);
+  z-index: 4;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.d-field .df-cross__h,
+.d-field .df-cross__v {
+  position: absolute;
+  background: linear-gradient(var(--dir, to right), var(--ink) 0 11px, transparent 11px 21px, var(--ink) 21px);
+  transition: transform 0.5s var(--ease);
+}
+.d-field .df-cross__h {
+  left: -16px;
+  top: -0.5px;
+  width: 32px;
+  height: 1px;
+}
+.d-field .df-cross__v {
+  --dir: to bottom;
+  left: -0.5px;
+  top: -16px;
+  width: 1px;
+  height: 32px;
+}
+.d-field .df-cross::after {
+  content: "";
+  position: absolute;
+  left: -1.5px;
+  top: -1.5px;
+  width: 3px;
+  height: 3px;
+  background: var(--red);
+}
+.d-field .df-field[data-drag] .df-cross__h {
+  transform: scaleX(1.5);
+}
+.d-field .df-field[data-drag] .df-cross__v {
+  transform: scaleY(1.5);
+}
+.d-field .df-cross__xy {
+  position: absolute;
+  left: 0.75rem;
+  top: 0.7rem;
+  padding: 0.25rem 0.4rem;
+  background: rgb(10 10 10 / 0.86);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 0.625rem;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The scrim that keeps the title readable over the moving field. */
+.d-field .df-scrim {
+  position: absolute;
+  inset: var(--top) 0 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(to top, rgb(10 10 10 / 0.98) 0%, rgb(10 10 10 / 0.95) 36%, rgb(10 10 10 / 0.62) 48%, rgb(10 10 10 / 0) 60%);
+}
+@media (width >= 64rem) {
+  .d-field .df-scrim {
+    background:
+      linear-gradient(to top, rgb(10 10 10 / 0.96) 0%, rgb(10 10 10 / 0.8) 24%, rgb(10 10 10 / 0.35) 40%, rgb(10 10 10 / 0) 54%),
+      linear-gradient(to right, rgb(10 10 10 / 0.9) 0%, rgb(10 10 10 / 0.76) 36%, rgb(10 10 10 / 0) 58%);
+  }
+}
+
+/* The copy over the field. It lets drags through; only its controls take the pointer. */
+.d-field .df-copy {
+  position: absolute;
+  z-index: 5;
+  left: var(--m);
+  right: var(--m);
+  bottom: max(1.25rem, env(safe-area-inset-bottom));
+  max-width: 48rem;
+  pointer-events: none;
+}
+.d-field .df-copy :where(a, button) {
+  pointer-events: auto;
+}
+.d-field .df-eyebrow {
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.d-field .df-h1 {
+  margin-top: 0.9rem;
+  font-family: var(--font-headline);
+  font-size: clamp(3.25rem, 7.2vw, 8rem);
+  font-weight: 500;
+  line-height: 0.9;
+  letter-spacing: -0.045em;
+}
+.d-field .df-h1__line {
+  display: block;
+}
+.d-field .df-copy__lead {
+  margin-top: 1.1rem;
+  max-width: 34ch;
+}
+.d-field .df-copy__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  margin-top: 1.4rem;
+}
+.d-field .df-copy__sail .sail-link {
+  margin-top: 0.4rem;
+  font-size: 0.875rem;
+  color: var(--ink-2);
+  text-decoration-color: var(--hair-2);
+}
+@media (hover: hover) {
+  .d-field .df-copy__sail .sail-link:hover {
+    color: var(--ink);
+    text-decoration-color: var(--red);
+  }
+}
+@media (width >= 64rem) {
+  .d-field .df-copy {
+    bottom: clamp(1.5rem, 5vh, 3.25rem);
+  }
+  .d-field .df-copy__lead {
+    margin-top: 1.5rem;
+  }
+  .d-field .df-copy__actions {
+    margin-top: 1.75rem;
+  }
+}
+@media (width < 40rem) {
+  .d-field .df-copy__actions .df-btn {
+    flex: 1 1 0;
+    padding-inline: 0.75rem;
+  }
+}
+
+/* The HUD: hint, selection, map. Phones: one line at the top of the field. */
+.d-field .df-hud {
+  position: absolute;
+  z-index: 6;
+  inset: calc(var(--top) + 1.75rem) var(--m) auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  pointer-events: none;
+  font-family: var(--mono);
+  font-size: 0.625rem;
+  line-height: 1.3;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.d-field .df-hud p {
+  padding: 0.3rem 0.45rem;
+  background: rgb(10 10 10 / 0.86);
+}
+.d-field .df-hud__hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--ink);
+}
+.d-field .df-hud__dot {
+  width: 6px;
+  height: 6px;
+  background: var(--red);
+  animation: df-blink 1.2s steps(1) 6;
+}
+@keyframes df-blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+.d-field .df-hud__keys {
+  color: var(--ink-3);
+}
+@media (hover: none) {
+  .d-field .df-hud__keys {
+    display: none;
+  }
+}
+.d-field .df-hud__target {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.15rem 0.5rem;
+  max-width: 58%;
+  color: var(--ink);
+  text-align: right;
+}
+.d-field .df-hud__k {
+  color: var(--red-text);
+}
+.d-field .df-hud__meta {
+  display: none;
+  color: var(--ink-3);
+}
+.d-field .df-map {
+  display: none;
+}
+@media (width >= 64rem) {
+  .d-field .df-hud {
+    inset: auto var(--m) clamp(1.5rem, 5vh, 3.25rem) auto;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+    font-size: 0.6875rem;
+  }
+  .d-field .df-hud__target {
+    max-width: 22rem;
+  }
+  .d-field .df-hud__meta {
+    display: block;
+    flex-basis: 100%;
+  }
+  .d-field .df-map {
+    position: relative;
+    display: block;
+    width: 9.5rem;
+    aspect-ratio: 2800 / 2000;
+    overflow: hidden;
+    border: 1px solid var(--hair-2);
+    background: rgb(10 10 10 / 0.86);
+    pointer-events: auto;
+    cursor: crosshair;
+  }
+  .d-field .df-map i {
+    position: absolute;
+    background: rgb(237 237 237 / 0.22);
+  }
+  .d-field .df-map i[data-on] {
+    background: var(--red);
+  }
+  .d-field .df-map b {
+    position: absolute;
+    left: 0;
+    top: 0;
+    border: 1px solid var(--ink);
+    will-change: transform;
+  }
+}
+
+/* ---------- Sections ---------- */
+
+.d-field .df-sec {
+  padding-top: clamp(5.5rem, 11vw, 10rem);
+}
+/* A hairline inside the margins (the element itself is full width, padded by --m). */
+.d-field .df-head {
+  background: linear-gradient(var(--hair), var(--hair)) var(--m) 100% / calc(100% - 2 * var(--m)) 1px no-repeat;
+}
+.d-field .df-rule-t {
+  background: linear-gradient(var(--hair), var(--hair)) var(--m) 0 / calc(100% - 2 * var(--m)) 1px no-repeat;
+}
+.d-field .df-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0 2rem;
+  padding-bottom: clamp(1.25rem, 2vw, 1.75rem);
+  margin-bottom: clamp(1.5rem, 3vw, 2.75rem);
+}
+.d-field .df-head .df-label {
+  grid-column: 1 / -1;
+}
+.d-field .df-h2 {
+  margin-top: 1rem;
+  font-family: var(--font-headline);
+  font-size: clamp(2.375rem, 5.4vw, 5.25rem);
+  font-weight: 500;
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+.d-field .df-head__meta {
+  align-self: end;
+  padding-bottom: 0.35rem;
+}
+.d-field .df-head--flat {
+  display: block;
+  padding: 0;
+  margin: 0;
+  background: none;
+}
+@media (width < 40rem) {
+  .d-field .df-head__btn {
+    display: none;
+  }
+}
+
+/* ---------- 00 Showreel: a frame from the field, enlarged by scrolling ---------- */
+
+.d-field .df-reel {
+  --from: 0.7;
+  position: relative;
+  height: 180svh;
+}
+@media (width >= 64rem) {
+  .d-field .df-reel {
+    --from: 0.44;
+    height: 240svh;
+  }
+}
+.d-field .df-reel__stick {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.25rem;
+  height: 100svh;
+  padding-block: 1.25rem;
+  overflow: hidden;
+}
+.d-field .df-reel__head,
+.d-field .df-reel__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+}
+.d-field .df-reel__foot {
+  align-items: center;
+}
+.d-field .df-reel__room {
+  display: grid;
+  place-items: center;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-inline: var(--m);
+}
+.d-field .df-reel__frame {
+  position: relative;
+  width: min(100%, calc((100svh - 11rem) * 16 / 9));
+  aspect-ratio: 16 / 9;
+  background: var(--bg-2);
+  transform: scale(var(--from));
+  will-change: transform;
+}
+.d-field .df-reel__frame video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.d-field .df-reel__corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 0 solid var(--ink-2);
+}
+.d-field .df-reel__corner--tl {
+  left: -8px;
+  top: -8px;
+  border-width: 1px 0 0 1px;
+}
+.d-field .df-reel__corner--tr {
+  right: -8px;
+  top: -8px;
+  border-width: 1px 1px 0 0;
+}
+.d-field .df-reel__corner--bl {
+  left: -8px;
+  bottom: -8px;
+  border-width: 0 0 1px 1px;
+}
+.d-field .df-reel__corner--br {
+  right: -8px;
+  bottom: -8px;
+  border-width: 0 1px 1px 0;
+}
+.d-field .df-reel__clock {
+  position: absolute;
+  right: 0.6rem;
+  bottom: 0.6rem;
+  padding: 0.25rem 0.4rem;
+  background: rgb(10 10 10 / 0.84);
+  font-family: var(--mono);
+  font-size: 0.625rem;
+  line-height: 1;
+}
+@supports (animation-timeline: view()) {
+  html:not([data-motion="off"]) .d-field .df-reel {
+    view-timeline: --df-reel block;
+  }
+  html:not([data-motion="off"]) .d-field .df-reel__frame {
+    animation: df-grow linear both;
+    animation-timeline: --df-reel;
+    animation-range: contain 0% contain 70%;
+  }
+  html:not([data-motion="off"]) .d-field .df-reel__hint {
+    animation: df-out linear both;
+    animation-timeline: --df-reel;
+    animation-range: contain 0% contain 35%;
+  }
+}
+@keyframes df-grow {
+  from {
+    transform: scale(var(--from));
+  }
+  to {
+    transform: scale(1);
+  }
+}
+@keyframes df-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* ---------- 01 Selected work: the four flagships as a spec strip ---------- */
+
+.d-field .df-feat__cols {
+  display: none;
+}
+.d-field .df-feat__row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "no go"
+    "media media"
+    "id id"
+    "story story"
+    "nums nums"
+    "theme theme";
+  gap: 1rem;
+  padding-block: 1.5rem 2rem;
+  border-bottom: 1px solid var(--hair);
+}
+.d-field .df-feat__row:first-of-type {
+  border-top: 1px solid var(--hair);
+}
+.d-field .df-feat__row::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: -1px;
+  width: 100%;
+  height: 1px;
+  background: var(--red);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  transition: transform 0.7s var(--ease);
+}
+.d-field .df-feat__no {
+  grid-area: no;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--red-text);
+}
+.d-field .df-feat__media {
+  grid-area: media;
+  position: relative;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: var(--bg-2);
+  outline: 1px solid var(--hair);
+}
+.d-field .df-feat__media img,
+.d-field .df-more__media img {
+  transition: transform 0.9s var(--ease);
+}
+.d-field .df-feat__media video,
+.d-field .df-more__media video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.5s var(--ease);
+}
+.d-field [data-playing] > video {
+  opacity: 1;
+}
+.d-field .df-feat__id {
+  grid-area: id;
+}
+.d-field .df-feat__client {
+  font-family: var(--font-headline);
+  font-size: clamp(1.625rem, 2.2vw, 2.125rem);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  margin-bottom: 0.4rem;
+}
+.d-field .df-feat__link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.d-field .df-feat__headline {
+  grid-area: story;
+  max-width: 36ch;
+  font-size: 1.0625rem;
+  line-height: 1.45;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.d-field .df-feat__metrics {
+  grid-area: nums;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+.d-field .df-feat__metric,
+.d-field .df-sheet__metric,
+.d-field .df-fig {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--hair-2);
+}
+.d-field .df-feat__mvalue,
+.d-field .df-sheet__mvalue {
+  font-family: var(--font-headline);
+  font-size: clamp(1.375rem, 1.6vw, 1.75rem);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.d-field .df-feat__mlabel,
+.d-field .df-sheet__mlabel {
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--ink-3);
+}
+.d-field .df-feat__theme {
+  grid-area: theme;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  align-self: center;
+}
+.d-field .df-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  color: var(--ink-2);
+}
+.d-field .df-swatch {
+  display: inline-block;
+  width: 0.875rem;
+  height: 0.875rem;
+  outline: 1px solid var(--hair-2);
+  outline-offset: -1px;
+}
+.d-field .df-feat__go {
+  grid-area: go;
+  align-self: center;
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--ink);
+}
+.d-field .df-feat__arrow,
+.d-field .df-svc__arrow {
+  display: inline-block;
+  color: var(--red-text);
+  transition: transform 0.5s var(--ease);
+}
+@media (hover: hover) {
+  .d-field .df-feat__row:hover::before {
+    transform: scaleX(1);
+  }
+  .d-field .df-feat__row:hover .df-feat__media img,
+  .d-field .df-more__item:hover .df-more__media img {
+    transform: scale(1.04);
+  }
+  .d-field .df-feat__row:hover .df-feat__arrow {
+    transform: translateX(4px);
+  }
+}
+.d-field .df-feat__row:focus-within::before {
+  transform: scaleX(1);
+}
+.d-field .df-feat__link:focus-visible {
+  outline: none;
+}
+.d-field .df-feat__link:focus-visible::after {
+  outline: 2px solid var(--ink);
+  outline-offset: 4px;
+}
+
+@media (width >= 40rem) {
+  .d-field .df-feat__row {
+    grid-template-columns: 2.5rem minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "no media media"
+      "no id story"
+      "no nums nums"
+      "no theme go";
+    gap: 1.25rem 1.5rem;
+  }
+}
+@media (width >= 64rem) {
+  .d-field .df-feat__cols {
+    display: grid;
+    grid-template-columns: 2.5rem minmax(0, 15rem) minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.3fr) 8rem;
+    gap: 1.75rem;
+    padding-bottom: 0.75rem;
+    font-family: var(--mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .d-field .df-feat__row {
+    grid-template-columns: 2.5rem minmax(0, 15rem) minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.3fr) 8rem;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "no media id story nums theme"
+      "no media go story nums theme";
+    gap: 0.75rem 1.75rem;
+    padding-block: 1.75rem;
+  }
+  .d-field .df-feat__no {
+    padding-top: 0.2rem;
+  }
+  .d-field .df-feat__go {
+    align-self: end;
+    justify-self: start;
+  }
+  .d-field .df-feat__theme {
+    flex-direction: column;
+    align-self: start;
+  }
+  .d-field .df-feat__metrics {
+    align-self: start;
+  }
+}
+@media (width >= 64rem) and (hover: hover) {
+  .d-field .df-feat__go {
+    opacity: 0.6;
+    transition: opacity 0.4s var(--ease);
+  }
+  .d-field .df-feat__row:hover .df-feat__go {
+    opacity: 1;
+  }
+}
+
+/* ---------- 02 More work: a contact sheet of frames ---------- */
+
+.d-field .df-more__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 3rem 1.5rem;
+}
+@media (width >= 40rem) {
+  .d-field .df-more__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (width >= 64rem) {
+  .d-field .df-more__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4rem 1.75rem;
+  }
+}
+.d-field .df-more__item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.d-field .df-more__frame {
+  display: flex;
+  gap: 0.9em;
+  margin-bottom: 0.6rem;
+}
+.d-field .df-more__frame .df-num {
+  color: var(--red-text);
+}
+.d-field .df-more__media {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: var(--bg-2);
+  outline: 1px solid var(--hair);
+}
+.d-field .df-more__client {
+  margin-top: 1.1rem;
+  font-family: var(--font-headline);
+  font-size: clamp(1.375rem, 1.8vw, 1.75rem);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+.d-field .df-more__link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.d-field .df-more__link:focus-visible {
+  outline: none;
+}
+.d-field .df-more__link:focus-visible::after {
+  outline: 2px solid var(--ink);
+  outline-offset: 6px;
+}
+.d-field .df-more__headline {
+  flex: 1 0 auto;
+  margin-top: 0.5rem;
+  max-width: 40ch;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.d-field .df-more__metric {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--hair);
+}
+.d-field .df-more__metric .df-num {
+  font-family: var(--font-headline);
+  font-size: 1.25rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.d-field .df-more__mlabel {
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--ink-3);
+}
+.d-field .df-more__end {
+  margin-top: 2.5rem;
+}
+@media (width >= 40rem) {
+  .d-field .df-more__end {
+    display: none;
+  }
+}
+
+/* ---------- 03 Clients and awards ---------- */
+
+.d-field .df-logos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.d-field .df-logos > li {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 3 / 2;
+  border-right: 1px solid var(--hair);
+  border-bottom: 1px solid var(--hair);
+}
+.d-field .df-logos > li:nth-child(3n + 1) {
+  border-left: 1px solid var(--hair);
+}
+.d-field .df-logos > li:nth-child(-n + 3) {
+  border-top: 1px solid var(--hair);
+}
+@media (width >= 64rem) {
+  .d-field .df-logos {
+    grid-template-columns: repeat(9, minmax(0, 1fr));
+  }
+  .d-field .df-logos > li:nth-child(3n + 1) {
+    border-left: 0;
+  }
+  .d-field .df-logos > li:nth-child(9n + 1) {
+    border-left: 1px solid var(--hair);
+  }
+  .d-field .df-logos > li:nth-child(-n + 9) {
+    border-top: 1px solid var(--hair);
+  }
+}
+.d-field .df-logo__img {
+  width: calc(var(--lw) * 0.78);
+  max-width: 78%;
+  height: auto;
+  filter: brightness(0) invert(1);
+  opacity: 0.74;
+  transition: opacity 0.4s var(--ease);
+}
+@media (width >= 40rem) {
+  .d-field .df-logo__img {
+    width: var(--lw);
+  }
+}
+@media (hover: hover) {
+  .d-field .df-logos > li:hover .df-logo__img {
+    opacity: 1;
+  }
+}
+.d-field .df-logo__no {
+  position: absolute;
+  left: 0.5rem;
+  top: 0.45rem;
+  font-family: var(--mono);
+  font-size: 0.5625rem;
+  color: var(--ink-3);
+}
+
+.d-field .df-recog {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0 1.75rem;
+  margin-top: clamp(2.5rem, 5vw, 4rem);
+}
+@media (width >= 40rem) {
+  .d-field .df-recog {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (width >= 80rem) {
+  .d-field .df-recog {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+.d-field .df-recog__item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding-block: 1.25rem;
+  border-top: 1px solid var(--hair);
+}
+.d-field .df-recog__mark {
+  display: flex;
+  align-items: center;
+  height: 4.25rem;
+}
+.d-field .df-recog__img {
+  width: auto;
+  height: 2.25rem;
+  max-width: 100%;
+  object-fit: contain;
+}
+.d-field .df-recog__mark--badge .df-recog__img {
+  height: 100%;
+}
+.d-field .df-recog__mark--plate .df-recog__img {
+  box-sizing: content-box;
+  height: 2rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--ink);
+}
+@media (width < 40rem) {
+  .d-field .df-recog__item {
+    display: grid;
+    grid-template-columns: 6.5rem minmax(0, 1fr);
+    grid-template-areas: "no no" "mark text";
+    gap: 0.6rem 1rem;
+    align-items: center;
+  }
+  .d-field .df-recog__item > .df-k {
+    grid-area: no;
+  }
+  .d-field .df-recog__mark {
+    grid-area: mark;
+    height: 3.5rem;
+  }
+  .d-field .df-recog__img {
+    height: auto;
+    max-height: 1.75rem;
+  }
+  .d-field .df-recog__mark--badge .df-recog__img {
+    max-height: 3.5rem;
+  }
+  .d-field .df-recog__mark--plate .df-recog__img {
+    max-height: 1.5rem;
+    padding: 0.4rem 0.5rem;
+  }
+  .d-field .df-recog__text {
+    grid-area: text;
+  }
+}
+.d-field .df-recog__title {
+  display: block;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+.d-field .df-recog__detail {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+
+/* ---------- 04 Studio and services ---------- */
+
+.d-field .df-studio__top {
+  display: grid;
+  gap: 2.5rem;
+  padding-bottom: clamp(2rem, 3vw, 2.75rem);
+}
+.d-field .df-studio__lead {
+  margin-top: 1.25rem;
+  max-width: 30ch;
+  font-size: clamp(1.125rem, 1.6vw, 1.5rem);
+}
+@media (width >= 64rem) {
+  .d-field .df-studio__top {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    align-items: end;
+    gap: 4rem;
+  }
+}
+.d-field .df-figs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+.d-field .df-fig__value {
+  font-family: var(--font-headline);
+  font-size: clamp(2.5rem, 5vw, 4.75rem);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+.d-field .df-fig__label {
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+}
+
+.d-field .df-svc {
+  display: grid;
+  gap: 3rem;
+  border-top: 1px solid var(--hair);
+}
+@media (width >= 64rem) {
+  .d-field .df-svc {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+.d-field .df-svc__row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  gap: 1rem;
+  padding-block: 1.25rem;
+  border-bottom: 1px solid var(--hair);
+  transition: opacity 0.4s var(--ease);
+}
+.d-field .df-svc__no,
+.d-field .df-svc__arrow {
+  display: none;
+}
+.d-field .df-svc__plate {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  background: var(--bg-2);
+}
+.d-field .df-svc__plate--row {
+  aspect-ratio: 3 / 2;
+  outline: 1px solid var(--hair);
+}
+.d-field .df-svc__title {
+  font-family: var(--font-headline);
+  font-size: clamp(1.25rem, 1.8vw, 1.75rem);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+.d-field .df-svc__link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.d-field .df-svc__link:focus-visible {
+  outline: none;
+}
+.d-field .df-svc__link:focus-visible::after {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+.d-field .df-svc__line {
+  margin-top: 0.4rem;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+.d-field .df-svc__proof {
+  margin-top: 0.6rem;
+}
+.d-field .df-svc__view {
+  display: none;
+}
+@media (width >= 64rem) {
+  .d-field .df-svc__row {
+    grid-template-columns: 3rem minmax(0, 1fr) auto;
+    padding-block: 1.4rem;
+  }
+  .d-field .df-svc__plate--row {
+    display: none;
+  }
+  .d-field .df-svc__no {
+    display: block;
+    padding-top: 0.35rem;
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    color: var(--ink-3);
+  }
+  .d-field .df-svc__arrow {
+    display: block;
+    padding-top: 0.2rem;
+    font-size: 1.25rem;
+    opacity: 0;
+    transform: translateX(-6px);
+    transition:
+      opacity 0.4s var(--ease),
+      transform 0.5s var(--ease);
+  }
+  .d-field .df-svc__row[data-on] .df-svc__no {
+    color: var(--red-text);
+  }
+  .d-field .df-svc__row[data-on] .df-svc__arrow {
+    opacity: 1;
+    transform: none;
+  }
+  .d-field .df-svc__list:hover .df-svc__row:not([data-on]) {
+    opacity: 0.45;
+  }
+  .d-field .df-svc__view {
+    position: sticky;
+    top: 2rem;
+    display: block;
+    margin-top: 1.4rem;
+    aspect-ratio: 3 / 2;
+    outline: 1px solid var(--hair);
+    background: var(--bg-2);
+  }
+  .d-field .df-svc__plate--view {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transform: scale(1.04);
+    transition:
+      opacity 0.6s var(--ease),
+      transform 1.2s var(--ease);
+  }
+  .d-field .df-svc__plate--view[data-on] {
+    opacity: 1;
+    transform: none;
+  }
+  .d-field .df-svc__caption {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    padding: 0.4rem 0.6rem;
+    background: rgb(10 10 10 / 0.86);
+    color: var(--ink);
+  }
+  .d-field .df-svc__caption .df-num {
+    margin-right: 0.6em;
+    color: var(--red-text);
+  }
+}
+.d-field .df-studio__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  margin-top: 2.25rem;
+}
+
+/* ---------- Contact and footer ---------- */
+
+.d-field .df-foot {
+  margin-top: clamp(6rem, 12vw, 11rem);
+}
+.d-field .df-foot__cta {
+  padding-top: clamp(4rem, 8vw, 7rem);
+}
+.d-field .df-foot__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+.d-field .df-foot__title {
+  max-width: 13ch;
+  font-family: var(--font-headline);
+  font-size: clamp(2.75rem, 7.4vw, 7.25rem);
+  font-weight: 500;
+  line-height: 0.92;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+.d-field .df-mascot.mascot-window {
+  width: clamp(5.5rem, 13vw, 12rem);
+}
+.d-field .df-mascot .mascot-window__pane {
+  border-radius: 0;
+  border-color: var(--hair-2);
+  background: var(--bg-2);
+  box-shadow: none;
+}
+.d-field .df-foot__lead {
+  margin-top: 1.5rem;
+  max-width: 34ch;
+}
+.d-field .df-foot__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  margin-top: 2rem;
+}
+@media (width < 40rem) {
+  .d-field .df-foot__actions .df-btn {
+    width: 100%;
+  }
+}
+.d-field .df-foot__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+  margin-top: clamp(4rem, 8vw, 7rem);
+  padding-top: 1.75rem;
+  padding-bottom: 2.25rem;
+}
+@media (width >= 64rem) {
+  .d-field .df-foot__grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+.d-field .df-foot__col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.d-field .df-foot__link,
+.d-field .df-foot__copy {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+  transition: color 0.3s var(--ease);
+}
+.d-field .df-foot__copy {
+  color: var(--ink-3);
+}
+@media (hover: hover) {
+  .d-field .df-foot__link:hover {
+    color: var(--ink);
+  }
+}
+@media (width >= 64rem) and (pointer: fine) {
+  .d-field .df-foot__link,
+  .d-field .df-foot__copy {
+    min-height: 2.25rem;
+  }
+  .d-field .df-foot__col--end {
+    align-items: flex-end;
+  }
+}
+.d-field .df-foot__strip {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  padding-top: 1.1rem;
+  padding-bottom: max(1.1rem, env(safe-area-inset-bottom));
+  font-family: var(--mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* ---------- The sheet: a panel from the right; on phones, from the bottom ---------- */
+
+.d-field .df-sheet {
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: min(33rem, 100vw);
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--hair-2);
+  background: var(--bg);
+  color: var(--ink);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  transform: translateX(100%);
+  transition: transform 0.55s var(--ease);
+}
+.d-field .df-sheet[data-state="open"] {
+  transform: none;
+}
+.d-field .df-sheet[data-state="closing"] {
+  transform: translateX(100%);
+  transition-duration: 0.35s;
+}
+.d-field .df-sheet::backdrop {
+  background: rgb(10 10 10 / 0.6);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.d-field .df-sheet[data-state="open"]::backdrop {
+  opacity: 1;
+}
+.d-field .df-sheet__in {
+  padding: 0 1.5rem;
+}
+.d-field .df-sheet__bar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 3.75rem;
+  margin-inline: -1.5rem;
+  padding-inline: 1.5rem;
+  border-bottom: 1px solid var(--hair);
+  background: var(--bg);
+}
+.d-field .df-sheet__bar .df-num {
+  color: var(--red-text);
+}
+.d-field .df-sheet__grip {
+  display: none;
+}
+.d-field .df-sheet__close {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 44px;
+  padding: 0 0.85rem;
+  border: 1px solid var(--hair-2);
+  background: none;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.3s var(--ease);
+}
+@media (hover: hover) {
+  .d-field .df-sheet__close:hover {
+    border-color: var(--ink);
+  }
+}
+.d-field .df-key {
+  padding: 0.15rem 0.3rem;
+  border: 1px solid var(--hair-2);
+  font-size: 0.5625rem;
+  color: var(--ink-3);
+}
+.d-field .df-sheet__media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: var(--ar);
+  max-height: 50svh;
+  margin-top: 1.5rem;
+  background: var(--bg-2);
+  outline: 1px solid var(--hair);
+}
+.d-field .df-sheet__media::before {
+  content: "";
+  position: absolute;
+  inset: -1px -1px auto;
+  z-index: 1;
+  height: 2px;
+  background: var(--ac);
+}
+.d-field .df-sheet__img {
+  object-fit: contain;
+  animation: df-fade 0.5s var(--ease) both;
+}
+.d-field .df-sheet__size {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  z-index: 1;
+  padding: 0.25rem 0.4rem;
+  background: rgb(10 10 10 / 0.86);
+  font-family: var(--mono);
+  font-size: 0.625rem;
+  line-height: 1;
+  color: var(--ink-2);
+}
+.d-field .df-sheet__frames {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+.d-field .df-sheet__thumb {
+  position: relative;
+  width: 4.25rem;
+  height: 2.875rem;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: var(--bg-2);
+  outline: 1px solid var(--hair-2);
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.3s var(--ease);
+}
+.d-field .df-sheet__thumb[aria-pressed="true"] {
+  opacity: 1;
+  outline: 1px solid var(--red);
+  outline-offset: 2px;
+}
+.d-field .df-sheet__thumb:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+@media (hover: hover) {
+  .d-field .df-sheet__thumb:hover {
+    opacity: 1;
+  }
+}
+.d-field .df-sheet__thumbimg {
+  object-fit: cover;
+}
+.d-field .df-sheet__body {
+  margin-top: 1.75rem;
+}
+.d-field .df-sheet__client {
+  margin-top: 0.4rem;
+  font-family: var(--font-headline);
+  font-size: clamp(2rem, 3vw, 2.625rem);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.d-field .df-sheet__headline {
+  margin-top: 0.85rem;
+  font-size: 1.0625rem;
+  line-height: 1.45;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.d-field .df-sheet__metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+.d-field .df-sheet__metrics--one {
+  grid-template-columns: minmax(0, 1fr);
+}
+.d-field .df-spec {
+  margin-top: 1.5rem;
+  border-top: 1px solid var(--hair);
+}
+.d-field .df-spec__row {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: 1rem;
+  padding-block: 0.7rem;
+  border-bottom: 1px solid var(--hair);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+.d-field .df-spec__row dt {
+  padding-top: 0.15rem;
+}
+.d-field .df-sheet__foot {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin: 1.75rem -1.5rem 0;
+  padding: 1rem 1.5rem calc(1rem + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--hair);
+  background: var(--bg);
+}
+.d-field .df-sheet__cta {
+  width: 100%;
+}
+
+@media (width < 48rem) {
+  .d-field .df-sheet {
+    inset: auto 0 0 0;
+    width: 100%;
+    height: auto;
+    max-height: 90dvh;
+    border-left: 0;
+    border-top: 1px solid var(--hair-2);
+    transform: translateY(100%);
+  }
+  .d-field .df-sheet[data-state="open"] {
+    transform: translateY(var(--pull, 0px));
+  }
+  .d-field .df-sheet[data-state="closing"] {
+    transform: translateY(100%);
+  }
+  .d-field .df-sheet[data-pulling] {
+    transition: none;
+  }
+  .d-field .df-sheet__in {
+    padding: 0 1rem;
+  }
+  .d-field .df-sheet__foot {
+    margin-inline: -1rem;
+    padding-inline: 1rem;
+  }
+  .d-field .df-sheet__bar {
+    margin-inline: -1rem;
+    padding-inline: 1rem;
+    padding-top: 0.5rem;
+    touch-action: none;
+  }
+  .d-field .df-sheet__grip {
+    position: absolute;
+    left: 50%;
+    top: 0.45rem;
+    display: block;
+    width: 2.25rem;
+    height: 3px;
+    background: var(--hair-2);
+    transform: translateX(-50%);
+  }
+  .d-field .df-sheet__media {
+    max-height: 38svh;
+    margin-top: 1rem;
+  }
+  .d-field .df-sheet__body {
+    margin-top: 1.25rem;
+  }
+}
+
+/* ---------- Without motion: everything still, nothing lost ---------- */
+
+html[data-motion="off"] .d-field .df-tile__frame,
+html[data-motion="off"] .d-field .df-tile__code,
+html[data-motion="off"] .d-field .df-sheet__img {
+  animation: none;
+}
+html[data-motion="off"] .d-field .df-layer,
+html[data-motion="off"] .d-field .df-field[data-drag] .df-layer {
+  transform: none;
+  transition: none;
+}
+html[data-motion="off"] .d-field .df-tile__img,
+html[data-motion="off"] .d-field .df-feat__media img,
+html[data-motion="off"] .d-field .df-more__media img {
+  transform: none !important;
+  transition: none;
+}
+html[data-motion="off"] .d-field .df-hud__dot {
+  animation: none;
+}
+html[data-motion="off"] .d-field .df-reel {
+  height: auto;
+}
+html[data-motion="off"] .d-field .df-reel__stick {
+  position: relative;
+  height: auto;
+  padding-top: clamp(5.5rem, 11vw, 10rem);
+}
+html[data-motion="off"] .d-field .df-reel__frame {
+  transform: none;
+}
+html[data-motion="off"] .d-field .df-reel__hint {
+  display: none;
+}
+html[data-motion="off"] .d-field .df-sheet,
+html[data-motion="off"] .d-field .df-sheet::backdrop {
+  transition: none;
+}

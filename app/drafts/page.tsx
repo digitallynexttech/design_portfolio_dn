@@ -4,7 +4,7 @@ import { PageFlow } from "@/components/ui/page-flow";
 
 export const metadata: Metadata = { title: "Home drafts", robots: { index: false, follow: false } };
 
-// Four directions for the home page, same content and sections, for review. Not linked anywhere.
+// Directions for the home page (same content and sections) and the mascot review. Not linked anywhere.
 const DRAFTS = [
   {
     href: "/drafts/monograph",
@@ -26,6 +26,36 @@ const DRAFTS = [
     name: "Spec Sheet",
     line: "Technical and precise: a studio that builds things. Bone paper, a live water line through the title, the work as stacked spec sheets and an index.",
   },
+  {
+    href: "/drafts/signal",
+    name: "Signal",
+    line: "The studio as a precision instrument: a dot-matrix display that reacts to you, and a dial that scrubs through the work.",
+  },
+  {
+    href: "/drafts/field",
+    name: "Field",
+    line: "The work as a space to explore: drag an endless field of every project, open any tile.",
+  },
+  {
+    href: "/drafts/depth",
+    name: "Depth",
+    line: "Scroll is a camera: a quiet WebGL flight past each flagship, the X waiting at the start.",
+  },
+  {
+    href: "/drafts/kinetic",
+    name: "Kinetic",
+    line: "Type is the interface: letters gain weight as the cursor nears, and every project plays in the cursor.",
+  },
+  {
+    href: "/drafts/xray",
+    name: "X-Ray",
+    line: "See how the work is built: an X-ray lens and a Design / Build switch show the grid, tokens and type under every project.",
+  },
+  {
+    href: "/drafts/mascots",
+    name: "Mascot review",
+    line: "Not a home draft: ten takes on the DN X mascot, one at a time on a sideways rail. Each one waves when it's in front.",
+  },
 ];
 
 export default function Drafts() {
@@ -35,7 +65,7 @@ export default function Drafts() {
         <p className="label">Review</p>
         <h1 className="mt-4 font-display text-d1 font-semibold">Home drafts</h1>
         <p className="mt-6 max-w-[52ch] text-lg text-(--text-2)">
-          The same content and sections in four directions.{" "}
+          The same content and sections in nine directions, plus the mascot review.{" "}
           <FlowLink href="/" direction="back" className="underline decoration-paper/40 underline-offset-4 hover:text-teal">
             Compare with the current home
           </FlowLink>

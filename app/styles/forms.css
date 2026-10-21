@@ -1,6 +1,6 @@
 /* forms styles. Plain CSS (no @apply); imported from app/globals.css. */
 
-/* ---------- (02) Selected work: one vessel on wide screens, a stage per case on phones ---------- */
+/* ---------- (01) Selected work: one vessel on wide screens, a stage per case on phones ---------- */
 
 .form-fallback {
   display: none;
@@ -98,104 +98,377 @@ html[data-forms="off"] .form-fallback {
 
 /* Moved from globals.css (10 Oct 2026): the hero and the Set sail button. */
 
-/* ---------- Hero ---------- */
+/* ---------- Hero (19 Oct 2026): the tagline on the left, the X on its stage on the right ---------- */
 
-.hero-sticky {
-  min-height: 100svh;
+/* Over the live water (no poster): a column of words and the ways in, and a lit card where the X
+   stands. Phones stack them, words first; the card follows below the fold's edge. */
+.hero {
   display: grid;
-  grid-template-rows: 1fr auto;
-  gap: 2.5rem;
-  padding: 7.5rem var(--gutter) 2.5rem;
+  gap: 3rem;
+  padding: 7.5rem var(--gutter) 7rem;
 }
-/* Phones keep the bottom strip clear for the thumb-zone Menu pill. */
-@media (max-width: 767px) {
-  .hero-sticky {
-    padding-bottom: 6.5rem;
+.hero > * {
+  min-width: 0;
+}
+@media (min-width: 1024px) {
+  .hero {
+    min-height: 100svh;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.9fr);
+    align-items: center;
+    gap: clamp(2rem, 5vw, 6rem);
+    padding-bottom: 3.5rem;
   }
 }
 
-.hero-beats {
-  align-self: center;
-  display: grid;
-  gap: 1.25rem;
+.hero__copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
-.hero-beat {
+.hero__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  background: var(--red);
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Poster type, in the same capitals as the showreel's words below: three lines, the middle one set in. */
+.hero__title {
+  margin-top: 1.75rem;
+  display: flex;
+  flex-direction: column;
   font-family: var(--font-headline);
-  font-weight: 600;
-  line-height: var(--text-hero--line-height);
-  letter-spacing: var(--text-hero--letter-spacing);
-  font-size: var(--text-hero);
+  font-weight: 500;
+  font-size: clamp(3rem, 15vw, 6rem);
+  line-height: 0.86;
+  letter-spacing: -0.035em;
+  text-transform: uppercase;
+}
+.hero__line--in {
+  padding-left: 1.1em;
+}
+@media (min-width: 768px) {
+  .hero__title {
+    font-size: clamp(5rem, 12vw, 9rem);
+  }
+}
+@media (min-width: 1024px) {
+  .hero__title {
+    font-size: clamp(5rem, 8.4vw, 10rem);
+  }
+}
+
+.hero__lead {
+  margin-top: 2rem;
+  max-width: 34ch;
+  font-size: 1.125rem;
+  line-height: 1.45;
+  color: var(--text-2);
   text-wrap: balance;
 }
-
-.hero-beat--long {
-  font-size: clamp(2.25rem, 6.4vw, 6.75rem);
-  line-height: 0.98;
-  max-width: 10.5em;
+@media (min-width: 768px) {
+  .hero__lead {
+    font-size: 1.3125rem;
+  }
 }
 
-.hero-foot {
+.hero__actions {
+  margin-top: 2rem;
   display: flex;
   flex-wrap: wrap;
-  align-items: end;
-  justify-content: space-between;
-  gap: 1.25rem;
+  gap: 0.75rem;
+}
+@media (max-width: 479px) {
+  .hero__actions > * {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
 }
 
-/* With motion on, the beats share one slot and play in sequence through a tall sticky track. */
-[data-motion="on"] .hero-track {
-  height: 280svh;
+/* The third way in, quieter than the two buttons: open the world. */
+.sail-link {
+  margin-top: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text-2);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--paper) 30%, transparent);
+  text-underline-offset: 0.35em;
+  transition:
+    color 250ms var(--ease-flow),
+    text-decoration-color 250ms var(--ease-flow);
+}
+.sail-link:hover {
+  color: var(--paper);
+  text-decoration-color: var(--teal);
+}
+.sail-link span {
+  transition: transform 400ms var(--ease-flow);
+}
+.sail-link:hover span {
+  transform: translateX(3px);
 }
 
-[data-motion="on"] .hero-sticky {
+/* The X's stage: a lit card, teal from above and a red glow on the floor. The X stands at the bottom
+   with its own shadow; the studio's local time sits in the corner. */
+.hero__stage {
+  position: relative;
+  display: grid;
+  place-items: end center;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  border-radius: 2rem;
+  border: 1px solid color-mix(in oklab, var(--paper) 10%, transparent);
+  background:
+    radial-gradient(55% 45% at 50% 38%, color-mix(in oklab, var(--teal) 20%, transparent), transparent 75%),
+    radial-gradient(60% 22% at 50% 96%, color-mix(in oklab, var(--red) 16%, transparent), transparent 70%),
+    linear-gradient(180deg, var(--ink-2), var(--ink));
+  box-shadow: 0 2.5rem 5rem -2.5rem rgb(0 0 0 / 0.8);
+}
+@media (min-width: 1024px) {
+  .hero__stage {
+    width: min(100%, calc(76svh * 0.8));
+    justify-self: end;
+  }
+}
+
+.mascot-window.mascot-window--stage {
+  width: 86%;
+  margin-bottom: 5%;
+}
+.mascot-window--stage .mascot-window__pane {
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.hero-clock {
+  position: absolute;
+  z-index: 1;
+  top: 1.25rem;
+  left: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.85rem 0.45rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--paper) 16%, transparent);
+  background: rgb(10 10 10 / 0.45);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.hero-clock time {
+  color: var(--paper);
+  font-variant-numeric: tabular-nums;
+}
+.hero-clock__dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--teal);
+  box-shadow: 0 0 0 0.25rem color-mix(in oklab, var(--teal) 25%, transparent);
+}
+
+/* ---------- Showreel: scroll to enlarge (19 Oct 2026) ---------- */
+
+/* A tall track with a pinned screen inside. showreel-zoom.tsx writes --e (0 → 1, eased) on the stage
+   as the track scrolls by: the card grows from its start size to its end size while the words run
+   behind it. Landscape screens end on the whole screen; portrait ones end on a full-width 16:9 band,
+   so the reel's sites aren't cropped to a sliver. */
+.showreel {
+  position: relative;
+  height: 220svh;
+}
+.showreel__stage {
+  --e: 0;
+  --w0: 34vw;
+  --h0: calc(34vw * 0.5625);
+  --w1: 100%;
+  --h1: 100%;
   position: sticky;
   top: 0;
   height: 100svh;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+@media (max-aspect-ratio: 4/3) {
+  .showreel__stage {
+    --w0: 62vw;
+    --h0: calc(62vw * 0.5625);
+    --h1: calc(100vw * 0.5625);
+  }
 }
 
-[data-motion="on"] .hero-beats > * {
-  grid-area: 1 / 1;
-  align-self: center;
-}
-
-[data-motion="on"] .hero-beats > :not(:first-child) {
-  opacity: 0;
-}
-
-/* With motion off the beats are read together, so the first stays the headline and the other two
-   follow it as a sub-head: the whole hero, Set sail included, fits the first screen. */
-[data-motion="off"] .hero-beats {
-  gap: 0.75rem;
-}
-[data-motion="off"] .hero-beat:not(:first-child) {
-  font-size: var(--text-d3);
-  line-height: var(--text-d3--line-height);
-  letter-spacing: var(--text-d3--letter-spacing);
-  max-width: 22ch;
-}
-
-
-.hero-sticky {
-  isolation: isolate;
-}
-.hero-poster {
+.showreel__words {
   position: absolute;
   inset: 0;
-  z-index: -1;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  pointer-events: none;
 }
-.hero-poster img {
+.showreel__track {
+  display: flex;
+  flex: none;
+  white-space: nowrap;
+  font-family: var(--font-headline);
+  font-weight: 600;
+  font-size: clamp(4.5rem, 15vw, 16rem);
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+  animation: showreel-words 36s linear infinite;
+}
+@media (max-aspect-ratio: 4/3) {
+  .showreel__track {
+    font-size: 24vw;
+  }
+}
+.showreel__phrase {
+  padding-right: 0.3em;
+}
+.showreel:not([data-seen]) .showreel__track {
+  animation-play-state: paused;
+}
+@keyframes showreel-words {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.showreel__frame {
+  position: relative;
+  z-index: 1;
+  width: calc(var(--w0) + (var(--w1) - var(--w0)) * var(--e));
+  height: calc(var(--h0) + (var(--h1) - var(--h0)) * var(--e));
+  border-radius: calc((1 - var(--e)) * 1rem);
+  overflow: hidden;
+  background: var(--ink-2);
+  box-shadow: 0 2rem 4rem -2rem rgb(0 0 0 / 0.7);
+}
+.showreel__frame video {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
-.hero-poster::after {
-  content: "";
+
+.showreel__hint {
   position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(180deg, rgb(10 10 10 / 0.62) 0%, rgb(10 10 10 / 0.2) 34%, rgb(10 10 10 / 0.42) 66%, rgb(10 10 10 / 0.74) 100%),
-    linear-gradient(90deg, rgb(10 10 10 / 0.6), transparent 62%);
+  z-index: 1;
+  top: calc(50% + var(--h0) / 2 + 1.5rem);
+  left: 50%;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  white-space: nowrap;
+  opacity: calc(1 - var(--e) * 6);
+}
+.showreel__hint::before {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--red);
+}
+
+/* Where Squared has its sound switch: the reel has no sound, so this opens it with its chapters.
+   It shows once the reel fills the screen, or whenever it has keyboard focus. */
+.showreel__play {
+  position: absolute;
+  z-index: 2;
+  right: var(--gutter);
+  bottom: 2rem;
+  border-radius: 999px;
+  background: rgb(10 10 10 / 0.6);
+  opacity: 0;
+  pointer-events: none;
+  translate: 0 0.75rem;
+  transition:
+    opacity var(--dur-4) var(--ease-flow),
+    translate var(--dur-4) var(--ease-flow);
+}
+.showreel[data-full] .showreel__play,
+.showreel__play:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+  translate: 0 0;
+}
+@media (max-aspect-ratio: 4/3) {
+  .showreel__play {
+    right: auto;
+    bottom: auto;
+    left: 50%;
+    top: calc(50% + var(--h1) / 2 + 1.5rem);
+    translate: -50% 0.75rem;
+  }
+  .showreel[data-full] .showreel__play,
+  .showreel__play:focus-within {
+    translate: -50% 0;
+  }
+}
+
+/* Motion off: no pinning and no growing. The words sit still above a plain 16:9 player. */
+[data-motion="off"] .showreel {
+  height: auto;
+}
+[data-motion="off"] .showreel__stage {
+  position: relative;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2rem;
+  padding: var(--spacing-section) var(--gutter);
+}
+[data-motion="off"] .showreel__words {
+  position: relative;
+  margin-inline: calc(-1 * var(--gutter));
+}
+[data-motion="off"] .showreel__track {
+  animation: none;
+}
+[data-motion="off"] .showreel__frame {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  border-radius: 1.5rem;
+}
+[data-motion="off"] .showreel__hint {
+  display: none;
+}
+[data-motion="off"] .showreel__play {
+  position: static;
+  align-self: flex-start;
+  opacity: 1;
+  pointer-events: auto;
+  translate: none;
 }
 
 /* Set sail is a .btn btn--primary btn--lg (its fill, focus and press); it adds a red glow and a
@@ -216,50 +489,6 @@ html[data-forms="off"] .form-fallback {
   100% {
     transform: translateX(100%);
   }
-}
-
-/* ---------- Hero, refined (10 Oct 2026) ---------- */
-
-/* Phones get their own scale: the first two beats fill the width, the long one stays readable. */
-@media (max-width: 767px) {
-  .hero-beat {
-    font-size: clamp(3.25rem, 18vw, 6rem);
-  }
-  .hero-beat--long {
-    font-size: clamp(2rem, 10vw, 3.25rem);
-  }
-}
-
-.hero-foot__aside {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.25rem 1.25rem;
-}
-
-/* "See the work" is a quiet way down, not a second button competing with Set sail. */
-.hero-scroll {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-height: 2.75rem;
-  padding-inline: 0.25rem;
-  font-size: 0.9375rem;
-  font-weight: 500;
-  color: var(--paper);
-  text-decoration: underline;
-  text-decoration-color: rgb(250 250 248 / 0.35);
-  text-underline-offset: 0.35em;
-  transition: text-decoration-color 250ms var(--ease-flow);
-}
-.hero-scroll:hover {
-  text-decoration-color: var(--teal);
-}
-.hero-scroll span {
-  transition: transform 400ms var(--ease-flow);
-}
-.hero-scroll:hover span {
-  transform: translateY(3px);
 }
 
 .sail-sound {
@@ -283,92 +512,4 @@ html[data-forms="off"] .form-fallback {
 }
 .sail-sound[aria-pressed="true"] {
   color: var(--teal);
-}
-
-/* Phones: Set sail is the one big button; the rest sit beside it. */
-@media (max-width: 767px) {
-  .hero-foot {
-    gap: 1rem;
-  }
-  .hero-foot .sail-button {
-    flex: 1;
-    justify-content: center;
-    min-height: 3.5rem;
-  }
-}
-
-/* ---------- The hero lifts off like a sheet (10 Oct 2026) ---------- */
-
-/* With motion on, the studio section waits under the hero: pulled up one screen so it sits behind
-   the hero's last frame, and pinned for that screen while the hero slides off it. The extra screen
-   (a spacer: a sticky box only moves inside its container's content, never its padding) is the
-   room it pins in, so nothing after it moves. --hero-lift (0 → 1, scrubbed in
-   hero-beats.tsx) lifts the hero's edge and brings the studio up out of the dark.
-   It is set on the track, the hero's sticky frame and the studio section only, and registered as
-   not inherited, so a scroll restyles those boxes and nothing inside them. Everything that moves
-   during the lift is its own compositor layer (the poster, the shadow, the studio and its shade),
-   so the lift repaints nothing: the shadow is drawn once and faded, not redrawn every frame. */
-@property --hero-lift {
-  syntax: "<number>";
-  inherits: false;
-  initial-value: 0;
-}
-[data-motion="on"] .hero-track {
-  --hero-lift: 0;
-  position: relative;
-  z-index: 2;
-}
-[data-motion="on"] .hero-sticky {
-  --hero-lift: 0;
-  overflow: hidden;
-  border-bottom-left-radius: calc(var(--hero-lift, 0) * 2.75rem);
-  border-bottom-right-radius: calc(var(--hero-lift, 0) * 2.75rem);
-}
-[data-motion="on"] .hero-poster {
-  will-change: transform;
-}
-/* The hero's shadow, under its last screen (where the sticky frame sits while it lifts). */
-[data-motion="on"] .hero-track::after {
-  content: "";
-  position: absolute;
-  inset: auto 0 0;
-  z-index: -1;
-  height: 100svh;
-  pointer-events: none;
-  border-bottom-left-radius: 2.75rem;
-  border-bottom-right-radius: 2.75rem;
-  box-shadow: 0 2.5rem 5rem -1.5rem rgb(0 0 0 / 0.8);
-  opacity: var(--hero-lift, 0);
-  will-change: opacity;
-}
-[data-motion="on"] .hero-underlay {
-  position: relative;
-  z-index: 1;
-  margin-top: -100svh;
-}
-[data-motion="on"] .hero-underlay::after {
-  content: "";
-  display: block;
-  height: 100svh;
-}
-[data-motion="on"] .hero-underlay > section {
-  /* Fully lifted until the script says otherwise. */
-  --hero-lift: 1;
-  position: sticky;
-  top: 0;
-  translate: 0 calc((1 - var(--hero-lift, 1)) * 8svh);
-  will-change: translate;
-}
-/* The studio comes up out of the dark under a shade that lifts with the hero (a shade, not opacity,
-   so the text itself always keeps its full contrast). */
-[data-motion="on"] .hero-underlay > section::after {
-  --hero-lift: inherit;
-  will-change: opacity;
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background: var(--ink);
-  opacity: calc((1 - var(--hero-lift, 1)) * 0.65);
 }

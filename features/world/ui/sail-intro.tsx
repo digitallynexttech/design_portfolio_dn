@@ -32,14 +32,35 @@ function prefetchWorld() {
   void import("./world-app");
 }
 
-/** The front door: "Set sail" opens the world over the page. */
-export function SailIntro({ data }: { data: WorldData }) {
+/**
+ * The front door: "Set sail" opens the world over the page. The "link" variant is a quiet text link
+ * under the home hero's buttons (sound off; the world has its own sound switch); where the browser
+ * can't draw the world it renders nothing.
+ */
+export function SailIntro({ data, variant = "button" }: { data: WorldData; variant?: "button" | "link" }) {
   const supported = useSyncExternalStore(noop, canRun, () => true);
   const [sound, setSound] = useState(false);
 
   useEffect(() => {
     world.setData(data);
   }, [data]);
+
+  if (variant === "link") {
+    if (!supported) return null;
+    return (
+      <button
+        type="button"
+        onClick={() => openWorld(false)}
+        onPointerEnter={prefetchWorld}
+        onPointerDown={prefetchWorld}
+        onTouchStart={prefetchWorld}
+        onFocus={prefetchWorld}
+        className="sail-link"
+      >
+        Or sail through our work in 3D <span aria-hidden>→</span>
+      </button>
+    );
+  }
 
   if (!supported) {
     return <p className="max-w-[34ch] text-sm text-(--text-3)">This browser can&apos;t draw our 3D world; every project in it is below.</p>;

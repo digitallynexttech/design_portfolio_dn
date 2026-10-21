@@ -1,0 +1,2038 @@
+/* =====================================================================================
+   Draft 7 · "Depth". Scroll is a camera moving forward through the work.
+
+   Scope: every selector starts with .d-depth, or with html:has(.d-depth):not(.dp-away) for the few
+   page-level rules (AwayFlag marks html .dp-away while Next keeps this page as a hidden copy, so the
+   rules never follow the reader to another route). No [style] inside :has().
+
+   Two layouts from one DOM, chosen before the first paint (mode.ts):
+   - html[data-dp="3d"]: the flight. A tall track with a sticky stage: the WebGL canvas, the HTML
+     overlays (one per station, positioned absolutely, opacity and transform written by journey.tsx)
+     and the depth gauge.
+   - anything else (flat, the default): the same overlays in normal flow, with their posters, as a
+     plain stacked page. Reduced motion, Data Saver, no WebGL2, and no script.
+
+   Spec:
+   - Void #070708, paper #F2F1EE. Brand red #E21F26 is the only accent (the stop, the primary action,
+     the gauge marker). Client colours appear only as their own frames, swatches and underlines.
+   - Type: Stack Sans Headline (500, tight) for display; Stack Sans Text; Geist Mono for labels.
+   - Hairlines only: 1 px at 12-24% paper. Square corners (2 px on controls). No shadows, no glass.
+   - Motion: transforms and opacity only.
+   ===================================================================================== */
+
+/* ---------- The route: the void, and the site's own chrome put away ---------- */
+
+html:has(.d-depth):not(.dp-away) {
+  background: #070708;
+  color-scheme: dark;
+  scroll-padding-top: 4.5rem;
+}
+html:has(.d-depth):not(.dp-away) body {
+  background: #070708;
+}
+html:has(.d-depth):not(.dp-away) body > .site-header,
+html:has(.d-depth):not(.dp-away) body > .site-header-glass,
+html:has(.d-depth):not(.dp-away) body > footer,
+html:has(.d-depth):not(.dp-away) body > .water-fallback,
+html:has(.d-depth):not(.dp-away) body > canvas,
+html:has(.d-depth):not(.dp-away) body > button[aria-haspopup="dialog"] {
+  display: none !important;
+}
+html:has(.d-depth):not(.dp-away) ::selection {
+  background: #e21f26;
+  color: #fff;
+}
+
+/* ---------- Tokens and base ---------- */
+
+.d-depth {
+  --dp-void: #070708;
+  --dp-ink: #f2f1ee;
+  --dp-2: rgb(242 241 238 / 0.8);
+  --dp-3: rgb(242 241 238 / 0.64);
+  --dp-4: rgb(242 241 238 / 0.54);
+  --dp-hair: rgb(242 241 238 / 0.12);
+  --dp-hair-2: rgb(242 241 238 / 0.24);
+  --dp-red: #e21f26;
+  --dp-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --dp-m: clamp(1rem, 3.4vw, 3rem);
+  --dp-gap: clamp(0.75rem, 1.6vw, 1.5rem);
+  --dp-top: 3.75rem;
+  --dp-hud: 3.5rem;
+  --dp-seg: 92svh;
+  --dp-display: var(--font-headline), "Helvetica Neue", Arial, sans-serif;
+  --dp-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  position: relative;
+  min-height: 100svh;
+  overflow-x: clip;
+  background: var(--dp-void);
+  color: var(--dp-ink);
+  font-family: var(--font-text), system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+@media (min-width: 900px) {
+  .d-depth {
+    --dp-seg: 100svh;
+  }
+}
+
+.d-depth :focus-visible {
+  outline: 2px solid var(--dp-ink);
+  outline-offset: 3px;
+}
+.d-depth .dp-st:focus,
+.d-depth .dp-st:focus-visible {
+  outline: none;
+}
+
+.d-depth h1,
+.d-depth h2,
+.d-depth h3,
+.d-depth p,
+.d-depth dl,
+.d-depth dd,
+.d-depth ol,
+.d-depth ul {
+  margin: 0;
+}
+.d-depth ol,
+.d-depth ul {
+  padding: 0;
+  list-style: none;
+}
+.d-depth a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* The reel viewer is a top-layer dialog inside the overlay: it keeps the site's own type and takes
+   pointer events back from the overlay. */
+.d-depth .liquid {
+  pointer-events: auto;
+  font-family: var(--font-text), system-ui, sans-serif;
+}
+
+/* ---------- Primitives ---------- */
+
+.d-depth .dp-k {
+  font-family: var(--dp-mono);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dp-3);
+}
+
+.d-depth .dp-stop {
+  color: var(--dp-red);
+}
+
+.d-depth .dp-cover {
+  object-fit: cover;
+}
+.d-depth .dp-cover--top {
+  object-position: 50% 0;
+}
+
+/* Buttons: hairline, square, a fill that rises behind the label on hover. */
+.d-depth .dp-btn {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 3rem;
+  padding: 0 1.25rem;
+  border: 1px solid var(--dp-hair-2);
+  border-radius: 2px;
+  color: var(--dp-ink);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+.d-depth .dp-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: rgb(242 241 238 / 0.1);
+  transform: scaleY(0);
+  transform-origin: 50% 100%;
+  transition: transform 450ms var(--dp-ease);
+}
+.d-depth .dp-btn > span[aria-hidden] {
+  display: inline-block;
+  transition: transform 450ms var(--dp-ease);
+}
+@media (hover: hover) {
+  .d-depth .dp-btn:hover::before {
+    transform: scaleY(1);
+  }
+  .d-depth .dp-btn:hover > span[aria-hidden] {
+    transform: translate3d(3px, 0, 0);
+  }
+}
+.d-depth .dp-btn:focus-visible::before {
+  transform: scaleY(1);
+}
+.d-depth .dp-btn:active {
+  transform: scale(0.98);
+}
+.d-depth .dp-btn--red {
+  background: var(--dp-red);
+  border-color: var(--dp-red);
+  color: #fff;
+}
+.d-depth .dp-btn--red::before {
+  background: rgb(0 0 0 / 0.2);
+}
+.d-depth .dp-btn--lg {
+  min-height: 3.5rem;
+  padding: 0 1.6rem;
+  font-size: 1rem;
+}
+.d-depth .dp-btn--block {
+  display: flex;
+  width: 100%;
+}
+
+/* A square icon button (the strip's arrows). */
+.d-depth .dp-sq {
+  display: inline-grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid var(--dp-hair-2);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--dp-ink);
+  font-size: 1rem;
+  cursor: pointer;
+}
+.d-depth .dp-sq span {
+  transition: transform 400ms var(--dp-ease);
+}
+@media (hover: hover) {
+  .d-depth .dp-sq:not(:disabled):hover span {
+    transform: scale(1.25);
+  }
+}
+.d-depth .dp-sq:disabled {
+  opacity: 0.32;
+  cursor: default;
+}
+
+/* A text link with an underline in the client's colour that draws out on hover. */
+.d-depth .dp-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 2.75rem;
+  font-size: 1rem;
+  font-weight: 500;
+}
+.d-depth .dp-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0.55rem;
+  height: 1px;
+  background: var(--accent, var(--dp-ink));
+  transform: scaleX(0.3);
+  transform-origin: 0 50%;
+  transition: transform 550ms var(--dp-ease);
+}
+.d-depth .dp-link > span {
+  display: inline-block;
+  transition: transform 450ms var(--dp-ease);
+}
+@media (hover: hover) {
+  .d-depth .dp-link:hover::after {
+    transform: scaleX(1);
+  }
+  .d-depth .dp-link:hover > span {
+    transform: translate3d(4px, 0, 0);
+  }
+}
+.d-depth .dp-link:focus-visible::after {
+  transform: scaleX(1);
+}
+
+/* The home hero's quiet "sail" link, in this draft's voice. */
+.d-depth .sail-link {
+  margin-top: 0;
+  color: var(--dp-3);
+  font-size: 0.875rem;
+  text-decoration-color: var(--dp-hair-2);
+  transition: none;
+}
+.d-depth .sail-link:hover {
+  color: var(--dp-ink);
+  text-decoration-color: var(--dp-red);
+}
+
+/* "Play reel": the shared button, squared off, with the red play mark. */
+.d-depth .dp-reelbtn {
+  min-height: 3rem;
+  border-radius: 2px;
+  border-color: var(--dp-hair-2);
+  padding: 0 1.25rem 0 0.7rem;
+  color: var(--dp-ink);
+  font-size: 0.9375rem;
+}
+.d-depth .dp-reelbtn > span:first-child {
+  border-radius: 1px;
+  background: var(--dp-red);
+  color: #fff;
+}
+
+/* ---------- Header ---------- */
+
+.d-depth .dp-top {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  height: var(--dp-top);
+  padding: 0 var(--dp-m);
+}
+/* Solid over the page; in the flight it stays clear until the void is behind you. */
+.d-depth .dp-top::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--dp-void);
+  border-bottom: 1px solid var(--dp-hair);
+  opacity: 1;
+  transition: opacity 400ms var(--dp-ease);
+}
+html[data-dp="3d"] .d-depth:not([data-past]) .dp-top::before {
+  opacity: 0;
+}
+.d-depth .dp-top__logo {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+}
+.d-depth .dp-top__logo img {
+  width: auto;
+  height: 1.375rem;
+}
+.d-depth .dp-top__nav {
+  display: none;
+  align-items: center;
+  gap: 0.25rem;
+}
+.d-depth .dp-top__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 0.85rem;
+  font-size: 0.875rem;
+  color: var(--dp-2);
+}
+.d-depth .dp-top__link:hover {
+  color: var(--dp-ink);
+}
+.d-depth .dp-top__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.5rem;
+  margin-left: 0.75rem;
+  padding: 0 1rem;
+  border: 1px solid var(--dp-hair-2);
+  border-radius: 2px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.d-depth .dp-top__cta span {
+  color: var(--dp-red);
+}
+.d-depth .dp-top__menu {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  margin-right: -0.5rem;
+  padding: 0 0.5rem;
+  border: 0;
+  background: none;
+  color: var(--dp-ink);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+@media (min-width: 768px) {
+  .d-depth .dp-top__nav {
+    display: flex;
+  }
+  .d-depth .dp-top__menu {
+    display: none;
+  }
+}
+
+.d-depth .dp-menu {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--dp-void);
+  color: var(--dp-ink);
+}
+.d-depth .dp-menu::backdrop {
+  background: var(--dp-void);
+}
+.d-depth .dp-menu__sheet {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 0 var(--dp-m) calc(2rem + env(safe-area-inset-bottom));
+}
+.d-depth .dp-menu__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--dp-top);
+  border-bottom: 1px solid var(--dp-hair);
+}
+.d-depth .dp-menu__close {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  margin-right: -0.5rem;
+  border: 0;
+  background: none;
+  color: var(--dp-ink);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.d-depth .dp-menu__nav {
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 0;
+}
+.d-depth .dp-menu__link {
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--dp-hair);
+  font-family: var(--dp-display);
+  font-size: 2.75rem;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.035em;
+}
+.d-depth .dp-menu__cta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: auto;
+}
+
+/* =====================================================================================
+   The journey's overlays. Flat (default): sections in normal flow.
+   ===================================================================================== */
+
+.d-depth .dp-main {
+  display: block;
+}
+.d-depth .dp-canvas,
+.d-depth .dp-veil,
+.d-depth .dp-cursor,
+.d-depth .dp-gauge {
+  display: none;
+}
+.d-depth .dp-st {
+  position: relative;
+  padding: clamp(4.5rem, 10vw, 8rem) var(--dp-m) 0;
+}
+
+/* A plane's box: the poster at its own aspect, mounted in a hairline frame in the client's colour. */
+.d-depth .dp-box {
+  position: relative;
+  aspect-ratio: var(--ar, 16 / 10);
+  background: #0d0d0f;
+}
+.d-depth .dp-box::after {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  border: 1px solid var(--accent, var(--dp-hair-2));
+  opacity: 0.55;
+  pointer-events: none;
+  transition: opacity 600ms var(--dp-ease);
+}
+
+/* ---------- Hero ---------- */
+
+.d-depth .dp-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas:
+    "label x"
+    "title title"
+    "foot foot";
+  row-gap: 1.25rem;
+  min-height: 100svh;
+  padding-top: calc(var(--dp-top) + 1.25rem);
+  padding-bottom: 2rem;
+}
+.d-depth .dp-hero__copy {
+  display: contents;
+}
+.d-depth .dp-hero__label {
+  grid-area: label;
+  align-self: end;
+  padding-bottom: 0.25rem;
+}
+.d-depth .dp-h1 {
+  grid-area: title;
+  align-self: end;
+  font-family: var(--dp-display);
+  font-size: clamp(3.4rem, 16.5vw, 5rem);
+  font-weight: 500;
+  line-height: 0.9;
+  letter-spacing: -0.05em;
+  text-wrap: balance;
+}
+.d-depth .dp-h1__line {
+  display: block;
+}
+.d-depth .dp-hero__foot {
+  grid-area: foot;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.d-depth .dp-hero__lead {
+  max-width: 30ch;
+  font-size: 1.0625rem;
+  line-height: 1.45;
+  color: var(--dp-2);
+  text-wrap: pretty;
+}
+.d-depth .dp-hero__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+.d-depth .dp-hero__actions .dp-btn {
+  padding: 0 0.75rem;
+}
+.d-depth .dp-hero__sail {
+  min-height: 2.75rem;
+  margin-top: -0.5rem;
+}
+.d-depth .dp-xbox {
+  grid-area: x;
+  position: relative;
+  width: clamp(8.5rem, 40vw, 13rem);
+  aspect-ratio: 1;
+}
+.d-depth .dp-xbox__poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: opacity 500ms var(--dp-ease);
+}
+.d-depth .dp-hero__cue {
+  display: none;
+}
+
+/* ---------- Reel ---------- */
+
+.d-depth .dp-reel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.d-depth .dp-reel__head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.d-depth .dp-reel__title {
+  font-family: var(--dp-display);
+  font-size: clamp(1.75rem, 3.4vw, 2.75rem);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.035em;
+}
+.d-depth .dp-reel > * {
+  width: 100%;
+  max-width: 72rem;
+}
+.d-depth .dp-reel__box {
+  margin-top: 0.75rem;
+}
+.d-depth .dp-reel__box::after {
+  opacity: 0.3;
+}
+.d-depth .dp-reel__play {
+  margin-top: 0.75rem;
+}
+
+/* ---------- Selected work ---------- */
+
+.d-depth .dp-title {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.d-depth .dp-title__h {
+  font-family: var(--dp-display);
+  font-size: clamp(2.75rem, 9vw, 7.5rem);
+  font-weight: 500;
+  line-height: 0.92;
+  letter-spacing: -0.05em;
+}
+
+.d-depth .dp-case {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+.d-depth .dp-case__box {
+  width: 100%;
+}
+.d-depth .dp-case__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+}
+.d-depth .dp-case__no {
+  color: var(--dp-ink);
+}
+.d-depth .dp-case__client {
+  margin-top: 0.6rem;
+  font-family: var(--dp-display);
+  font-size: clamp(2.5rem, 4.6vw, 4.75rem);
+  font-weight: 500;
+  line-height: 0.95;
+  letter-spacing: -0.045em;
+}
+.d-depth .dp-case__line {
+  max-width: 30ch;
+  margin-top: 0.9rem;
+  font-size: clamp(1.0625rem, 1.35vw, 1.3125rem);
+  line-height: 1.4;
+  color: var(--dp-2);
+  text-wrap: pretty;
+}
+.d-depth .dp-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  max-width: 30rem;
+  margin-top: 1.5rem;
+}
+.d-depth .dp-metric {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+  gap: 0.3rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--dp-hair-2);
+}
+.d-depth .dp-metric__value {
+  font-family: var(--dp-display);
+  font-size: clamp(1.5rem, 2.3vw, 2.25rem);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.d-depth .dp-metric__label {
+  max-width: 24ch;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--dp-3);
+}
+.d-depth .dp-spec {
+  max-width: 30rem;
+  margin-top: 1.25rem;
+}
+.d-depth .dp-spec__row {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.45rem 0;
+  border-top: 1px solid var(--dp-hair);
+  font-size: 0.8125rem;
+  color: var(--dp-2);
+}
+.d-depth .dp-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+  font-family: var(--dp-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  color: var(--dp-3);
+}
+.d-depth .dp-swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.d-depth .dp-swatch__chip {
+  width: 0.625rem;
+  height: 0.625rem;
+  outline: 1px solid var(--dp-hair-2);
+}
+.d-depth .dp-case .dp-link {
+  margin-top: 1rem;
+}
+
+@media (min-width: 900px) {
+  .d-depth .dp-hero {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-template-rows: 1fr;
+    grid-template-areas: none;
+    column-gap: var(--dp-gap);
+    padding-bottom: 3rem;
+  }
+  .d-depth .dp-hero__copy {
+    grid-column: 1 / 9;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: clamp(1.5rem, 3vh, 2.5rem);
+  }
+  .d-depth .dp-hero__label {
+    align-self: auto;
+    max-width: none;
+    margin-bottom: auto;
+    padding-top: 0.5rem;
+  }
+  .d-depth .dp-h1 {
+    align-self: auto;
+    font-size: clamp(4rem, 9.4vw, 10.5rem);
+  }
+  .d-depth .dp-hero__foot {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 1rem 2rem;
+  }
+  .d-depth .dp-hero__lead {
+    font-size: clamp(1.0625rem, 1.3vw, 1.25rem);
+  }
+  .d-depth .dp-hero__actions {
+    display: flex;
+  }
+  .d-depth .dp-hero__actions .dp-btn {
+    padding: 0 1.25rem;
+  }
+  .d-depth .dp-hero__sail {
+    grid-column: 2;
+    justify-self: end;
+  }
+  .d-depth .dp-xbox {
+    grid-area: auto;
+    grid-column: 10 / 13;
+    grid-row: 1;
+    align-self: end;
+    justify-self: end;
+    width: min(100%, 52svh);
+  }
+
+  .d-depth .dp-reel__head {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 2rem;
+  }
+
+  .d-depth .dp-case {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--dp-gap);
+    align-items: center;
+  }
+  .d-depth .dp-case[data-side="right"] .dp-case__box {
+    grid-column: 6 / 13;
+    grid-row: 1;
+  }
+  .d-depth .dp-case[data-side="right"] .dp-case__text {
+    grid-column: 1 / 5;
+    grid-row: 1;
+  }
+  .d-depth .dp-case[data-side="left"] .dp-case__box {
+    grid-column: 1 / 8;
+    grid-row: 1;
+  }
+  .d-depth .dp-case[data-side="left"] .dp-case__text {
+    grid-column: 9 / 13;
+    grid-row: 1;
+  }
+}
+
+/* =====================================================================================
+   The flight (html[data-dp="3d"])
+   ===================================================================================== */
+
+html[data-dp="3d"] .d-depth .dp-journey {
+  position: relative;
+  height: calc(100svh + var(--n, 6) * var(--dp-seg));
+}
+html[data-dp="3d"] .d-depth .dp-stage {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+  touch-action: pan-y;
+  isolation: isolate;
+}
+html[data-dp="3d"] .d-depth .dp-canvas {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.d-depth .dp-canvas canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 900ms var(--dp-ease);
+}
+.d-depth .dp-journey[data-live] .dp-canvas canvas {
+  opacity: 1;
+}
+/* A faint falloff at the edges, as if the void had walls. */
+html[data-dp="3d"] .d-depth .dp-veil {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(120% 90% at 50% 46%, transparent 55%, rgb(0 0 0 / 0.55) 100%);
+}
+/* The reel's <video> feeds the texture; it is never shown itself. */
+.d-depth .dp-video {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+html[data-dp="3d"] .d-depth .dp-layers {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+html[data-dp="3d"] .d-depth .dp-works {
+  position: absolute;
+  inset: 0;
+}
+html[data-dp="3d"] .d-depth .dp-st {
+  position: absolute;
+  inset: 0;
+  min-height: 0;
+  padding: calc(var(--dp-top) + 1rem) var(--dp-m) calc(var(--dp-hud) + 1rem);
+  opacity: 0;
+  transform-origin: 50% 50%;
+}
+/* Only the stations near the camera keep their own compositor layers. */
+html[data-dp="3d"] .d-depth .dp-st[data-near],
+html[data-dp="3d"] .d-depth .dp-hero {
+  will-change: transform, opacity;
+}
+html[data-dp="3d"] .d-depth .dp-hero {
+  opacity: 1;
+}
+html[data-dp="3d"] .d-depth .dp-st[data-on] :is(a, button, [data-text]) {
+  pointer-events: auto;
+}
+/* Inside an overlay, lines travel at slightly different speeds as the camera passes: depth. */
+html[data-dp="3d"] .d-depth .dp-case__text > *,
+html[data-dp="3d"] .d-depth .dp-reel > * {
+  transform: translate3d(0, calc(var(--d, 0) * var(--k, 0) * -1px), 0);
+}
+html[data-dp="3d"] .d-depth .dp-case__text > :nth-child(1) {
+  --k: 10;
+}
+html[data-dp="3d"] .d-depth .dp-case__text > :nth-child(2) {
+  --k: 20;
+}
+html[data-dp="3d"] .d-depth .dp-case__text > :nth-child(3) {
+  --k: 34;
+}
+html[data-dp="3d"] .d-depth .dp-case__text > :nth-child(4) {
+  --k: 50;
+}
+html[data-dp="3d"] .d-depth .dp-case__text > :nth-child(5) {
+  --k: 64;
+}
+html[data-dp="3d"] .d-depth .dp-case__text > :nth-child(6) {
+  --k: 78;
+}
+
+/* Boxes: posters show near the camera until the scene is live (or for good, without WebGL); once
+   a plane's texture is in (data-ready), its poster fades and the plane takes over. */
+html[data-dp="3d"] .d-depth .dp-plate {
+  display: none;
+}
+html[data-dp="3d"] .d-depth .dp-journey:not([data-live]) .dp-st[data-near] .dp-plate,
+html[data-dp="3d"] .d-depth .dp-journey[data-live] .dp-st[data-keep] .dp-plate {
+  display: block;
+}
+html[data-dp="3d"] .d-depth .dp-st[data-ready] .dp-plate {
+  opacity: 0;
+  transition: opacity 700ms var(--dp-ease);
+}
+html[data-dp="3d"] .d-depth .dp-box {
+  background: none;
+}
+html[data-dp="3d"] .d-depth .dp-journey[data-live] .dp-box::after {
+  opacity: 0;
+}
+html[data-dp="3d"] .d-depth[data-x="live"] .dp-xbox__poster {
+  opacity: 0;
+}
+
+/* Hero in the void. */
+html[data-dp="3d"] .d-depth .dp-hero {
+  padding-bottom: calc(var(--dp-hud) + 1.25rem);
+}
+
+/* Reel: one centred screen, its title above and the button below. */
+html[data-dp="3d"] .d-depth .dp-reel {
+  --w: min(100%, calc((100svh - var(--dp-top) - var(--dp-hud) - 12rem) * 16 / 9), 76rem);
+  align-items: center;
+  justify-content: center;
+}
+html[data-dp="3d"] .d-depth .dp-reel > * {
+  width: var(--w);
+  max-width: none;
+}
+html[data-dp="3d"] .d-depth .dp-reel__head {
+  --k: 30;
+}
+html[data-dp="3d"] .d-depth .dp-reel__play {
+  --k: -30;
+}
+
+/* The section title the camera flies through. */
+html[data-dp="3d"] .d-depth .dp-title {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+html[data-dp="3d"] .d-depth .dp-title__h {
+  font-size: clamp(3rem, 12vw, 11rem);
+}
+
+/* A flagship: on phones the screen above, the facts below. */
+html[data-dp="3d"] .d-depth .dp-case {
+  justify-content: center;
+  gap: 1.75rem;
+}
+html[data-dp="3d"] .d-depth .dp-case__box {
+  width: min(100%, calc(32svh * var(--arn, 1.6)));
+  align-self: center;
+}
+
+/* The cursor's label over a plane (mouse only). */
+html[data-dp="3d"] .d-depth .dp-cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 4;
+  display: none;
+  pointer-events: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  html[data-dp="3d"] .d-depth .dp-cursor {
+    display: block;
+  }
+}
+.d-depth .dp-cursor > * {
+  display: inline-block;
+}
+.d-depth .dp-cursor {
+  white-space: nowrap;
+}
+.d-depth .dp-cursor [data-cursor-text],
+.d-depth .dp-cursor__arrow {
+  margin: 1.1rem 0 0 0;
+  padding: 0.45rem 0.6rem;
+  background: var(--dp-ink);
+  color: var(--dp-void);
+  font-family: var(--dp-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0;
+  transform: translate3d(1rem, 0.25rem, 0) scale(0.92);
+  transform-origin: 0 0;
+  transition:
+    opacity 250ms var(--dp-ease),
+    transform 400ms var(--dp-ease);
+}
+.d-depth .dp-cursor__arrow {
+  margin-left: 1px;
+  padding-inline: 0.5rem;
+  background: var(--dp-red);
+  color: #fff;
+}
+.d-depth .dp-stage[data-hover] .dp-cursor [data-cursor-text],
+.d-depth .dp-stage[data-hover] .dp-cursor__arrow {
+  opacity: 1;
+  transform: translate3d(1rem, 0.25rem, 0);
+}
+
+/* ---------- The depth gauge ---------- */
+
+html[data-dp="3d"] .d-depth .dp-gauge {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  height: var(--dp-hud);
+  padding: 0 var(--dp-m) env(safe-area-inset-bottom);
+}
+.d-depth .dp-gauge[data-gone] {
+  visibility: hidden;
+}
+.d-depth .dp-gauge__z,
+.d-depth .dp-gauge__now {
+  flex: none;
+  font-family: var(--dp-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dp-3);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.d-depth .dp-gauge__z {
+  display: none;
+  width: 8ch;
+}
+.d-depth .dp-gauge__now {
+  width: 9.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--dp-ink);
+}
+.d-depth .dp-gauge__rail {
+  position: relative;
+  flex: 1;
+  height: 2.75rem;
+  margin-right: 1.25rem;
+  touch-action: pan-y;
+}
+.d-depth .dp-gauge__rail[data-scrub] {
+  cursor: ew-resize;
+}
+.d-depth .dp-gauge__line {
+  position: absolute;
+  inset: 50% 0 auto;
+  height: 1px;
+  background: var(--dp-hair-2);
+}
+.d-depth .dp-gauge__ticks {
+  position: absolute;
+  inset: 0;
+}
+.d-depth .dp-gauge__tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--t, 0) * 100%);
+  width: 0;
+}
+/* Phones: each stop is a 44 px target centred on its notch; the name is in the readout. */
+.d-depth .dp-gauge__link {
+  position: absolute;
+  top: 0;
+  left: -1.375rem;
+  width: 2.75rem;
+  height: 100%;
+  color: var(--dp-4);
+}
+.d-depth .dp-gauge__link::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: calc(50% - 4px);
+  width: 1px;
+  height: 9px;
+  background: currentColor;
+}
+.d-depth .dp-gauge__no,
+.d-depth .dp-gauge__name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.d-depth .dp-gauge__tick[data-cur] .dp-gauge__link {
+  color: var(--dp-ink);
+}
+.d-depth .dp-gauge__marker {
+  position: absolute;
+  top: calc(50% - 7px);
+  left: -1px;
+  width: 3px;
+  height: 15px;
+  background: var(--dp-red);
+  pointer-events: none;
+}
+
+@media (min-width: 900px) {
+  .d-depth .dp-gauge__z {
+    display: block;
+  }
+  .d-depth .dp-gauge__now {
+    display: none;
+  }
+  .d-depth .dp-gauge__rail {
+    max-width: 50rem;
+    margin: 0 auto;
+    transform: translateX(-3rem);
+  }
+  /* Wide screens: every stop is named, above the line, from its notch. */
+  .d-depth .dp-gauge__link {
+    left: 0;
+    width: auto;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding-top: 0.2rem;
+    font-family: var(--dp-mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .d-depth .dp-gauge__link::before {
+    left: 0;
+  }
+  .d-depth .dp-gauge__no,
+  .d-depth .dp-gauge__name {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+  }
+  .d-depth .dp-gauge__no {
+    padding-left: 0.5rem;
+  }
+  .d-depth .dp-gauge__link:hover {
+    color: var(--dp-ink);
+  }
+}
+
+/* ---------- The flight on wide screens ---------- */
+
+@media (min-width: 900px) and (min-aspect-ratio: 5 / 4) {
+  html[data-dp="3d"] .d-depth .dp-hero__cue {
+    position: absolute;
+    right: var(--dp-m);
+    bottom: calc(var(--dp-hud) + 0.75rem);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  html[data-dp="3d"] .d-depth .dp-hero__cue-line {
+    position: relative;
+    overflow: hidden;
+    width: 2.5rem;
+    height: 1px;
+    background: var(--dp-hair-2);
+  }
+  html[data-dp="3d"] .d-depth .dp-hero__cue-line::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--dp-ink);
+    transform: translateX(-100%);
+    animation: dp-cue 2.4s var(--dp-ease) infinite;
+  }
+  html[data-dp="3d"] .d-depth .dp-hero:not([data-on]) .dp-hero__cue-line::after {
+    animation-play-state: paused;
+  }
+  html[data-dp="3d"] .d-depth .dp-xbox {
+    width: min(100%, calc(100svh - var(--dp-top) - var(--dp-hud) - 14rem));
+    margin-bottom: 2.25rem;
+  }
+
+  html[data-dp="3d"] .d-depth .dp-case {
+    display: grid;
+    align-content: center;
+  }
+  html[data-dp="3d"] .d-depth .dp-case__box {
+    width: min(100%, calc((100svh - var(--dp-top) - var(--dp-hud) - 7rem) * var(--arn, 1.6)));
+  }
+  html[data-dp="3d"] .d-depth .dp-case[data-side="right"] .dp-case__box {
+    justify-self: end;
+  }
+  html[data-dp="3d"] .d-depth .dp-case[data-side="left"] .dp-case__box {
+    justify-self: start;
+  }
+}
+/* Phones and portrait tablets: a touch tighter so a whole station fits one screen. */
+@media (max-width: 899px), (max-aspect-ratio: 5 / 4) {
+  html[data-dp="3d"] .d-depth .dp-case {
+    display: flex;
+  }
+  html[data-dp="3d"] .d-depth .dp-case__client {
+    font-size: clamp(2.5rem, 11vw, 3.75rem);
+  }
+  html[data-dp="3d"] .d-depth .dp-case__line {
+    font-size: 1.0625rem;
+  }
+  html[data-dp="3d"] .d-depth .dp-metrics {
+    margin-top: 1.1rem;
+  }
+  html[data-dp="3d"] .d-depth .dp-spec {
+    margin-top: 0.9rem;
+  }
+  html[data-dp="3d"] .d-depth .dp-case .dp-link {
+    margin-top: 0.4rem;
+  }
+}
+@media (max-height: 760px) and (max-width: 899px) {
+  html[data-dp="3d"] .d-depth .dp-spec__row:first-child {
+    display: none;
+  }
+}
+
+@keyframes dp-cue {
+  0% {
+    transform: translateX(-100%);
+  }
+  55%,
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* =====================================================================================
+   After the flight: plain, precise sections
+   ===================================================================================== */
+
+.d-depth .dp-sec {
+  padding: clamp(5rem, 11vw, 9rem) var(--dp-m) 0;
+}
+.d-depth .dp-sec__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0.9rem 2rem;
+  margin-bottom: clamp(2.25rem, 5vw, 4rem);
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--dp-hair);
+}
+.d-depth .dp-sec__head > .dp-k {
+  grid-column: 1 / -1;
+}
+.d-depth .dp-h2 {
+  font-family: var(--dp-display);
+  font-size: clamp(2.5rem, 6.4vw, 6rem);
+  font-weight: 500;
+  line-height: 0.95;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+.d-depth .dp-sec__aside {
+  display: none;
+}
+@media (min-width: 768px) {
+  .d-depth .dp-sec__aside {
+    display: inline-flex;
+  }
+}
+
+/* ---------- (02) More work ---------- */
+
+/* In the flight, the next section rises over the last stretch of the track while the void closes,
+   so there is no dead black screen between the corridor and the page. */
+html[data-dp="3d"] .d-depth .dp-journey + .dp-sec {
+  position: relative;
+  z-index: 3;
+  margin-top: -58svh;
+}
+
+.d-depth .dp-more__all {
+  margin-top: 2rem;
+}
+@media (min-width: 768px) {
+  .d-depth .dp-more__all {
+    display: none;
+  }
+}
+.d-depth .dp-rows {
+  display: flex;
+  gap: 0.75rem;
+  margin: 0 calc(-1 * var(--dp-m));
+  padding: 0 var(--dp-m) 0.5rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--dp-m);
+  scrollbar-width: none;
+}
+.d-depth .dp-rows::-webkit-scrollbar {
+  display: none;
+}
+.d-depth .dp-row {
+  flex: 0 0 min(72vw, 19rem);
+  scroll-snap-align: start;
+}
+.d-depth .dp-row__link {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "fig fig"
+    "no main"
+    ". metric";
+  gap: 0.25rem 0.75rem;
+}
+.d-depth .dp-row__fig {
+  grid-area: fig;
+  position: relative;
+  display: block;
+  aspect-ratio: 4 / 5;
+  margin-bottom: 0.9rem;
+  overflow: hidden;
+  background: #0d0d0f;
+  outline: 1px solid var(--dp-hair);
+}
+.d-depth .dp-row__no {
+  grid-area: no;
+  padding-top: 0.3rem;
+  font-family: var(--dp-mono);
+  font-size: 0.6875rem;
+  color: var(--dp-4);
+}
+.d-depth .dp-row__main {
+  grid-area: main;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.d-depth .dp-row__client {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--dp-display);
+  font-size: 1.5rem;
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  transition: transform 500ms var(--dp-ease);
+}
+.d-depth .dp-row__client::before {
+  content: "";
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  background: var(--accent);
+  outline: 1px solid var(--dp-hair-2);
+}
+.d-depth .dp-row__ind {
+  font-family: var(--dp-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dp-3);
+}
+.d-depth .dp-row__metric {
+  grid-area: metric;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--dp-hair);
+}
+.d-depth .dp-row__value {
+  font-family: var(--dp-display);
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+.d-depth .dp-row__label {
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--dp-3);
+}
+.d-depth .dp-row__arrow {
+  display: none;
+}
+.d-depth .dp-stack {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .d-depth .dp-more__body {
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    gap: clamp(2rem, 4vw, 4.5rem);
+    align-items: start;
+  }
+  .d-depth .dp-rows {
+    display: block;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    border-bottom: 1px solid var(--dp-hair);
+  }
+  .d-depth .dp-row__link {
+    grid-template-columns: 2.75rem minmax(0, 1.15fr) minmax(0, 1fr) 1.5rem;
+    grid-template-areas: "no main metric arrow";
+    align-items: start;
+    gap: 1.25rem;
+    padding: 1.5rem 0 1.6rem;
+    border-top: 1px solid var(--dp-hair);
+  }
+  /* The active row's top rule draws out in red. */
+  .d-depth .dp-row__link::before {
+    content: "";
+    position: absolute;
+    top: -1px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--dp-red);
+    transform: scaleX(0);
+    transform-origin: 0 50%;
+    transition: transform 700ms var(--dp-ease);
+  }
+  .d-depth .dp-row[data-on] .dp-row__link::before {
+    transform: scaleX(1);
+  }
+  .d-depth .dp-row__fig {
+    display: none;
+  }
+  .d-depth .dp-row__client {
+    font-size: clamp(1.5rem, 2.1vw, 2rem);
+  }
+  .d-depth .dp-row[data-on] .dp-row__client {
+    transform: translate3d(0.4rem, 0, 0);
+  }
+  .d-depth .dp-row[data-on] .dp-row__no {
+    color: var(--dp-ink);
+  }
+  .d-depth .dp-row__metric {
+    margin: 0;
+    padding: 0.2rem 0 0;
+    border: 0;
+  }
+  .d-depth .dp-row__arrow {
+    display: block;
+    padding-top: 0.3rem;
+    color: var(--dp-3);
+    transition: transform 500ms var(--dp-ease);
+  }
+  .d-depth .dp-row[data-on] .dp-row__arrow {
+    color: var(--dp-ink);
+    transform: translate3d(0.3rem, 0, 0);
+  }
+
+  /* The stack: every screen in depth; the active one in front, those before it flown past. */
+  .d-depth .dp-stack {
+    position: sticky;
+    top: calc(var(--dp-top) + 3rem);
+    display: block;
+    aspect-ratio: 16 / 10;
+    margin-top: 4.5rem;
+    perspective: 1500px;
+    perspective-origin: 50% -40%;
+    cursor: pointer;
+  }
+  .d-depth .dp-stack__card {
+    position: absolute;
+    inset: 0;
+    z-index: calc(20 - var(--r, 0));
+    background: #0d0d0f;
+    transform: translate3d(0, calc(var(--r, 0) * -4.2%), calc(var(--r, 0) * -120px));
+    transform-origin: 50% 0;
+    opacity: calc(1 - var(--r, 0) * 0.17);
+    transition:
+      transform 850ms var(--dp-ease),
+      opacity 600ms var(--dp-ease);
+  }
+  .d-depth .dp-stack__card[data-rel="past"] {
+    z-index: 21;
+    transform: translate3d(0, 9%, 220px);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .d-depth .dp-stack__card::after {
+    content: "";
+    position: absolute;
+    inset: -8px;
+    border: 1px solid var(--accent);
+    opacity: 0;
+    transition: opacity 500ms var(--dp-ease);
+    pointer-events: none;
+  }
+  .d-depth .dp-stack__card[data-rel="0"]::after {
+    opacity: 0.8;
+  }
+  .d-depth .dp-stack__video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 400ms var(--dp-ease);
+  }
+  .d-depth .dp-stack__video[data-playing] {
+    opacity: 1;
+  }
+  .d-depth .dp-stack__tag {
+    position: absolute;
+    left: 0;
+    top: calc(100% + 1rem);
+    font-family: var(--dp-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--dp-3);
+    opacity: 0;
+    transition: opacity 400ms var(--dp-ease);
+  }
+  .d-depth .dp-stack__card[data-rel="0"] .dp-stack__tag {
+    opacity: 1;
+  }
+}
+
+/* ---------- (03) Clients and awards ---------- */
+
+.d-depth .dp-logos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid var(--dp-hair);
+  border-left: 1px solid var(--dp-hair);
+}
+.d-depth .dp-logo {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 3 / 2;
+  border-right: 1px solid var(--dp-hair);
+  border-bottom: 1px solid var(--dp-hair);
+}
+.d-depth .dp-logo__img {
+  max-width: 72%;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+  opacity: 0.78;
+  transform: scale(0.82);
+  transition:
+    opacity 400ms var(--dp-ease),
+    transform 600ms var(--dp-ease);
+}
+.d-depth .dp-logo__name {
+  position: absolute;
+  left: 0.6rem;
+  bottom: 0.45rem;
+  max-width: calc(100% - 1.2rem);
+  overflow: hidden;
+  font-family: var(--dp-mono);
+  font-size: 0.5625rem;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--dp-3);
+  opacity: 0;
+  transition: opacity 300ms var(--dp-ease);
+}
+@media (hover: hover) {
+  .d-depth .dp-logo:hover .dp-logo__img {
+    opacity: 1;
+    transform: scale(0.9);
+  }
+  .d-depth .dp-logo:hover .dp-logo__name {
+    opacity: 1;
+  }
+}
+@media (min-width: 1024px) {
+  .d-depth .dp-logos {
+    grid-template-columns: repeat(9, minmax(0, 1fr));
+  }
+  .d-depth .dp-logo__img {
+    transform: none;
+  }
+  @media (hover: hover) {
+    .d-depth .dp-logo:hover .dp-logo__img {
+      transform: scale(1.08);
+    }
+  }
+}
+
+.d-depth .dp-recog {
+  margin-top: clamp(3rem, 6vw, 5rem);
+}
+.d-depth .dp-recog__k {
+  padding-bottom: 1rem;
+}
+.d-depth .dp-recog__row {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  grid-template-areas:
+    "mark title"
+    "mark detail";
+  align-items: center;
+  gap: 0.15rem 1.25rem;
+  padding: 1rem 0;
+  border-top: 1px solid var(--dp-hair);
+}
+.d-depth .dp-recog__row:last-child {
+  border-bottom: 1px solid var(--dp-hair);
+}
+.d-depth .dp-recog__mark {
+  grid-area: mark;
+  display: grid;
+  place-items: center;
+  height: 3.5rem;
+  padding: 0.35rem;
+}
+.d-depth .dp-recog__mark--plate {
+  background: var(--dp-ink);
+}
+.d-depth .dp-recog__img {
+  width: 100%;
+  height: 2.8rem;
+  object-fit: contain;
+}
+.d-depth .dp-recog__title {
+  grid-area: title;
+  align-self: end;
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+.d-depth .dp-recog__detail {
+  grid-area: detail;
+  align-self: start;
+  font-size: 0.8125rem;
+  color: var(--dp-3);
+}
+@media (min-width: 900px) {
+  .d-depth .dp-recog {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--dp-gap);
+  }
+  .d-depth .dp-recog__k {
+    grid-column: 1 / 4;
+    padding-top: 1.25rem;
+  }
+  .d-depth .dp-recog__list {
+    grid-column: 4 / 13;
+  }
+  .d-depth .dp-recog__row {
+    grid-template-columns: 10rem minmax(0, 1fr) minmax(0, 1.25fr);
+    grid-template-areas: "mark title detail";
+    gap: 2rem;
+    padding: 1.1rem 0;
+  }
+  .d-depth .dp-recog__title,
+  .d-depth .dp-recog__detail {
+    align-self: center;
+  }
+}
+
+/* ---------- (04) Studio and services ---------- */
+
+.d-depth .dp-studio__top {
+  display: grid;
+  gap: 2.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--dp-hair);
+}
+.d-depth .dp-studio__top .dp-h2 {
+  max-width: 14ch;
+  margin-top: 0.9rem;
+}
+.d-depth .dp-studio__lead {
+  max-width: 32ch;
+  margin-top: 1.25rem;
+  font-size: clamp(1.125rem, 1.6vw, 1.5rem);
+  line-height: 1.35;
+  color: var(--dp-2);
+}
+.d-depth .dp-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+.d-depth .dp-fact {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--dp-hair-2);
+}
+.d-depth .dp-fact__value {
+  font-family: var(--dp-display);
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  font-weight: 500;
+  line-height: 0.95;
+  letter-spacing: -0.045em;
+  font-variant-numeric: tabular-nums;
+}
+.d-depth .dp-fact__label {
+  font-size: 0.8125rem;
+  color: var(--dp-3);
+}
+@media (min-width: 1100px) {
+  .d-depth .dp-studio__top {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr);
+    align-items: end;
+    gap: 4rem;
+  }
+  .d-depth .dp-facts {
+    gap: 2rem;
+  }
+}
+
+.d-depth .dp-svc {
+  margin-top: clamp(3rem, 6vw, 5rem);
+}
+.d-depth .dp-svc__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+.d-depth .dp-svc__btns {
+  display: flex;
+  gap: 0.5rem;
+}
+.d-depth .dp-svc__track {
+  margin: 0 calc(-1 * var(--dp-m));
+  padding: 0.75rem var(--dp-m) 1rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--dp-m);
+  scrollbar-width: none;
+  cursor: grab;
+}
+.d-depth .dp-svc__track::-webkit-scrollbar {
+  display: none;
+}
+.d-depth .dp-svc__track:focus-visible {
+  outline-offset: -2px;
+}
+.d-depth .dp-svc__track[data-drag] {
+  scroll-snap-type: none;
+  cursor: grabbing;
+  user-select: none;
+}
+.d-depth .dp-svc__list {
+  display: flex;
+  gap: var(--dp-gap);
+  width: max-content;
+}
+.d-depth .dp-svc__card {
+  width: min(78vw, 22rem);
+  scroll-snap-align: start;
+}
+.d-depth .dp-svc__img {
+  position: relative;
+  aspect-ratio: 3 / 2;
+  margin-bottom: 1rem;
+  overflow: hidden;
+  background: #0d0d0f;
+}
+.d-depth .dp-svc__img img {
+  transition: transform 900ms var(--dp-ease);
+}
+@media (hover: hover) {
+  .d-depth .dp-svc__card:hover .dp-svc__img img {
+    transform: scale(1.04);
+  }
+}
+.d-depth .dp-svc__title {
+  margin-top: 0.4rem;
+  font-family: var(--dp-display);
+  font-size: clamp(1.3rem, 1.8vw, 1.625rem);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+.d-depth .dp-svc__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+}
+@media (hover: hover) {
+  .d-depth .dp-svc__link:hover {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
+    text-decoration-color: var(--dp-red);
+  }
+}
+.d-depth .dp-svc__line {
+  max-width: 30ch;
+  margin-top: 0.4rem;
+  font-size: 0.9375rem;
+  color: var(--dp-2);
+}
+.d-depth .dp-svc__proof {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--dp-hair);
+  font-size: 0.8125rem;
+  color: var(--dp-3);
+}
+.d-depth .dp-svc__proof-k {
+  display: block;
+  margin-bottom: 0.2rem;
+  font-family: var(--dp-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dp-4);
+}
+@media (min-width: 1024px) {
+  .d-depth .dp-svc__card {
+    width: clamp(18rem, 27vw, 25rem);
+  }
+}
+.d-depth .dp-studio__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 2.5rem;
+}
+
+/* ---------- Contact and footer ---------- */
+
+.d-depth .dp-foot {
+  margin-top: clamp(5rem, 11vw, 9rem);
+}
+.d-depth .dp-contact {
+  padding: 0 var(--dp-m) clamp(4rem, 8vw, 7rem);
+}
+.d-depth .dp-gate {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: clamp(3.5rem, 9vw, 8rem) clamp(1rem, 6vw, 6rem);
+  text-align: center;
+}
+.d-depth .dp-gate__c {
+  position: absolute;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 0 solid var(--dp-hair-2);
+}
+.d-depth .dp-gate__c--tl {
+  top: 0;
+  left: 0;
+  border-width: 1px 0 0 1px;
+}
+.d-depth .dp-gate__c--tr {
+  top: 0;
+  right: 0;
+  border-width: 1px 1px 0 0;
+}
+.d-depth .dp-gate__c--bl {
+  bottom: 0;
+  left: 0;
+  border-width: 0 0 1px 1px;
+}
+.d-depth .dp-gate__c--br {
+  right: 0;
+  bottom: 0;
+  border-width: 0 1px 1px 0;
+}
+.d-depth .dp-contact__h {
+  max-width: 13ch;
+  margin-top: 1.25rem;
+  font-family: var(--dp-display);
+  font-size: clamp(2.6rem, 7.2vw, 6.75rem);
+  font-weight: 500;
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+  text-wrap: balance;
+}
+.d-depth .dp-contact__line {
+  max-width: 34ch;
+  margin-top: 1.5rem;
+  font-size: clamp(1.0625rem, 1.4vw, 1.3125rem);
+  color: var(--dp-2);
+}
+.d-depth .dp-contact__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: 100%;
+  margin-top: 2.25rem;
+}
+@media (min-width: 640px) {
+  .d-depth .dp-contact__actions {
+    flex-direction: row;
+    justify-content: center;
+    width: auto;
+  }
+}
+
+.d-depth .dp-foot__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+  padding: 2rem var(--dp-m);
+  border-top: 1px solid var(--dp-hair);
+}
+.d-depth .dp-foot__col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.d-depth .dp-foot__link,
+.d-depth .dp-foot__copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  font-size: 0.9375rem;
+  color: var(--dp-2);
+}
+.d-depth .dp-foot__copy {
+  color: var(--dp-3);
+}
+@media (hover: hover) {
+  .d-depth .dp-foot__link:hover {
+    color: var(--dp-ink);
+  }
+}
+@media (min-width: 768px) {
+  .d-depth .dp-foot__grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .d-depth .dp-foot__col--end {
+    align-items: flex-end;
+  }
+}
+@media (pointer: fine) {
+  .d-depth .dp-foot__link,
+  .d-depth .dp-foot__copy {
+    min-height: 2rem;
+  }
+}
+.d-depth .dp-foot__base {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem var(--dp-m) calc(1.75rem + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--dp-hair);
+  font-family: var(--dp-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dp-4);
+}
+
+/* ---------- Depth reveals (CSS scroll-driven; without support everything simply shows) ---------- */
+
+/* No backwards fill: an element waiting below the fold keeps its own style and takes the first
+   frame only at entry 0%, while it is still entirely off screen (so restored scroll positions and
+   full-page captures never show blanks). */
+@supports (animation-timeline: view()) {
+  html[data-motion="on"] .d-depth .dp-rise {
+    animation: dp-rise linear forwards;
+    animation-timeline: view();
+    animation-range: entry 0% entry 75%;
+  }
+  html[data-motion="on"] .d-depth .dp-logo.dp-rise {
+    animation-range: entry 0% entry calc(45% + var(--i, 0) * 6%);
+  }
+  /* The last frame: the contact block comes forward out of the dark, like the planes did. */
+  html[data-motion="on"] .d-depth .dp-gate {
+    animation: dp-arrive linear forwards;
+    animation-timeline: view();
+    animation-range: entry 0% cover 45%;
+  }
+  /* Service cards lean back as they enter and leave the strip. */
+  html[data-motion="on"] .d-depth .dp-svc__card {
+    animation:
+      dp-lean-in linear none,
+      dp-lean-out linear none;
+    animation-timeline: view(inline), view(inline);
+    animation-range: entry, exit;
+  }
+}
+@keyframes dp-rise {
+  from {
+    opacity: 0;
+    transform: perspective(900px) translate3d(0, 2rem, -5rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes dp-arrive {
+  from {
+    opacity: 0.15;
+    transform: perspective(1200px) translate3d(0, 0, -320px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes dp-lean-in {
+  from {
+    opacity: 0.35;
+    transform: perspective(1100px) translate3d(0, 0, -140px) rotateY(-12deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes dp-lean-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0.35;
+    transform: perspective(1100px) translate3d(0, 0, -140px) rotateY(12deg);
+  }
+}

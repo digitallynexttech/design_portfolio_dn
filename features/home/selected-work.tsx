@@ -31,7 +31,7 @@ function Fallback({ slug }: { slug: string }) {
 }
 
 /**
- * (02) Selected work. On wide screens one vessel stays beside the cases and the water reshapes for
+ * (01) Selected work. On wide screens one vessel stays beside the cases and the water reshapes for
  * each client as it scrolls past. On phones each case has its own stage that holds while its card
  * slides over it, so the shape is always in view while you read.
  */
@@ -45,7 +45,7 @@ export function SelectedWork({ flagships }: { flagships: CaseStudy[] }) {
       aria-labelledby="selected-title"
       className="relative scroll-mt-[calc(5rem-var(--spacing-section))] px-(--gutter) pt-section"
     >
-      <p className="label">(02) Selected work</p>
+      <p className="label">(01) Selected work</p>
       <h2 id="selected-title" className="mt-4 font-display text-showpiece font-semibold">
         Shapes we&apos;ve taken<span className="stop">.</span>
       </h2>

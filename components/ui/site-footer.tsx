@@ -1,4 +1,5 @@
 import { CAREERS_URL, CONTACT_URL, COPYRIGHT_YEAR, JOURNAL_URL, MAIN_SITE, NAV, PRIVACY_URL, SOCIALS } from "@/lib/site";
+import { MascotWindow } from "@/features/mascot/mascot-window";
 import { FlowLink } from "./flow-link";
 
 // Footer links: full-width 44px rows on touch screens (thumb-sized); with a mouse, compact and only as wide
@@ -9,15 +10,24 @@ export function SiteFooter() {
   return (
     <footer className="relative border-t border-paper/10 px-(--gutter) pt-section pb-28 md:pb-12">
       {/* .footer-cta: the case-study pages hide it on every chapter but the last. */}
-      <div className="footer-cta pb-20 md:pb-28">
+      <div className="footer-cta flex flex-col items-center pb-20 text-center md:pb-28">
         <p className="label">(∞) Next</p>
-        <h2 className="mt-4 font-display text-d1 font-semibold">
-          Have something that needs shaping<span className="stop">?</span>
+        {/* Two staggered lines with the X's window beside the first; on phones the window leads. */}
+        <h2 className="mt-16 flex flex-col items-center font-display text-statement font-semibold md:mt-14">
+          <span className="flex flex-col items-center gap-5 md:translate-x-[-0.8em] md:flex-row md:items-end md:gap-[0.3em]">
+            <span>Have something</span>
+            <MascotWindow className="order-first md:order-0" />
+          </span>
+          <span className="md:translate-x-[0.8em]">
+            that needs shaping<span className="stop">?</span>
+          </span>
         </h2>
-        <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap md:mt-12">
+        <p className="mt-6 max-w-[34ch] text-lg text-balance text-(--text-2) md:mt-8">Tell us what you&apos;re making. We&apos;ll take its shape.</p>
+        <div className="mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-center md:mt-10">
           <a
             href={CONTACT_URL}
             className="btn btn--primary btn--lg"
+            data-mascot-wave
           >
             Start a project <span aria-hidden>↗</span>
           </a>

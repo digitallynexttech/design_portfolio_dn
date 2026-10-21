@@ -59,57 +59,16 @@
 }
 
 /* ---------- One reveal language ----------
-   .reveal (globals.css) lifts text into place. Here: .stagger offsets siblings by --i, and .reveal-fill
-   fills an image frame from the bottom up, like water rising in a glass. Both run on the scroll
-   timeline only where supported and motion is on; everywhere else the content is simply there.
-   The fill moves layers rather than clipping (a moving clip repaints the picture every frame): the
-   frame clips, the water layer rises into it, and the layer inside slides the other way so the
-   picture holds still. Transforms on a scroll timeline run on the compositor. */
+   .reveal (globals.css) lifts text into place. Here: .stagger offsets siblings by --i. It runs on the
+   scroll timeline only where supported and motion is on; everywhere else the content is simply there. */
 
 @supports (animation-timeline: view()) {
   [data-motion="on"] .reveal.stagger {
     animation-range: entry calc(var(--i, 0) * 8%) entry calc(55% + var(--i, 0) * 8%);
   }
-
-  /* Named, so the layers inside (whose clipping frame would otherwise be their scroll container)
-     follow the frame's progress through the page, not their own inside the frame. */
-  [data-motion="on"] .reveal-fill {
-    view-timeline-name: --fill;
-  }
-  [data-motion="on"] .reveal-fill__water {
-    animation: reveal-fill linear both;
-    animation-timeline: --fill;
-    animation-range: entry 0% cover 40%;
-  }
-  [data-motion="on"] .reveal-fill__still {
-    animation: reveal-fill-hold linear both;
-    animation-timeline: --fill;
-    animation-range: entry 0% cover 40%;
-  }
-  [data-motion="on"] .reveal-fill img {
-    animation: reveal-fill-settle linear both;
-    animation-timeline: --fill;
-    animation-range: entry 0% cover 45%;
-  }
 }
 
-@keyframes reveal-fill {
-  from {
-    transform: translateY(100%);
-  }
-}
-@keyframes reveal-fill-hold {
-  from {
-    transform: translateY(-100%);
-  }
-}
-@keyframes reveal-fill-settle {
-  from {
-    transform: scale(1.12) translateY(4%);
-  }
-}
-
-/* ---------- (03) More work as rows, with the project's screen on hover (10 Oct 2026) ---------- */
+/* ---------- (02) More work as rows, with the project's screen on hover (10 Oct 2026) ---------- */
 
 .work-rows {
   position: relative;
