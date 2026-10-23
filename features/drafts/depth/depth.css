@@ -660,7 +660,7 @@ html[data-dp="3d"] .d-depth:not([data-past]) .dp-top::after {
 /* The bust's picture: its helmet (centre --cx, --cy of the picture, diameter --d of its height,
    picture aspect --ar) laid on the slot. */
 .d-depth .dp-hero__fig {
-  /* printed by h_compose.py for hero-bust-6.webp */
+  /* printed by h_compose.py for hero-bust-7.webp */
   --cx: 0.3348;
   --cy: 0.1402;
   --d: 0.2731;
@@ -2109,7 +2109,7 @@ html[data-dp="3d"] .d-depth .dp-journey + .dp-sec {
 .d-depth .dp-astro-gate {
   position: relative;
   width: 6.5rem;
-  aspect-ratio: 592 / 922;
+  aspect-ratio: 610 / 920;
   margin-bottom: 1.25rem;
 }
 .d-depth .dp-astro-gate__poster {

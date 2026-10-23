@@ -7,13 +7,13 @@ import type { LoadReport } from "./loader-bus";
 // colour, roughness and occlusion are baked from the Cycles look into textures. No animation clips
 // ship with it. Its pose is blended here, every frame, from a small table: reaching toward you in
 // the hero, freefall while it descends, settled at the destination, plus a slow weightless drift.
-// The X is the site's own rigged mascot (dn-x-5.glb: the logo's shoes, matched legs, a whole smile),
+// The X is the site's own rigged mascot (dn-x-6.glb: the logo's shoes, matched legs, a whole smile),
 // seated on the "perch" bone on the left shoulder, so it can never drift off: wherever the chest
 // goes, the X goes.
 
 export const ASTRONAUT_MODEL = "/models/astronaut/astronaut-v3.glb";
 export const ASTRONAUT_MODEL_PHONE = "/models/astronaut/astronaut-v3-phone.glb";
-const X_MODEL = "/models/dn-x/dn-x-5.glb";
+const X_MODEL = "/models/dn-x/dn-x-6.glb";
 const WEAVE = "/models/astronaut/weave.webp";
 /** The X's height on the shoulder, in metres (the astronaut is 1.87 m to the top of the helmet). */
 export const X_SCALE = 0.38;
