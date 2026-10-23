@@ -3,6 +3,7 @@ import { FIGURE_H, HELMET, loadAstronaut, type Astronaut } from "./astronaut";
 import { createEarth, type Earth } from "./earth";
 import type { LoadReport } from "./loader-bus";
 import { createSpace, type Space } from "./space";
+import { createXHop, type XHop } from "./x-hop";
 import { STATION_DEPTH as D, type DepthPlane } from "./types";
 
 // The flight's scene: one camera falling down -z through space. Each station's plane hangs at DIST
@@ -64,6 +65,8 @@ export type DepthScene = {
   pick: (mx: number, my: number) => string | null;
   /** Off while the tab is hidden: the reel pauses. */
   setRunning: (on: boolean) => void;
+  /** Something is mid-move that wants every frame (the X's jumps). */
+  animating: () => boolean;
   /** The X's hello, held while the preloader is up (holdHello), given when it lifts. */
   hello: () => void;
   /** Where the astronaut is on screen (CSS pixels): its box and a sample of its posed vertices, for
@@ -99,6 +102,12 @@ type Options = {
   skyOnly?: boolean;
   /** Tooling: the astronaut alone on a transparent canvas (the contact gate's still is captured from it). */
   astroOnly?: boolean;
+  /** The X's last jumps (x-hop.ts): where it stands on "Join the studio", the footer's sign-off and
+   *  its X, and what to tell the page when the X has become that letter. */
+  xPerch?: HTMLElement | null;
+  xMark?: HTMLElement | null;
+  xSlot?: Element | null;
+  onXHome?: (on: boolean) => void;
   /** The preloader is up: the X keeps its hello (and every other wave) until hello() is called. */
   holdHello?: boolean;
   /** Where downloads and build steps are reported, for the preloader (loader-bus.ts). */
@@ -246,6 +255,9 @@ export async function createScene(o: Options): Promise<DepthScene> {
   let W = 1;
   let H = 1;
   let tanHalf = Math.tan(THREE.MathUtils.degToRad(18));
+  /** As high as a whole figure's top may reach, in NDC and in CSS px (--astro-clear-top, read on layout). */
+  let clearTop = 1;
+  let clearPx = 0;
   let bend = 0;
 
   // ---------- Space ----------
@@ -424,6 +436,7 @@ export async function createScene(o: Options): Promise<DepthScene> {
 
   let astro: Astronaut | null = null;
   let astroVisible = false;
+  let xhop: XHop | null = null;
   let earth: Earth | null = null;
   const envs: THREE.Texture[] = [];
 
@@ -478,6 +491,19 @@ export async function createScene(o: Options): Promise<DepthScene> {
     charScene.environmentIntensity = 1;
     rig.add(made.root);
     astro = made;
+    if (o.xPerch && o.xMark && o.xSlot && !o.astroOnly && !o.skyOnly) {
+      xhop = createXHop({
+        astro: made,
+        world: charScene,
+        camera,
+        depth: NEAR,
+        perch: o.xPerch,
+        mark: o.xMark,
+        slot: o.xSlot,
+        onHome: (on) => o.onXHome?.(on),
+      });
+      xhop.layout();
+    }
     // Compiled before it is shown, so its first frame doesn't stall.
     await renderer.compileAsync(charScene, camera);
     if (disposed) return;
@@ -616,6 +642,9 @@ export async function createScene(o: Options): Promise<DepthScene> {
       oz: 0,
     });
     keys = next.sort((a, b) => a.at - b.at);
+    clearPx = cssNumber(sky, "--astro-clear-top", 0);
+    clearTop = 1 - (2 * clearPx) / H;
+    xhop?.layout();
 
     contact = null;
     if (o.contact) {
@@ -806,6 +835,10 @@ export async function createScene(o: Options): Promise<DepthScene> {
     // ---------- The astronaut ----------
     astroVisible = false;
     if (astro && placeAt(s.c, place)) {
+      // A whole figure never reaches above the header: on short, wide windows the work's corner slots
+      // start above the screen, and the path between them swings higher still. (A helmet-anchored
+      // place, the hero's and the way out of it, is placed by its helmet and left alone.)
+      if (!place.oy) place.y = Math.min(place.y, clearTop - place.h);
       // Below the flight: it waits at the contact gate, and comes forward as the gate rises.
       let arrive = 0;
       if (contact && s.c > o.exit - 0.5) {
@@ -860,8 +893,12 @@ export async function createScene(o: Options): Promise<DepthScene> {
         cam.updateProjectionMatrix();
         keyLight.shadow.normalBias = 0.012 * scale;
       }
-      lookX += (THREE.MathUtils.clamp(place.face * 0.55 + s.px * 0.5, -1, 1) - lookX) * k;
-      lookY += (THREE.MathUtils.clamp(place.lookY * 0.8 + s.py * 0.4, -1, 1) - lookY) * k;
+      // Its head follows the X while the X is off on its own.
+      const xAt = xhop?.free();
+      const lookXTo = xAt ? (xAt.x - rig.position.x) / (scale * 1.5) : place.face * 0.55 + s.px * 0.5;
+      const lookYTo = xAt ? (xAt.y - rig.position.y - scale * 0.7) / (scale * 1.5) : place.lookY * 0.8 + s.py * 0.4;
+      lookX += (THREE.MathUtils.clamp(lookXTo, -1, 1) - lookX) * k;
+      lookY += (THREE.MathUtils.clamp(lookYTo, -1, 1) - lookY) * k;
       // The station's light falls on it: the client's colour in the corridor, the brand red in the deep.
       let a = 0;
       while (a < accents.length - 2 && s.c > accents[a + 1].at) a++;
@@ -869,7 +906,24 @@ export async function createScene(o: Options): Promise<DepthScene> {
       accentNow.copy(accents[a].color).lerp(accents[a + 1].color, e);
       accentLight.color.copy(accentNow);
 
-      astro.frame({ dt: s.dt, t: s.t, hero: heroW, fall: fallW, settle: settleW, lookX, lookY, xYaw: place.xYaw, drift: 1 });
+      astro.frame({
+        dt: s.dt,
+        t: s.t,
+        hero: heroW,
+        fall: fallW,
+        settle: settleW,
+        lookX,
+        lookY,
+        xYaw: place.xYaw,
+        drift: 1,
+        xSit: xhop?.sit() ?? 1,
+        xTuck: xhop?.tuck() ?? 0,
+      });
+      // The X's own way: onto "Join the studio" as the astronaut arrives, into the footer's letter.
+      if (xhop) {
+        camera.updateMatrixWorld();
+        xhop.update({ t: s.t, scrollY: s.scrollY, arrive, W, H, tanHalf, clearTop: clearPx });
+      }
       // Weightless things never quite stop: the journey keeps drawing (at ~30 fps once idle).
       busy = true;
       astroVisible = scale * FIGURE_H > 0.002;
@@ -886,7 +940,7 @@ export async function createScene(o: Options): Promise<DepthScene> {
         if (station === 1) react("Wave", s.t);
         else if (station === 2) react("Jump", s.t);
       }
-      if (arrive > 0.92 && !arrived) {
+      if (!xhop && arrive > 0.92 && !arrived) {
         arrived = true;
         react("Wave", s.t, 1);
       } else if (arrive < 0.4) arrived = false;
@@ -932,6 +986,7 @@ export async function createScene(o: Options): Promise<DepthScene> {
       react("Wave", lastT, 0);
       o.invalidate();
     },
+    animating: () => xhop?.animating() ?? false,
     setRunning(on) {
       running = on;
       if (!on && video && !video.paused) video.pause();
@@ -957,9 +1012,16 @@ export async function createScene(o: Options): Promise<DepthScene> {
         b[3] = Math.max(b[3], py);
       };
       astro.root.updateMatrixWorld(true);
-      astro.root.traverse((n) => {
+      astro.x.seat.updateMatrixWorld(true);
+      const shown = (n: THREE.Object3D | null) => {
+        for (; n; n = n.parent) if (!n.visible) return false;
+        return true;
+      };
+      const seen = new Set<THREE.Object3D>();
+      const each = (n: THREE.Object3D) => {
         const mesh = n as THREE.Mesh;
-        if (!mesh.isMesh || !(mesh.material as THREE.Material).visible) return;
+        if (seen.has(n) || !mesh.isMesh || !(mesh.material as THREE.Material).visible || !shown(n)) return;
+        seen.add(n);
         const isVisor = mesh.material === astro?.visor;
         const count = mesh.geometry.attributes.position.count;
         for (let i = 0; i < count; i += 3) {
@@ -974,7 +1036,9 @@ export async function createScene(o: Options): Promise<DepthScene> {
           if (isVisor) grow(visor, px, py);
           if (mesh.userData.x) grow(xBox, px, py);
         }
-      });
+      };
+      astro.root.traverse(each);
+      astro.x.seat.traverse(each);
       return { x: ((x0 + 1) / 2) * W, y: ((1 - y1) / 2) * H, w: ((x1 - x0) / 2) * W, h: ((y1 - y0) / 2) * H, pts, visor, mascot: xBox };
     },
     dispose() {
@@ -987,6 +1051,7 @@ export async function createScene(o: Options): Promise<DepthScene> {
         video.remove();
       }
       videoTexture?.dispose();
+      xhop?.dispose();
       astro?.dispose();
       for (const t of envs) t.dispose();
       earth?.dispose();

@@ -15,7 +15,7 @@ export const ASTRONAUT_MODEL_PHONE = "/models/astronaut/astronaut-v3-phone.glb";
 const X_MODEL = "/models/dn-x/dn-x.glb";
 const WEAVE = "/models/astronaut/weave.webp";
 /** The X's height on the shoulder, in metres (the astronaut is 1.87 m to the top of the helmet). */
-const X_SCALE = 0.38;
+export const X_SCALE = 0.38;
 /**
  * Where the X's hips sit, from the perch (the top of the left shoulder) in the astronaut's frame, in
  * metres: out over the shoulder's edge, up, forward. On the perch itself its legs were inside the
@@ -115,6 +115,9 @@ export type AstronautFrame = {
   xYaw: number;
   /** How much the body drifts, 0…1. */
   drift: number;
+  /** How far the X sits (1, on the shoulder; 0 standing), and how far its arms are tucked in (0…1). */
+  xSit?: number;
+  xTuck?: number;
 };
 
 export type Astronaut = {
@@ -127,6 +130,12 @@ export type Astronaut = {
   /** Poses the figure and steps the X's clips. */
   frame: (f: AstronautFrame) => void;
   react: (clip: XClip) => void;
+  /**
+   * The X, for the scene to take off the shoulder (x-hop.ts). seat: the X, its origin at its feet;
+   * mark: where it sits on the shoulder now (follows the pose); setFree moves it between the shoulder
+   * and the given parent, where the scene places it, keeping it exactly where it is.
+   */
+  x: { seat: THREE.Group; mark: THREE.Object3D; setFree: (free: boolean, parent: THREE.Object3D) => void };
   /** Testing: how much of the X is inside the suit as posed now (sampled points, and the deepest, in metres). */
   probe: () => { inside: number; total: number; deepest: number; gap: number };
   dispose: () => void;
@@ -439,6 +448,26 @@ export async function loadAstronaut(opts: AstronautOptions): Promise<Astronaut> 
   xTurn.add(xModel);
   seat.add(xTurn);
   mount.add(seat);
+  // Where it sits on the shoulder, posed with it, so the scene can bring it back to exactly there.
+  const seatMark = new THREE.Object3D();
+  mount.add(seatMark);
+  let xFree = false;
+  const setFree = (free: boolean, parent: THREE.Object3D) => {
+    if (free === xFree) return;
+    xFree = free;
+    if (free) {
+      // its turn moves into the seat, so the scene places one object
+      seat.quaternion.multiply(xTurn.quaternion);
+      xTurn.rotation.set(0, 0, 0);
+      parent.attach(seat);
+    } else {
+      mount.add(seat);
+      seat.position.copy(seatMark.position);
+      seat.quaternion.identity();
+      seat.scale.setScalar(1);
+      seat.visible = true;
+    }
+  };
 
   const mixer = new THREE.AnimationMixer(xModel);
   const actions = new Map(x.animations.map((clip) => [clip.name, mixer.clipAction(clip)]));
@@ -501,6 +530,10 @@ export async function loadAstronaut(opts: AstronautOptions): Promise<Astronaut> 
     { b: xBones.get("footL"), rad: 30 * DEG },
     { b: xBones.get("footR"), rad: 30 * DEG },
   ].map((p) => ({ ...p, rest: p.b?.quaternion.clone() }));
+  // Its arms, tucked in as it becomes the footer's letter (the letter has none).
+  const arms = [xBones.get("upper_armL"), xBones.get("upper_armR")]
+    .filter((b): b is THREE.Bone => Boolean(b))
+    .map((b) => ({ b, rest: b.scale.clone() }));
 
   const frame = (f: AstronautFrame) => {
     for (const [b, rest] of restLocal) b.quaternion.copy(rest);
@@ -527,17 +560,25 @@ export async function loadAstronaut(opts: AstronautOptions): Promise<Astronaut> 
     float.position.y = 0.035 * s(0.83, 0) * w;
     float.rotation.set(0.045 * s(0.57, 1.7) * w, 0.05 * s(0.41, 0.6) * w, 0.06 * s(0.47, 2.9) * w);
 
-    // The X: turned toward where it's told (the camera, mostly), its eyes following the look.
-    xTurn.rotation.y = f.xYaw + f.lookX * 0.25;
+    // The X: turned toward where it's told (the camera, mostly), its eyes following the look. Off the
+    // shoulder the scene turns it.
+    const xYaw = f.xYaw + f.lookX * 0.25;
+    if (!xFree) xTurn.rotation.y = xYaw;
     for (const eye of eyes) {
       eye.node.position.copy(eye.rest);
       eye.node.position.x += f.lookX * 0.006;
       eye.node.position.y += f.lookY * 0.006;
     }
-    seat.position.set(SEAT.out, -X_SCALE * 0.42 + SEAT.up + SEAT_SETTLED.up * f.settle, SEAT.fwd + SEAT_SETTLED.fwd * f.settle);
+    seatMark.position.set(SEAT.out, -X_SCALE * 0.42 + SEAT.up + SEAT_SETTLED.up * f.settle, SEAT.fwd + SEAT_SETTLED.fwd * f.settle);
+    seatMark.rotation.set(0, xYaw, 0);
+    if (!xFree) seat.position.copy(seatMark.position);
     for (const p of sit) if (p.b && p.rest) p.b.quaternion.copy(p.rest);
+    for (const a of arms) a.b.scale.copy(a.rest);
     mixer.update(Math.min(f.dt, 1 / 20));
-    for (const p of sit) xRotate(p.b, X, p.rad);
+    const sitW = f.xSit ?? 1;
+    for (const p of sit) xRotate(p.b, X, p.rad * sitW);
+    const tuck = f.xTuck ?? 0;
+    if (tuck > 0) for (const a of arms) a.b.scale.multiplyScalar(Math.max(1e-3, 1 - tuck));
   };
 
   return {
@@ -546,6 +587,7 @@ export async function loadAstronaut(opts: AstronautOptions): Promise<Astronaut> 
     visor,
     frame,
     react: play,
+    x: { seat, mark: seatMark, setFree },
     probe() {
       // The suit as posed, in world space, cut down to the triangles near the X; then a point is
       // inside when a ray from it first meets the suit from within (the face turned the ray's way),

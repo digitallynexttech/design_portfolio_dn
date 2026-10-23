@@ -294,7 +294,7 @@ export function Journey({
         last = 0;
         return;
       }
-      if (moving || t - lastInput < IDLE_AFTER) raf = requestAnimationFrame(frame);
+      if (moving || scene?.animating() || t - lastInput < IDLE_AFTER) raf = requestAnimationFrame(frame);
       else idleTimer = window.setTimeout(kick, IDLE_FRAME);
     };
     const kick = () => {
@@ -503,6 +503,7 @@ export function Journey({
       el.removeAttribute("data-live");
       draft.removeAttribute("data-live");
       draft.removeAttribute("data-astro");
+      draft.removeAttribute("data-x-home");
     };
     const boot = async () => {
       const weak = detectTier({ ignoreMotion: true }) <= 1;
@@ -529,6 +530,10 @@ export function Journey({
           astroOnly: location.search.includes("astro-only"),
           holdHello: preload,
           progress: preload ? loadBus.report : undefined,
+          xPerch: draft.querySelector<HTMLElement>("[data-x-perch]"),
+          xMark: draft.querySelector<HTMLElement>(".dp-foot__mark"),
+          xSlot: draft.querySelector("[data-x-slot]"),
+          onXHome: (on) => draft.toggleAttribute("data-x-home", on),
           onHover,
           onReady: (key) => st.querySelector(`[data-box="${key}"]`)?.closest("[data-at]")?.setAttribute("data-ready", ""),
           onAstroReady: () => draft.setAttribute("data-astro", "live"),
@@ -590,6 +595,7 @@ export function Journey({
       draft.removeAttribute("data-live");
       draft.removeAttribute("data-astro");
       draft.removeAttribute("data-past");
+      draft.removeAttribute("data-x-home");
       mq.removeEventListener("change", onMotion);
     };
 

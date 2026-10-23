@@ -325,6 +325,21 @@ html:has(.d-depth):not(.dp-away) ::selection {
 html[data-dp="3d"] .d-depth:not([data-past]) .dp-top::before {
   opacity: 0;
 }
+/* In the flight a dark fall sits behind the header instead, as behind the gauge: the X waves on the
+   astronaut's shoulder up into this band in the hero, and the links read over it all the same. */
+.d-depth .dp-top::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 -1.75rem;
+  z-index: -2;
+  background: linear-gradient(to bottom, rgb(7 7 8 / 0.78) 0%, rgb(7 7 8 / 0.5) 55%, rgb(7 7 8 / 0));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 400ms var(--dp-ease);
+}
+html[data-dp="3d"] .d-depth:not([data-past]) .dp-top::after {
+  opacity: 1;
+}
 .d-depth .dp-top__logo {
   display: flex;
   align-items: center;
@@ -896,6 +911,61 @@ html[data-dp="3d"] .d-depth:not([data-past]) .dp-top::before {
   }
 }
 
+/* Tablets, upright (Karan, 23 Oct 2026: like the desktop): the copy on the left over the dark fall,
+   its label with it, the headline large, the buttons side by side; the astronaut's helmet high on the
+   right, its arm reaching toward the words and the X on its shoulder. Landscape tablets are wide
+   enough for the desktop frame itself. */
+@media (min-width: 700px) and (max-aspect-ratio: 5 / 4) {
+  .d-depth .dp-hero {
+    --dp-helmet: min(22svh, 34vw);
+    padding-top: calc(var(--dp-top) + 1.25rem);
+    padding-bottom: calc(var(--dp-hud) + 3rem);
+  }
+  .d-depth .dp-hero__space {
+    display: contents;
+  }
+  .d-depth .dp-hero__copy {
+    position: relative;
+    max-width: min(66vw, 36rem);
+  }
+  .d-depth .dp-hero__label {
+    position: static;
+    margin-bottom: 1.4rem;
+  }
+  .d-depth .dp-h1 {
+    font-size: clamp(4rem, 9.6vw, 7rem);
+  }
+  .d-depth .dp-hero__lead {
+    max-width: 25ch;
+    margin-top: 1.4rem;
+    font-size: clamp(1.125rem, 2.2vw, 1.4rem);
+    line-height: 1.42;
+  }
+  .d-depth .dp-hero__actions {
+    display: flex;
+    gap: 0.9rem;
+    margin-top: 2rem;
+  }
+  .d-depth .dp-hero__actions .dp-btn {
+    min-height: 3.5rem;
+    padding: 0 1.6rem;
+    font-size: 1.0625rem;
+  }
+  .d-depth .dp-hero::before {
+    background:
+      linear-gradient(to top, rgb(7 7 8 / 0.92) 0%, rgb(7 7 8 / 0.72) 28%, transparent 56%),
+      linear-gradient(to right, rgb(7 7 8 / 0.5) 0%, transparent 60%);
+  }
+  .d-depth .dp-astro--hero {
+    position: absolute;
+    left: calc(52% - var(--dp-helmet) / 2);
+    top: calc(29% - var(--dp-helmet) / 2);
+    width: var(--dp-helmet);
+    height: var(--dp-helmet);
+    max-height: none;
+  }
+}
+
 @media (min-width: 900px) {
   .d-depth .dp-reel__head {
     flex-direction: row;
@@ -945,8 +1015,10 @@ html[data-dp="3d"] .d-depth .dp-stage {
   isolation: isolate;
 }
 /* The sky: fixed, as tall as the largest viewport so a phone's collapsing toolbar never resizes the
-   canvas. --astro-deep-* place the astronaut once it has fallen on ahead (share of the screen). */
+   canvas. --astro-deep-* place the astronaut once it has fallen on ahead (share of the screen).
+   --astro-clear-top (px) is as high as a whole figure may reach: below the header, with room. */
 html[data-dp="3d"] .d-depth .dp-sky {
+  --astro-clear-top: 76;
   --astro-deep-x: 0.86;
   --astro-deep-y: 0.6;
   --astro-deep-h: 0.15;
@@ -1126,6 +1198,21 @@ html[data-dp="3d"] .d-depth .dp-astro--hero {
     top: calc(36% - 20svh);
     width: 40svh;
     height: 40svh;
+  }
+}
+/* Tablets, upright: the helmet high on the right, turned toward the copy as on the desktop. */
+@media (min-width: 700px) and (max-aspect-ratio: 5 / 4) {
+  html[data-dp="3d"] .d-depth .dp-hero {
+    padding-top: calc(var(--dp-top) + 1.25rem);
+    padding-bottom: calc(var(--dp-hud) + 3rem);
+  }
+  html[data-dp="3d"] .d-depth .dp-astro--hero {
+    --yaw: -40;
+    position: absolute;
+    left: calc(52% - var(--dp-helmet) / 2);
+    top: calc(29% - var(--dp-helmet) / 2);
+    width: var(--dp-helmet);
+    height: var(--dp-helmet);
   }
 }
 html[data-dp="3d"] .d-depth .dp-astro--reel {
@@ -2096,6 +2183,35 @@ html[data-dp="3d"] .d-depth .dp-gate {
     width: auto;
   }
 }
+/* In the flight the X leaps off the astronaut and stands on "Join the studio" (x-hop.ts): room for it
+   above the buttons (between them, stacked on phones), and the place it stands, as tall as it is. */
+html[data-dp="3d"] .d-depth .dp-contact {
+  --dp-x-h: clamp(2.75rem, 6svh, 4.25rem);
+}
+html[data-dp="3d"] .d-depth .dp-contact__actions {
+  margin-top: calc(1.5rem + var(--dp-x-h));
+}
+@media (max-width: 639.98px) {
+  html[data-dp="3d"] .d-depth .dp-contact__actions {
+    margin-top: 2.25rem;
+  }
+  html[data-dp="3d"] .d-depth .dp-contact__actions > .dp-btn--perch {
+    margin-top: calc(var(--dp-x-h) + 0.25rem);
+  }
+}
+.d-depth .dp-x-perch {
+  display: none;
+}
+/* The button clips its contents; the place is only measured, never drawn. */
+html[data-dp="3d"] .d-depth .dp-x-perch {
+  display: block;
+  position: absolute;
+  right: 1.1rem;
+  bottom: 100%;
+  height: var(--dp-x-h);
+  aspect-ratio: 0.84;
+  pointer-events: none;
+}
 
 /* ---------- The footer: the studio, its links, and the sign-off ---------- */
 .d-depth .dp-foot {
@@ -2283,6 +2399,31 @@ html[data-dp="3d"] .d-depth .dp-gate {
 .d-depth .dp-foot__mark-layer--fill .dp-foot__mark-x path {
   fill: var(--dp-red);
 }
+/* The X in NEXT is the mascot's own place. In the flight it stays empty until the 3D X jumps into it
+   (x-hop.ts sets data-x-home), then it is the letter: red, whatever the fill has reached, landing
+   with a small squash. */
+html[data-dp="3d"] .d-depth[data-astro="live"] .dp-foot__mark-x {
+  visibility: hidden;
+}
+html[data-dp="3d"] .d-depth[data-x-home] .dp-foot__mark-x {
+  visibility: visible;
+}
+html[data-dp="3d"] .d-depth[data-x-home] .dp-foot__mark-layer--line .dp-foot__mark-x path {
+  fill: var(--dp-red);
+  stroke: var(--dp-red);
+}
+@media (prefers-reduced-motion: no-preference) {
+  html[data-dp="3d"] .d-depth[data-x-home] .dp-foot__mark-x {
+    transform-origin: 50% 100%;
+    animation: dp-x-land 480ms var(--dp-ease);
+  }
+}
+@keyframes dp-x-land {
+  from {
+    transform: scale(1.07, 0.88);
+  }
+}
+
 @property --f {
   syntax: "<number>";
   inherits: true;

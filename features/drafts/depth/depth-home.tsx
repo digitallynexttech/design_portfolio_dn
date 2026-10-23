@@ -76,7 +76,8 @@ function FootMark() {
   const layer = (kind: "line" | "fill") => (
     <span className={`dp-foot__mark-layer dp-foot__mark-layer--${kind}`}>
       <span className="dp-foot__mark-a">DIGITALLY</span> <span className="dp-foot__mark-b">NE</span>
-      <svg className="dp-foot__mark-x" viewBox={`0 0 ${X_GLYPH.width} ${X_GLYPH.height}`}>
+      {/* In the flight the 3D X jumps into this place (x-hop.ts) and becomes the letter. */}
+      <svg className="dp-foot__mark-x" viewBox={`0 0 ${X_GLYPH.width} ${X_GLYPH.height}`} data-x-slot={kind === "fill" ? "" : undefined}>
         <path d={X_GLYPH.d} />
       </svg>
       <span className="dp-foot__mark-b">T</span>
@@ -427,8 +428,10 @@ export function DepthHome() {
               <a href={CONTACT_URL} className="dp-btn dp-btn--red dp-btn--lg">
                 Start a project <span aria-hidden>↗</span>
               </a>
-              <a href={CAREERS_URL} className="dp-btn dp-btn--lg">
+              <a href={CAREERS_URL} className="dp-btn dp-btn--lg dp-btn--perch">
                 Join the studio <span aria-hidden>↗</span>
+                {/* Where the X lands and stands, on the button's top edge (x-hop.ts). */}
+                <span className="dp-x-perch" data-x-perch aria-hidden />
               </a>
             </div>
           </div>
