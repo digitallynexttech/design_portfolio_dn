@@ -98,7 +98,7 @@ const NOTHING = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAA
 
 function HeroStill() {
   const common = { alt: "", sizes: "100vw", priority: true, quality: 75 } as const;
-  const wide = getImageProps({ ...common, src: "/models/astronaut/hero-wide-5.webp", width: 2400, height: 1350 }).props;
+  const wide = getImageProps({ ...common, src: "/models/astronaut/hero-wide-6.webp", width: 2400, height: 1350 }).props;
   const sky = getImageProps({ ...common, src: "/models/astronaut/hero-sky-3.webp", width: 1260, height: 1800 }).props;
   return (
     <picture className="dp-hero__still">
@@ -111,7 +111,7 @@ function HeroStill() {
 /** Phones: the bust, cut out, laid on the helmet's place until the scene takes over (depth.css). */
 function HeroFigure() {
   const fig = getImageProps({
-    src: "/models/astronaut/hero-bust-5.webp",
+    src: "/models/astronaut/hero-bust-6.webp",
     alt: "",
     width: 1170,
     height: 2228,
@@ -417,7 +417,7 @@ export function DepthHome() {
             <span className="dp-gate__c dp-gate__c--br" aria-hidden />
             {/* The bottom of the well: the astronaut settles here (a still picture until the scene is live). */}
             <div className="dp-astro-gate" data-astro-contact aria-hidden>
-              <Image src="/models/astronaut/gate-settled-5.webp" alt="" width={602} height={920} sizes="12rem" className="dp-astro-gate__poster" />
+              <Image src="/models/astronaut/gate-settled-6.webp" alt="" width={592} height={922} sizes="12rem" className="dp-astro-gate__poster" />
             </div>
             <p className="dp-k">Next</p>
             <h2 id="dp-contact-title" className="dp-contact__h">

@@ -48,6 +48,12 @@ export const loadBus = {
   /** The journey, as it boots: which model sizes this visitor downloads. */
   plan(small: boolean) {
     sizes = small ? SIZES.phone : SIZES.desktop;
+    // a new visit (back here by a link, the module still loaded): nothing has arrived yet
+    fraction.clear();
+    moved.clear();
+    steps.clear();
+    failed = false;
+    isLifted = false;
   },
   report: {
     bytes(key, loaded, total) {

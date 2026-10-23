@@ -30,7 +30,7 @@ export function DepthHeader() {
   return (
     <header className="dp-top">
       <FlowLink href="/" direction="back" aria-label="Digitally Next Design, home" className="dp-top__logo">
-        <Image src="/brand/logo-white.png" alt="" width={1512} height={321} sizes="132px" loading="eager" />
+        <Image src="/brand/logo-white.png" alt="" width={1512} height={321} sizes="208px" loading="eager" />
       </FlowLink>
       <nav aria-label="Main" className="dp-top__nav">
         {NAV.map((item) => (

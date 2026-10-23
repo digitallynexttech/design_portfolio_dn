@@ -345,9 +345,13 @@ html[data-dp="3d"] .d-depth:not([data-past]) .dp-top::after {
   align-items: center;
   min-height: 2.75rem;
 }
+/* (Karan, 23 Oct 2026: twice the size; on phones as large as the bar holds, the same 44 px) */
 .d-depth .dp-top__logo img {
   width: auto;
-  height: 1.75rem;
+  height: 2.75rem;
+  max-width: calc(100vw - 2 * var(--dp-m) - 4.25rem);
+  object-fit: contain;
+  object-position: left center;
 }
 .d-depth .dp-top__nav {
   display: none;
@@ -418,9 +422,6 @@ html[data-dp="3d"] .d-depth:not([data-past]) .dp-top::after {
   top: 7px;
 }
 @media (min-width: 768px) {
-  .d-depth .dp-top__logo img {
-    height: 1.375rem;
-  }
   .d-depth .dp-top__nav {
     display: flex;
   }
@@ -659,7 +660,7 @@ html[data-dp="3d"] .d-depth:not([data-past]) .dp-top::after {
 /* The bust's picture: its helmet (centre --cx, --cy of the picture, diameter --d of its height,
    picture aspect --ar) laid on the slot. */
 .d-depth .dp-hero__fig {
-  /* printed by h_compose.py for hero-bust-5.webp */
+  /* printed by h_compose.py for hero-bust-6.webp */
   --cx: 0.3348;
   --cy: 0.1402;
   --d: 0.2731;
@@ -2108,7 +2109,7 @@ html[data-dp="3d"] .d-depth .dp-journey + .dp-sec {
 .d-depth .dp-astro-gate {
   position: relative;
   width: 6.5rem;
-  aspect-ratio: 602 / 920;
+  aspect-ratio: 592 / 922;
   margin-bottom: 1.25rem;
 }
 .d-depth .dp-astro-gate__poster {

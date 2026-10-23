@@ -4,7 +4,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { roomEnvironment } from "@/features/exhibits/room-environment";
 import { exhibitDpr } from "@/features/exhibits/use-compiled";
 
-export const MASCOT_MODEL = "/models/dn-x/dn-x-3.glb";
+export const MASCOT_MODEL = "/models/dn-x/dn-x-5.glb";
 
 export type MascotClip = "Idle" | "Walk" | "Wave" | "Jump" | "Spin";
 

@@ -13,7 +13,15 @@ export function decideMode(): "3d" | "flat" {
   return !reduced && !saver && gl2 ? "3d" : "flat";
 }
 
-// Whether this visit opens with the preloader (html[data-loader]). Only in the 3d layout (it loads
-// the 3D), once a session, and never for the testing tools' own URLs. ?loader shows it every time;
-// ?loader=off never. Runs right after MODE_SCRIPT.
-export const LOADER_SCRIPT = `(function(){try{var d=document.documentElement;if(d.getAttribute('data-dp')!=='3d')return;var q=location.search,m=/[?&]loader(=([^&]*))?/.exec(q);if(m&&m[2]==='off')return;if(!m&&(/astro-debug|sky-only|astro-only/.test(q)||sessionStorage.getItem('dp-loader')))return;d.setAttribute('data-loader','')}catch(e){}})()`;
+// Whether this visit opens with the preloader (html[data-loader]). Every load in the 3d layout (it
+// loads the 3D; Karan, 23 Oct 2026: the default, not once a session), never for the testing tools'
+// own URLs unless they add ?loader; ?loader=off never. Runs right after MODE_SCRIPT; wantsLoader is
+// the same rule for visits by a link, where the script never runs (preloader.tsx).
+export const LOADER_SCRIPT = `(function(){try{var d=document.documentElement;if(d.getAttribute('data-dp')!=='3d')return;var q=location.search,m=/[?&]loader(=([^&]*))?/.exec(q);if(m&&m[2]==='off')return;if(!m&&/astro-debug|sky-only|astro-only/.test(q))return;d.setAttribute('data-loader','')}catch(e){}})()`;
+
+export function wantsLoader(mode: string | undefined, search: string): boolean {
+  if (mode !== "3d") return false;
+  const m = /[?&]loader(=([^&]*))?/.exec(search);
+  if (m && m[2] === "off") return false;
+  return Boolean(m) || !/astro-debug|sky-only|astro-only/.test(search);
+}

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { loadBus, type LoadState } from "./loader-bus";
+import { decideMode, wantsLoader } from "./mode";
 import { reveal } from "./preloader-reveal";
 import { X_GLYPH } from "./x-glyph";
 import "./preloader.css";
@@ -82,11 +83,20 @@ function Layer({ layer }: { layer: "line" | "fill" }) {
  * line under it says which), its tagline is its steps (Think: downloading, Act: building, Disrupt:
  * the reveal), and it lifts the moment the first frame is drawn: the X in NEXT becomes a window onto
  * the live hero and grows as it flies to the 3D X on the astronaut's shoulder (preloader-reveal.ts).
- * Once a visit, never longer than MAX_WAIT, never under reduced motion (mode.ts decides, before the
+ * Every visit, never longer than MAX_WAIT, never under reduced motion (mode.ts decides, before the
  * first paint). Decorative: the page under it stays in reach of a screen reader.
  */
 export function Preloader() {
   const root = useRef<HTMLDivElement>(null);
+
+  // A visit by a link (a client navigation) never ran LOADER_SCRIPT: the same rule, before the
+  // first paint.
+  useLayoutEffect(() => {
+    const html = document.documentElement;
+    if (!html.hasAttribute("data-loader") && wantsLoader(html.dataset.dp ?? decideMode(), location.search)) {
+      html.setAttribute("data-loader", "");
+    }
+  }, []);
 
   useEffect(() => {
     const html = document.documentElement;
@@ -118,11 +128,6 @@ export function Preloader() {
 
     const lift = async (complete: boolean) => {
       setPhase(2);
-      try {
-        sessionStorage.setItem("dp-loader", "1");
-      } catch {
-        // private mode: it shows again next visit, that's all
-      }
       // Out of time: the wordmark finishes filling (the reveal starts from a whole word), but the
       // number stays honest; the stills stand in while the 3D finishes behind.
       if (complete) count.data = "100";
