@@ -1216,6 +1216,47 @@ html[data-dp="3d"] .d-depth .dp-astro--hero {
     height: var(--dp-helmet);
   }
 }
+
+/* Under 900 px the astronaut and the X stand on the right, the whole figure in view with the page's
+   margin beside it (Karan, 23 Oct 2026; 900 px and up are as they were). The figure reaches up to 1.5
+   helmets right of the helmet's centre (the X, the arm behind it), so that centre sits 1.5 helmets in
+   from the margin. Phones (and short, wide windows): the helmet's slot goes right in the room above
+   the copy, with a spacer as wide as it after it; no larger than leaves the helmet itself in view. */
+@media (max-width: 699.98px), (max-width: 899.98px) and (min-aspect-ratio: 1001 / 800) {
+  .d-depth .dp-hero__space {
+    justify-content: flex-end;
+  }
+  .d-depth .dp-astro--hero,
+  .d-depth .dp-hero__space::after {
+    left: 0;
+    height: 66%;
+    max-height: min(calc(50vw - var(--dp-m)), 23rem);
+  }
+  .d-depth .dp-hero__space::after {
+    content: "";
+    flex: none;
+    aspect-ratio: 1;
+  }
+}
+/* Narrow phones see the figure a little straighter on: it reaches 1.4 helmets right (a little more
+   on short ones, so half a rem more margin). */
+@media (max-width: 499.98px) {
+  .d-depth .dp-astro--hero,
+  .d-depth .dp-hero__space::after {
+    max-height: min(calc((100vw - 2 * var(--dp-m) - 0.5rem) / 1.9), 23rem);
+  }
+  .d-depth .dp-hero__space::after {
+    margin-right: 0.5rem;
+    aspect-ratio: 0.9;
+  }
+}
+/* Upright tablets under 900 px: the helmet, placed by its size, the same way (1.48 helmets). */
+@media (min-width: 700px) and (max-width: 899.98px) and (max-aspect-ratio: 5 / 4) {
+  .d-depth .dp-astro--hero,
+  html[data-dp="3d"] .d-depth .dp-astro--hero {
+    left: calc(100% - var(--dp-m) - 1.98 * var(--dp-helmet));
+  }
+}
 html[data-dp="3d"] .d-depth .dp-astro--reel {
   --face: -0.75;
   --look-y: -0.2;
