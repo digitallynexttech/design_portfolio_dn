@@ -7,12 +7,12 @@ import type { LoadReport } from "./loader-bus";
 // colour, roughness and occlusion are baked from the Cycles look into textures. No animation clips
 // ship with it. Its pose is blended here, every frame, from a small table: reaching toward you in
 // the hero, freefall while it descends, settled at the destination, plus a slow weightless drift.
-// The X is the site's own rigged mascot (dn-x.glb), seated on the "perch" bone on the left shoulder,
-// so it can never drift off: wherever the chest goes, the X goes.
+// The X is the site's own rigged mascot (dn-x-3.glb, wearing the logo's shoes, legs matched), seated on the "perch"
+// bone on the left shoulder, so it can never drift off: wherever the chest goes, the X goes.
 
 export const ASTRONAUT_MODEL = "/models/astronaut/astronaut-v3.glb";
 export const ASTRONAUT_MODEL_PHONE = "/models/astronaut/astronaut-v3-phone.glb";
-const X_MODEL = "/models/dn-x/dn-x.glb";
+const X_MODEL = "/models/dn-x/dn-x-3.glb";
 const WEAVE = "/models/astronaut/weave.webp";
 /** The X's height on the shoulder, in metres (the astronaut is 1.87 m to the top of the helmet). */
 export const X_SCALE = 0.38;
@@ -530,8 +530,8 @@ export async function loadAstronaut(opts: AstronautOptions): Promise<Astronaut> 
     { b: xBones.get("footL"), rad: 30 * DEG },
     { b: xBones.get("footR"), rad: 30 * DEG },
   ].map((p) => ({ ...p, rest: p.b?.quaternion.clone() }));
-  // Its arms, tucked in as it becomes the footer's letter (the letter has none).
-  const arms = [xBones.get("upper_armL"), xBones.get("upper_armR")]
+  // Its arms and its shoes, tucked away as it becomes the footer's letter (the letter has neither).
+  const arms = [xBones.get("upper_armL"), xBones.get("upper_armR"), xBones.get("shoeL"), xBones.get("shoeR")]
     .filter((b): b is THREE.Bone => Boolean(b))
     .map((b) => ({ b, rest: b.scale.clone() }));
 

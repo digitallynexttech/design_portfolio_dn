@@ -9,7 +9,10 @@ import { X_GLYPH } from "./x-glyph";
 // filled up to the gap where its X belongs ([data-x-slot]), it jumps one last time, turning, tucks
 // its arms in and lands exactly on the letter's place; the page swaps in the flat letter
 // (data-x-home on the draft) and the 3D X goes. Every move is a played jump, not tied to the
-// scrollbar, and every one runs backwards when you scroll back up.
+// scrollbar, and every one runs backwards when you scroll back up. The jumps go round the words, by
+// the right-hand edge of the screen: across to it, up or down it, and in along the row it lands on
+// (on a phone, where the words fill the width, it can only pass in front of them). Into its letter it
+// comes from straight above, so it never crosses the T beside it.
 
 type Mode = "shoulder" | "perch" | "home";
 type Pose = { p: THREE.Vector3; q: THREE.Quaternion; s: number; sit: number; tuck: number };
@@ -37,6 +40,8 @@ export type XHop = {
   animating: () => boolean;
   /** Where the X is while it is off the shoulder (world), for the astronaut to watch it; else null. */
   free: () => THREE.Vector3 | null;
+  /** How far it has left the astronaut's light for its own, 0…1 (it takes off in the one, lands in the other). */
+  lit: () => number;
   dispose: () => void;
 };
 
@@ -86,8 +91,11 @@ export function createXHop(o: {
   let flight: { from: Pose; t0: number; dur: number; spin: number } | null = null;
   let sitW = 1;
   let tuckW = 0;
+  let litW = 0;
 
   const ray = new THREE.Vector3();
+  const c1 = new THREE.Vector3();
+  const c2 = new THREE.Vector3();
   const fwd = new THREE.Vector3();
   const up = new THREE.Vector3();
   const sc = new THREE.Vector3();
@@ -197,6 +205,7 @@ export function createXHop(o: {
       if (!flight) {
         sitW = target.sit;
         tuckW = target.tuck;
+        litW = mode === "shoulder" ? 0 : 1;
         if (isFree) place(target);
         return;
       }
@@ -204,13 +213,36 @@ export function createXHop(o: {
       const u = clamp01((f.t - flight.t0) / flight.dur);
       const e = easeInOut(u);
       const a = flight.from;
-      now.p.lerpVectors(a.p, target.p, e);
-      // an arc, up the screen: a little higher for a longer jump, but never above the header line
+      // By the right-hand edge: a curve through two points out at the edge, level with where it
+      // takes off and with where it lands (the words are left of that edge, the astronaut and the
+      // footer's X near it). Plus a small hop, never above the header line.
       up.set(0, 1, 0).applyQuaternion(camera.quaternion);
-      const span = a.p.distanceTo(target.p);
-      const tall = Math.max(a.s, target.s) * X_SCALE;
-      now.p.addScaledVector(up, (span * 0.12 + tall * 0.8) * Math.sin(Math.PI * u));
       const pxPerUnit = f.H / (2 * o.depth * f.tanHalf);
+      const wide = Math.max(a.s, target.s) * X_SCALE * pxPerUnit * 0.95;
+      const sa = ray.copy(a.p).project(camera);
+      const ax = ((sa.x + 1) / 2) * f.W;
+      const ay = ((1 - sa.y) / 2) * f.H;
+      const st = ray.copy(target.p).project(camera);
+      const tx = ((st.x + 1) / 2) * f.W;
+      const ty = ((1 - st.y) / 2) * f.H;
+      if (mode === "home") {
+        toWorld(tx, ay, f, c1);
+        toWorld(tx, ay + (ty - ay) * 0.35, f, c2);
+      } else {
+        const edge = Math.max(ax, tx, f.W - 0.2 * wide);
+        toWorld(edge, ay, f, c1);
+        toWorld(edge, ty, f, c2);
+      }
+      const v = 1 - e;
+      now.p
+        .copy(a.p)
+        .multiplyScalar(v * v * v)
+        .addScaledVector(c1, 3 * v * v * e)
+        .addScaledVector(c2, 3 * v * e * e)
+        .addScaledVector(target.p, e * e * e);
+      // (onto the button the clip's own hop is lift enough: more would reach the line above)
+      const tall = Math.max(a.s, target.s) * X_SCALE;
+      if (mode !== "perch") now.p.addScaledVector(up, tall * 0.3 * Math.sin(Math.PI * u));
       const s = a.s + (target.s - a.s) * e;
       ray.copy(now.p).project(camera);
       const over = f.clearTop - (((1 - ray.y) / 2) * f.H - s * X_SCALE * pxPerUnit);
@@ -220,6 +252,7 @@ export function createXHop(o: {
       if (flight.spin) now.q.multiply(spinQ.setFromAxisAngle(Y, flight.spin * Math.PI * 2 * e));
       now.s = s;
       sitW = a.sit + (target.sit - a.sit) * smoothstep(0, 1, u);
+      litW = mode === "shoulder" ? Math.min(litW, 1 - e) : Math.max(litW, e);
       tuckW = a.tuck + (target.tuck - a.tuck) * (target.tuck > a.tuck ? smoothstep(0.5, 0.95, u) : smoothstep(0, 0.4, u));
       place(now);
 
@@ -238,6 +271,7 @@ export function createXHop(o: {
     },
 
     sit: () => sitW,
+    lit: () => litW,
     tuck: () => tuckW,
     animating: () => Boolean(flight) || (floating && mode === "perch"),
     free: () => (isFree && seat.visible ? seat.position : null),

@@ -110,7 +110,7 @@ export function MascotWindow({
     <span ref={host} aria-hidden className={`mascot-window ${className}`} data-ready={ready || undefined}>
       {bubble ? <span className="mascot-window__bubble">{bubble}</span> : null}
       <span className="mascot-window__pane">
-        <Image src="/models/dn-x/poster.webp" alt="" fill unoptimized className="mascot-window__poster" />
+        <Image src="/models/dn-x/poster-3.webp" alt="" fill unoptimized className="mascot-window__poster" />
         <canvas ref={canvas} className="mascot-window__canvas" />
       </span>
     </span>

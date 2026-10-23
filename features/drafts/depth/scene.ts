@@ -434,6 +434,29 @@ export async function createScene(o: Options): Promise<DepthScene> {
   // Earth's blue from below, black space above
   charScene.add(new THREE.HemisphereLight(0x161a24, 0x3a5784, 0.75));
 
+  // The X off the shoulder (x-hop.ts) has a stage of its own, drawn after the astronaut. It takes off
+  // in the astronaut's light (the same lights, from the same directions) and lands, on the button and
+  // in the footer, in a warm light from the front, so its red and its shoes read: the astronaut's sun
+  // comes from behind, and an X facing you would stand in shadow.
+  const xScene = new THREE.Scene();
+  const xSuit = [
+    { light: new THREE.DirectionalLight(0xffdcb0, 4.6), dir: SUN, k: 4.6 },
+    { light: new THREE.DirectionalLight(0xdfe6f5, 1.0), dir: fillLight.position, k: 1.0 },
+    { light: new THREE.DirectionalLight(0xafc6ff, 1.5), dir: rimLight.position, k: 1.5 },
+    { light: new THREE.DirectionalLight(RED, 0.55), dir: accentLight.position, k: 0.55 },
+  ];
+  const xStage = [
+    { light: new THREE.DirectionalLight(0xfff0e4, 3.4), dir: new THREE.Vector3(-1.4, 1.8, 3), k: 3.4 },
+    { light: new THREE.DirectionalLight(0xdfe6f5, 1.1), dir: new THREE.Vector3(2.4, 0.4, 2.2), k: 1.1 },
+    { light: new THREE.DirectionalLight(0xffb8a8, 1.4), dir: new THREE.Vector3(0.8, 1.6, -3), k: 1.4 },
+  ];
+  for (const { light, dir } of [...xSuit, ...xStage]) {
+    light.position.copy(dir).normalize().multiplyScalar(5);
+    xScene.add(light);
+  }
+  const xHemi = new THREE.HemisphereLight(0x161a24, 0x3a5784, 0.75);
+  xScene.add(xHemi);
+
   let astro: Astronaut | null = null;
   let astroVisible = false;
   let xhop: XHop | null = null;
@@ -488,13 +511,14 @@ export async function createScene(o: Options): Promise<DepthScene> {
     const made = await loadAstronaut({ small: o.small, shadows: o.shadows, visorEnv, progress: o.progress });
     if (disposed) return made.dispose();
     charScene.environment = suitEnv;
+    xScene.environment = suitEnv;
     charScene.environmentIntensity = 1;
     rig.add(made.root);
     astro = made;
     if (o.xPerch && o.xMark && o.xSlot && !o.astroOnly && !o.skyOnly) {
       xhop = createXHop({
         astro: made,
-        world: charScene,
+        world: xScene,
         camera,
         depth: NEAR,
         perch: o.xPerch,
@@ -905,6 +929,7 @@ export async function createScene(o: Options): Promise<DepthScene> {
       const e = smoothstep(accents[a].at, accents[a + 1].at, s.c);
       accentNow.copy(accents[a].color).lerp(accents[a + 1].color, e);
       accentLight.color.copy(accentNow);
+      xSuit[3].light.color.copy(accentNow);
 
       astro.frame({
         dt: s.dt,
@@ -951,6 +976,14 @@ export async function createScene(o: Options): Promise<DepthScene> {
     if (astroVisible && !o.skyOnly) {
       renderer.clearDepth();
       renderer.render(charScene, camera);
+    }
+    // the X on its own: no depth cleared, so the astronaut still hides it where it passes behind
+    if (xhop?.free() && !o.skyOnly) {
+      const g = xhop.lit();
+      for (const l of xSuit) l.light.intensity = l.k * (1 - g);
+      for (const l of xStage) l.light.intensity = l.k * g;
+      xHemi.intensity = 0.75 * (1 - 0.4 * g);
+      renderer.render(xScene, camera);
     }
     if (!framed && astroVisible && earth) {
       framed = true;

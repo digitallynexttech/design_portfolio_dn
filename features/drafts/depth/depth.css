@@ -659,7 +659,7 @@ html[data-dp="3d"] .d-depth:not([data-past]) .dp-top::after {
 /* The bust's picture: its helmet (centre --cx, --cy of the picture, diameter --d of its height,
    picture aspect --ar) laid on the slot. */
 .d-depth .dp-hero__fig {
-  /* printed by h_compose.py for hero-bust-3.webp */
+  /* printed by h_compose.py for hero-bust-5.webp */
   --cx: 0.3348;
   --cy: 0.1402;
   --d: 0.2731;
@@ -2108,7 +2108,7 @@ html[data-dp="3d"] .d-depth .dp-journey + .dp-sec {
 .d-depth .dp-astro-gate {
   position: relative;
   width: 6.5rem;
-  aspect-ratio: 614 / 920;
+  aspect-ratio: 602 / 920;
   margin-bottom: 1.25rem;
 }
 .d-depth .dp-astro-gate__poster {
@@ -2184,19 +2184,20 @@ html[data-dp="3d"] .d-depth .dp-gate {
   }
 }
 /* In the flight the X leaps off the astronaut and stands on "Join the studio" (x-hop.ts): room for it
-   above the buttons (between them, stacked on phones), and the place it stands, as tall as it is. */
+   above the buttons (between them, stacked on phones), and the place it stands, as tall as it is,
+   centred on the button. Large (Karan, 23 Oct 2026: three times the first size). */
 html[data-dp="3d"] .d-depth .dp-contact {
-  --dp-x-h: clamp(2.75rem, 6svh, 4.25rem);
+  --dp-x-h: clamp(8.25rem, 18svh, 12.75rem);
 }
 html[data-dp="3d"] .d-depth .dp-contact__actions {
-  margin-top: calc(1.5rem + var(--dp-x-h));
+  margin-top: calc(2.5rem + var(--dp-x-h));
 }
 @media (max-width: 639.98px) {
   html[data-dp="3d"] .d-depth .dp-contact__actions {
     margin-top: 2.25rem;
   }
   html[data-dp="3d"] .d-depth .dp-contact__actions > .dp-btn--perch {
-    margin-top: calc(var(--dp-x-h) + 0.25rem);
+    margin-top: calc(var(--dp-x-h) + 1rem);
   }
 }
 .d-depth .dp-x-perch {
@@ -2206,7 +2207,7 @@ html[data-dp="3d"] .d-depth .dp-contact__actions {
 html[data-dp="3d"] .d-depth .dp-x-perch {
   display: block;
   position: absolute;
-  right: 1.1rem;
+  left: calc(50% - var(--dp-x-h) * 0.42);
   bottom: 100%;
   height: var(--dp-x-h);
   aspect-ratio: 0.84;
