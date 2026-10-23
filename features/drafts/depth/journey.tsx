@@ -194,7 +194,14 @@ export function Journey({
     let zShown = "";
     let current = -1;
 
-    const running = () => shown;
+    // Off while the tab is hidden, and while the 3D world is open over the page ("Set sail": its
+    // own canvas, html[data-world] set by world-root.tsx): one scene at a time on the GPU.
+    const worldOpen = () => {
+      const w = document.documentElement.dataset.world;
+      return Boolean(w) && w !== "off";
+    };
+    let world = worldOpen();
+    const running = () => shown && !world;
 
     // ---------- Overlays, gauge and the exit fade, from the smoothed camera ----------
     const sync = () => {
@@ -482,6 +489,13 @@ export function Journey({
       kick();
     };
     document.addEventListener("visibilitychange", onVisibility);
+    const worldWatch = new MutationObserver(() => {
+      if (worldOpen() === world) return;
+      world = worldOpen();
+      scene?.setRunning(running());
+      kick();
+    });
+    worldWatch.observe(document.documentElement, { attributes: true, attributeFilter: ["data-world"] });
 
     // A deep link to a station lands there.
     const hashStop = location.hash === "#work" ? 2 : stops.find((s) => `#${s.id}` === location.hash)?.at;
@@ -586,6 +600,7 @@ export function Journey({
       rail?.removeEventListener("pointercancel", onRailUp);
       rail?.removeEventListener("dragstart", onRailDrag);
       document.removeEventListener("visibilitychange", onVisibility);
+      worldWatch.disconnect();
       ro.disconnect();
       loadBus.disconnect();
       scene?.dispose();
