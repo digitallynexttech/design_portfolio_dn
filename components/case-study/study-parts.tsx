@@ -49,13 +49,14 @@ export function Metrics({ metrics }: { metrics: Metric[] }) {
   return (
     // One column until 1024px, then a row of equal thirds. A value never wraps ("8.9 → 1 / MB"): a
     // cell is at least as wide as its value, so a long one takes more of the row or a row of its own.
+    // On the narrowest phones the value's size follows the screen, so "1.66 MB → 2.6 KB" still fits.
     // The 3rem gap keeps two long values in a row from reading as one.
     <dl className="flex flex-col gap-8 lg:flex-row lg:flex-wrap lg:gap-x-12">
       {metrics.map((metric) => (
         <div key={metric.label} className="reveal border-t border-(--c-line) pt-5 lg:grow lg:basis-60">
           <dt className="sr-only">{metric.label}</dt>
           <dd>
-            <span className="block font-(family-name:--c-display) text-5xl leading-none tracking-tight whitespace-nowrap lining-nums md:text-6xl">
+            <span className="block font-(family-name:--c-display) text-[clamp(2.25rem,11.5vw,3rem)] leading-none tracking-tight whitespace-nowrap lining-nums md:text-6xl">
               {metric.value}
             </span>
             <span className="mt-3 block text-(--c-muted)">{metric.label}</span>

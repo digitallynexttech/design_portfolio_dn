@@ -113,10 +113,11 @@ function BlockView({ block, level }: { block: Block; level: Level }) {
       return (
         <section className="reveal my-16 grid gap-8 md:grid-cols-2">
           {block.families.map((family) => (
-            <div key={family.name} className="rounded-2xl border border-(--c-line) p-6">
+            <div key={family.name} className="min-w-0 rounded-2xl border border-(--c-line) p-6">
               <p className="label">{family.role}</p>
               <p className="mt-2 text-sm text-(--c-muted)">{family.name}</p>
-              <p className="mt-6 text-5xl leading-none md:text-6xl" style={{ fontFamily: fontFamily[family.font] }}>
+              {/* sized to the screen on the narrowest phones, where "complicated." is wider than the card */}
+              <p className="mt-6 text-[clamp(2rem,10vw,3rem)] leading-none [overflow-wrap:anywhere] md:text-6xl" style={{ fontFamily: fontFamily[family.font] }}>
                 {block.sample}
               </p>
               <p className="mt-4 text-lg" style={{ fontFamily: fontFamily[family.font] }}>

@@ -21,12 +21,15 @@
 .study-wide {
   margin-inline: calc((100% - min(100vw - 2 * var(--gutter), 92rem)) / 2);
 }
+/* 2.5rem at the least: a long name ("Mangalwedhe.") fits a 320 px phone; and a word that still
+   doesn't breaks rather than pushing the page sideways. */
 .study-h1 {
   font-family: var(--c-display);
-  font-size: clamp(3rem, 9vw, 8rem);
+  font-size: clamp(2.5rem, 9vw, 8rem);
   line-height: 0.92;
   letter-spacing: -0.03em;
   text-wrap: balance;
+  overflow-wrap: anywhere;
 }
 .study-h2 {
   font-family: var(--c-display);
