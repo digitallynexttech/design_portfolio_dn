@@ -12,3 +12,8 @@ export function decideMode(): "3d" | "flat" {
   const gl2 = typeof WebGL2RenderingContext !== "undefined";
   return !reduced && !saver && gl2 ? "3d" : "flat";
 }
+
+// Whether this visit opens with the preloader (html[data-loader]). Only in the 3d layout (it loads
+// the 3D), once a session, and never for the testing tools' own URLs. ?loader shows it every time;
+// ?loader=off never. Runs right after MODE_SCRIPT.
+export const LOADER_SCRIPT = `(function(){try{var d=document.documentElement;if(d.getAttribute('data-dp')!=='3d')return;var q=location.search,m=/[?&]loader(=([^&]*))?/.exec(q);if(m&&m[2]==='off')return;if(!m&&(/astro-debug|sky-only|astro-only/.test(q)||sessionStorage.getItem('dp-loader')))return;d.setAttribute('data-loader','')}catch(e){}})()`;

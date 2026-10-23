@@ -9,8 +9,8 @@ const FOREVER = "public, max-age=31536000, immutable";
 
 // Asset folders under /public. The header rule only matches paths that end in a file
 // extension, so the /work and /services pages themselves are never cached this way.
-const ASSET_DIRS = "world|models|forms|work|services|studio|video|logos|archive|recognition|brand|icons";
-const ASSET_EXT = "webp|png|jpg|jpeg|svg|glb|gltf|bin|ktx2|mp4|webm|vtt";
+const ASSET_DIRS = "world|models|space|forms|work|services|studio|video|logos|archive|recognition|brand|icons";
+const ASSET_EXT = "webp|png|jpg|jpeg|svg|glb|gltf|bin|ktx2|exr|mp4|webm|vtt";
 
 const nextConfig: NextConfig = {
   cacheComponents: true,

@@ -6,9 +6,11 @@
    rules never follow the reader to another route). No [style] inside :has().
 
    Two layouts from one DOM, chosen before the first paint (mode.ts):
-   - html[data-dp="3d"]: the flight. A tall track with a sticky stage: the WebGL canvas, the HTML
-     overlays (one per station, positioned absolutely, opacity and transform written by journey.tsx)
-     and the depth gauge.
+   - html[data-dp="3d"]: the flight. A tall track with a sticky stage: the HTML overlays (one per
+     station, positioned absolutely, opacity and transform written by journey.tsx) and the depth
+     gauge, over the sky: one WebGL canvas fixed behind the whole draft, where the astronaut falls.
+     Where it floats at each station is an invisible slot (.dp-astro) the scene reads, so its
+     composition is set here, per breakpoint, and it never sits on the words.
    - anything else (flat, the default): the same overlays in normal flow, with their posters, as a
      plain stacked page. Reduced motion, Data Saver, no WebGL2, and no script.
 
@@ -64,6 +66,8 @@ html:has(.d-depth):not(.dp-away) ::selection {
   --dp-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
 
   position: relative;
+  /* The sky (z-index -1) paints above this background and below everything else. */
+  isolation: isolate;
   min-height: 100svh;
   overflow-x: clip;
   background: var(--dp-void);
@@ -328,7 +332,7 @@ html[data-dp="3d"] .d-depth:not([data-past]) .dp-top::before {
 }
 .d-depth .dp-top__logo img {
   width: auto;
-  height: 1.375rem;
+  height: 1.75rem;
 }
 .d-depth .dp-top__nav {
   display: none;
@@ -362,6 +366,8 @@ html[data-dp="3d"] .d-depth:not([data-past]) .dp-top::before {
   color: var(--dp-red);
 }
 .d-depth .dp-top__menu {
+  display: grid;
+  place-items: center;
   min-width: 2.75rem;
   min-height: 2.75rem;
   margin-right: -0.5rem;
@@ -369,12 +375,37 @@ html[data-dp="3d"] .d-depth:not([data-past]) .dp-top::before {
   border: 0;
   background: none;
   color: var(--dp-ink);
-  font: inherit;
-  font-size: 0.875rem;
-  font-weight: 500;
   cursor: pointer;
 }
+/* Three lines. */
+.d-depth .dp-top__bars,
+.d-depth .dp-top__bars::before,
+.d-depth .dp-top__bars::after {
+  display: block;
+  width: 1.625rem;
+  height: 2px;
+  border-radius: 1px;
+  background: currentColor;
+}
+.d-depth .dp-top__bars {
+  position: relative;
+}
+.d-depth .dp-top__bars::before,
+.d-depth .dp-top__bars::after {
+  content: "";
+  position: absolute;
+  left: 0;
+}
+.d-depth .dp-top__bars::before {
+  top: -7px;
+}
+.d-depth .dp-top__bars::after {
+  top: 7px;
+}
 @media (min-width: 768px) {
+  .d-depth .dp-top__logo img {
+    height: 1.375rem;
+  }
   .d-depth .dp-top__nav {
     display: flex;
   }
@@ -450,10 +481,11 @@ html[data-dp="3d"] .d-depth:not([data-past]) .dp-top::before {
 .d-depth .dp-main {
   display: block;
 }
-.d-depth .dp-canvas,
+.d-depth .dp-sky,
 .d-depth .dp-veil,
 .d-depth .dp-cursor,
-.d-depth .dp-gauge {
+.d-depth .dp-gauge,
+.d-depth .dp-astro {
   display: none;
 }
 .d-depth .dp-st {
@@ -477,83 +509,202 @@ html[data-dp="3d"] .d-depth:not([data-past]) .dp-top::before {
   transition: opacity 600ms var(--dp-ease);
 }
 
-/* ---------- Hero ---------- */
+/* ---------- Hero ----------
+   Karan's reference frames. Wide (21 Oct 2026): the copy top left, the astronaut's bust on the right
+   over Earth's limb, the X on its shoulder. Phones (22 Oct 2026): the label under the header, the
+   bust filling the room above the copy, left of centre, its body going on behind the copy under a
+   dark fall, the copy at the foot with the buttons stacked. Flat, and until the scene is live, the
+   frame is a Cycles still (rendered from the same model: Blender/DigitallyNext/astronaut/hero). */
 
 .d-depth .dp-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-rows: auto 1fr auto;
-  grid-template-areas:
-    "label x"
-    "title title"
-    "foot foot";
-  row-gap: 1.25rem;
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
   min-height: 100svh;
-  padding-top: calc(var(--dp-top) + 1.25rem);
+  padding-top: calc(var(--dp-top) + 2.75rem);
   padding-bottom: 2rem;
+  /* the bust's still runs past the screen's edge */
+  overflow: clip;
+}
+/* Under the copy, back to front: the sky (or the wide frame), the bust's picture (phones), the dark
+   fall where the copy sits (over the live scene too: the canvas is behind the whole page). */
+.d-depth .dp-hero__still {
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+  display: block;
+  overflow: hidden;
+}
+.d-depth .dp-hero__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Phones: the sky, centred as the live camera is (h_stills.py, "sky"). */
+  object-position: 50% 50%;
+  transition: opacity 900ms var(--dp-ease);
+}
+/* The dark fall where the copy sits, so it reads over Earth and the suit: on phones the body goes on
+   under the words, dimmed. */
+.d-depth .dp-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(to top, rgb(7 7 8 / 0.95) 0%, rgb(7 7 8 / 0.86) 30%, rgb(7 7 8 / 0.45) 47%, transparent 62%);
+  pointer-events: none;
 }
 .d-depth .dp-hero__copy {
-  display: contents;
+  display: flex;
+  flex-direction: column;
 }
+/* Phones: the label under the header, over the bust's room. */
 .d-depth .dp-hero__label {
-  grid-area: label;
-  align-self: end;
-  padding-bottom: 0.25rem;
+  position: absolute;
+  top: calc(var(--dp-top) + 0.85rem);
+  left: var(--dp-m);
+  margin: 0;
+  letter-spacing: 0.16em;
+  color: var(--dp-2);
 }
 .d-depth .dp-h1 {
-  grid-area: title;
-  align-self: end;
   font-family: var(--dp-display);
-  font-size: clamp(3.4rem, 16.5vw, 5rem);
+  font-size: clamp(2.9rem, 13.5vw, 4.4rem);
   font-weight: 500;
-  line-height: 0.9;
-  letter-spacing: -0.05em;
+  line-height: 0.95;
+  letter-spacing: -0.045em;
   text-wrap: balance;
 }
 .d-depth .dp-h1__line {
   display: block;
 }
-.d-depth .dp-hero__foot {
-  grid-area: foot;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
 .d-depth .dp-hero__lead {
-  max-width: 30ch;
-  font-size: 1.0625rem;
-  line-height: 1.45;
+  max-width: 32ch;
+  margin-top: 0.9rem;
+  font-size: 1rem;
+  line-height: 1.42;
   color: var(--dp-2);
   text-wrap: pretty;
 }
+/* Phones: the two buttons stacked, full width. */
 .d-depth .dp-hero__actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.6rem;
+  gap: 0.7rem;
+  margin-top: 1.4rem;
 }
 .d-depth .dp-hero__actions .dp-btn {
+  min-height: 3.25rem;
   padding: 0 0.75rem;
+  border-radius: 6px;
 }
-.d-depth .dp-hero__sail {
-  min-height: 2.75rem;
-  margin-top: -0.5rem;
-}
-.d-depth .dp-xbox {
-  grid-area: x;
-  position: relative;
-  width: clamp(8.5rem, 40vw, 13rem);
-  aspect-ratio: 1;
-}
-.d-depth .dp-xbox__poster {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  transition: opacity 500ms var(--dp-ease);
+/* The reference's second button: a dark solid with a hairline. */
+.d-depth .dp-btn--solid {
+  background: rgb(22 23 26 / 0.92);
+  border-color: rgb(242 241 238 / 0.18);
 }
 .d-depth .dp-hero__cue {
   display: none;
+}
+/* Phones: the room the copy leaves (first in the column, growing into the free space). The helmet
+   is its upper 64%, a little left of centre, so it never reaches the words whatever the screen's
+   height; the scene hangs the body from it. Until the scene is live (and under reduced motion) a
+   Cycles cut-out of the bust stands on the helmet's place, sized and placed from where its helmet
+   is in the picture (h_stills.py, "bust"; HELMET below). */
+.d-depth .dp-hero__space {
+  order: -1;
+  display: flex;
+  flex: 1 1 0;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 5.5rem;
+  margin-bottom: 0.75rem;
+}
+/* Short phones (an SE): the buttons side by side again, so the bust keeps some room. */
+@media (max-height: 640px) and (max-width: 899.98px) {
+  .d-depth .dp-hero__actions {
+    grid-template-columns: 1fr 1fr;
+    margin-top: 1.1rem;
+  }
+  .d-depth .dp-hero__lead {
+    font-size: 0.9375rem;
+  }
+}
+.d-depth .dp-astro--hero {
+  display: block;
+  position: relative;
+  left: -18%;
+  flex: none;
+  height: 66%;
+  /* a tall room (a long phone, a tablet): the X on the shoulder must still fit the width */
+  max-height: min(52vw, 23rem);
+  aspect-ratio: 1;
+}
+/* The bust's picture: its helmet (centre --cx, --cy of the picture, diameter --d of its height,
+   picture aspect --ar) laid on the slot. */
+.d-depth .dp-hero__fig {
+  /* printed by h_compose.py for hero-bust-3.webp */
+  --cx: 0.3348;
+  --cy: 0.1402;
+  --d: 0.2731;
+  --ar: 0.5251;
+  position: absolute;
+  z-index: -2;
+  top: calc(50% - var(--cy) * 100% / var(--d));
+  left: calc(50% - var(--cx) * var(--ar) * 100% / var(--d));
+  width: auto;
+  height: calc(100% / var(--d));
+  max-width: none;
+  transition: opacity 900ms var(--dp-ease);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .d-depth .dp-hero__fig {
+    animation: dp-in 1100ms var(--dp-ease) 120ms both;
+  }
+}
+/* Wide: the wide still holds the whole frame, astronaut and all; the slot is placed on the hero. */
+@media (min-width: 900px) and (min-aspect-ratio: 5 / 4) {
+  .d-depth .dp-hero__space {
+    display: contents;
+  }
+  .d-depth .dp-astro--hero {
+    display: none;
+  }
+}
+
+/* The copy arrives: the headline's lines slide up (transform only, so its first paint is never held
+   back), the rest rises in after it. */
+@media (prefers-reduced-motion: no-preference) {
+  .d-depth .dp-h1__line {
+    animation: dp-line 1100ms var(--dp-ease) both;
+  }
+  .d-depth .dp-h1__line + .dp-h1__line {
+    animation-delay: 90ms;
+  }
+  .d-depth :is(.dp-hero__label, .dp-hero__lead, .dp-hero__actions) {
+    animation: dp-in 900ms var(--dp-ease) both;
+  }
+  .d-depth .dp-hero__label {
+    animation-delay: 60ms;
+  }
+  .d-depth .dp-hero__lead {
+    animation-delay: 260ms;
+  }
+  .d-depth .dp-hero__actions {
+    animation-delay: 380ms;
+  }
+}
+@keyframes dp-line {
+  from {
+    transform: translate3d(0, 0.34em, 0);
+  }
+}
+@keyframes dp-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0.9rem, 0);
+  }
 }
 
 /* ---------- Reel ---------- */
@@ -703,59 +854,49 @@ html[data-dp="3d"] .d-depth:not([data-past]) .dp-top::before {
   margin-top: 1rem;
 }
 
-@media (min-width: 900px) {
+@media (min-width: 900px) and (min-aspect-ratio: 5 / 4) {
   .d-depth .dp-hero {
-    grid-template-columns: repeat(12, minmax(0, 1fr));
-    grid-template-rows: 1fr;
-    grid-template-areas: none;
-    column-gap: var(--dp-gap);
-    padding-bottom: 3rem;
+    justify-content: center;
+    padding-top: calc(var(--dp-top) + 1.25rem);
+    padding-bottom: calc(var(--dp-hud) + 2rem);
   }
   .d-depth .dp-hero__copy {
-    grid-column: 1 / 9;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    gap: clamp(1.5rem, 3vh, 2.5rem);
+    position: relative;
+    max-width: min(46vw, 44rem);
+    margin-top: -5svh;
   }
   .d-depth .dp-hero__label {
-    align-self: auto;
-    max-width: none;
-    margin-bottom: auto;
-    padding-top: 0.5rem;
+    position: static;
+    margin-bottom: 1.6rem;
   }
   .d-depth .dp-h1 {
-    align-self: auto;
-    font-size: clamp(4rem, 9.4vw, 10.5rem);
-  }
-  .d-depth .dp-hero__foot {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: end;
-    gap: 1rem 2rem;
+    font-size: clamp(3.6rem, 5.7vw, 7rem);
   }
   .d-depth .dp-hero__lead {
-    font-size: clamp(1.0625rem, 1.3vw, 1.25rem);
+    max-width: 25ch;
+    margin-top: 1.6rem;
+    font-size: clamp(1.0625rem, 1.3vw, 1.35rem);
+    line-height: 1.42;
   }
   .d-depth .dp-hero__actions {
     display: flex;
+    gap: 0.9rem;
+    margin-top: 2.2rem;
   }
   .d-depth .dp-hero__actions .dp-btn {
-    padding: 0 1.25rem;
+    min-height: 3.6rem;
+    padding: 0 1.6rem;
+    font-size: 1.0625rem;
   }
-  .d-depth .dp-hero__sail {
-    grid-column: 2;
-    justify-self: end;
+  .d-depth .dp-hero::before {
+    background: linear-gradient(to right, rgb(7 7 8 / 0.6) 0%, rgb(7 7 8 / 0.25) 34%, transparent 52%);
   }
-  .d-depth .dp-xbox {
-    grid-area: auto;
-    grid-column: 10 / 13;
-    grid-row: 1;
-    align-self: end;
-    justify-self: end;
-    width: min(100%, 52svh);
+  .d-depth .dp-hero__img {
+    object-position: 60% 50%;
   }
+}
 
+@media (min-width: 900px) {
   .d-depth .dp-reel__head {
     flex-direction: row;
     align-items: baseline;
@@ -803,20 +944,36 @@ html[data-dp="3d"] .d-depth .dp-stage {
   touch-action: pan-y;
   isolation: isolate;
 }
-html[data-dp="3d"] .d-depth .dp-canvas {
+/* The sky: fixed, as tall as the largest viewport so a phone's collapsing toolbar never resizes the
+   canvas. --astro-deep-* place the astronaut once it has fallen on ahead (share of the screen). */
+html[data-dp="3d"] .d-depth .dp-sky {
+  --astro-deep-x: 0.86;
+  --astro-deep-y: 0.6;
+  --astro-deep-h: 0.15;
   display: block;
-  position: absolute;
-  inset: 0;
-  z-index: 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100lvh;
+  pointer-events: none;
 }
-.d-depth .dp-canvas canvas {
+@media (max-width: 899px), (max-aspect-ratio: 5 / 4) {
+  html[data-dp="3d"] .d-depth .dp-sky {
+    --astro-deep-x: 0.8;
+    --astro-deep-y: 0.7;
+    --astro-deep-h: 0.12;
+  }
+}
+.d-depth .dp-sky canvas {
   display: block;
   width: 100%;
   height: 100%;
   opacity: 0;
   transition: opacity 900ms var(--dp-ease);
 }
-.d-depth .dp-journey[data-live] .dp-canvas canvas {
+.d-depth[data-live] .dp-sky canvas {
   opacity: 1;
 }
 /* A faint falloff at the edges, as if the void had walls. */
@@ -866,11 +1023,9 @@ html[data-dp="3d"] .d-depth .dp-hero {
 html[data-dp="3d"] .d-depth .dp-st[data-on] :is(a, button, [data-text]) {
   pointer-events: auto;
 }
-/* Inside an overlay, lines travel at slightly different speeds as the camera passes: depth. */
-html[data-dp="3d"] .d-depth .dp-case__text > *,
-html[data-dp="3d"] .d-depth .dp-reel > * {
-  transform: translate3d(0, calc(var(--d, 0) * var(--k, 0) * -1px), 0);
-}
+/* Inside an overlay, lines travel at slightly different speeds as the camera passes: depth. --k is
+   each line's speed; journey.tsx writes its transform. (A custom property set on the overlay every
+   frame would restyle every line and label under it, every frame.) */
 html[data-dp="3d"] .d-depth .dp-case__text > :nth-child(1) {
   --k: 10;
 }
@@ -909,8 +1064,89 @@ html[data-dp="3d"] .d-depth .dp-box {
 html[data-dp="3d"] .d-depth .dp-journey[data-live] .dp-box::after {
   opacity: 0;
 }
-html[data-dp="3d"] .d-depth[data-x="live"] .dp-xbox__poster {
+/* Phones in the flight: the label's room under the header, the gauge's under the buttons. */
+@media not all and (min-width: 900px) and (min-aspect-ratio: 5 / 4) {
+  html[data-dp="3d"] .d-depth .dp-hero {
+    padding-top: calc(var(--dp-top) + 2.75rem);
+    padding-bottom: calc(var(--dp-hud) + 0.75rem);
+  }
+}
+html[data-dp="3d"] .d-depth[data-astro="live"] :is(.dp-hero__img, .dp-hero__fig, .dp-astro-gate__poster) {
   opacity: 0;
+}
+
+/* ---------- The astronaut's slots (read by scene.ts; the figure fills the slot's height) ----------
+   --face turns it toward the work (-1 left … 1 right), --look-y tips its head, --roll tilts it (deg).
+   Each sits in a station's open space: beside the reel, under the title, above the inner corner of
+   each plane (below its outer corner on phones), clear of every line of text. */
+html[data-dp="3d"] .d-depth .dp-astro {
+  display: block;
+  position: absolute;
+  aspect-ratio: 0.93;
+  pointer-events: none;
+}
+/* The hero's slot is the helmet (data-anchor="helmet"): the scene hangs the body below it, turned
+   toward the copy, seen a little from below, in the hero pose, the X turned to face you. */
+html[data-dp="3d"] .d-depth .dp-astro--hero {
+  --anchor-helmet: 1;
+  --yaw: -38;
+  --pitch: -4;
+  --roll: 3;
+  --hero: 1;
+  --x-yaw: 36;
+  --look-y: 0.05;
+  /* Phones: the hero's own rules place the slot, in the room above the copy. */
+  position: relative;
+  aspect-ratio: 1;
+}
+/* Wide: the helmet itself, as in the reference; the body hangs from it, cropped by the frame. */
+@media (min-width: 900px) and (min-aspect-ratio: 5 / 4) {
+  html[data-dp="3d"] .d-depth .dp-astro--hero {
+    --yaw: -40;
+    position: absolute;
+    left: calc(54.5% - 25svh);
+    top: calc(37% - 25svh);
+    width: 50svh;
+    height: 50svh;
+    margin: 0;
+    aspect-ratio: 1;
+  }
+  html[data-dp="3d"] .d-depth .dp-hero__fig {
+    display: none;
+  }
+}
+/* Squarer desktops leave the copy less room: the helmet a little smaller and further right (the
+   still too: its crop slides left, which carries the helmet right, clear of the headline). */
+@media (min-width: 900px) and (min-aspect-ratio: 5 / 4) and (max-aspect-ratio: 8 / 5) {
+  .d-depth .dp-hero__img {
+    object-position: 22% 50%;
+  }
+  html[data-dp="3d"] .d-depth .dp-astro--hero {
+    left: calc(64% - 20svh);
+    top: calc(36% - 20svh);
+    width: 40svh;
+    height: 40svh;
+  }
+}
+html[data-dp="3d"] .d-depth .dp-astro--reel {
+  --face: -0.75;
+  --look-y: -0.2;
+  --roll: -8;
+}
+html[data-dp="3d"] .d-depth .dp-astro--title {
+  --face: -0.55;
+  --look-y: 0.35;
+  --roll: 7;
+}
+html[data-dp="3d"] .d-depth .dp-case[data-side="right"] .dp-astro--case {
+  --face: 0.75;
+  --look-y: -0.5;
+  --roll: -6;
+}
+html[data-dp="3d"] .d-depth .dp-case[data-side="left"] .dp-astro--case {
+  --face: -0.75;
+  --look-y: -0.5;
+  --roll: 6;
 }
 
 /* Hero in the void. */
@@ -1019,6 +1255,16 @@ html[data-dp="3d"] .d-depth .dp-gauge {
 .d-depth .dp-gauge[data-gone] {
   visibility: hidden;
 }
+/* A dark fall-off behind the gauge (and the hero's "Scroll to descend" above it): it sits over the
+   astronaut's suit in the hero, as in the reference, and over bright planes later, and always reads. */
+html[data-dp="3d"] .d-depth .dp-gauge::before {
+  content: "";
+  position: absolute;
+  inset: -3.75rem 0 0;
+  z-index: -1;
+  background: linear-gradient(to top, rgb(7 7 8 / 0.86) 35%, rgb(7 7 8 / 0));
+  pointer-events: none;
+}
 .d-depth .dp-gauge__z,
 .d-depth .dp-gauge__now {
   flex: none;
@@ -1049,6 +1295,14 @@ html[data-dp="3d"] .d-depth .dp-gauge {
 }
 .d-depth .dp-gauge__rail[data-scrub] {
   cursor: ew-resize;
+}
+/* The stops and the marker ride the strip: the rail itself on wide screens, wider than it on phones. */
+.d-depth .dp-gauge__strip {
+  position: absolute;
+  inset: 0;
+}
+.d-depth .dp-gauge__short {
+  display: none;
 }
 .d-depth .dp-gauge__line {
   position: absolute;
@@ -1107,6 +1361,70 @@ html[data-dp="3d"] .d-depth .dp-gauge {
   pointer-events: none;
 }
 
+/* Phones (Karan's phone frame): every stop named, its number over the line and a short name under
+   it, a hairline at its left; the strip is wider than the screen and slides (journey.tsx, slideTo)
+   to keep the current stop near the start. The red marker stands at the current stop's left. */
+@media (max-width: 899.98px) {
+  .d-depth .dp-gauge__now {
+    display: none;
+  }
+  .d-depth .dp-gauge__rail {
+    overflow: hidden;
+    height: 2.875rem;
+    margin-right: 0;
+  }
+  .d-depth .dp-gauge__strip {
+    right: auto;
+    width: calc((var(--count, 12) - 1) * 4.5rem);
+    transition: transform 450ms var(--dp-ease);
+  }
+  .d-depth .dp-gauge__link {
+    left: 0;
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+    align-items: center;
+    width: 4.5rem;
+    padding-left: 0.6rem;
+    font-family: var(--dp-mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--dp-4);
+  }
+  .d-depth .dp-gauge__link::before {
+    left: 0;
+    top: 14%;
+    height: 72%;
+  }
+  .d-depth .dp-gauge__no {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+    align-self: end;
+    padding-bottom: 0.3rem;
+  }
+  .d-depth .dp-gauge__short {
+    display: block;
+    align-self: start;
+    padding-top: 0.3rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .d-depth .dp-gauge__tick[data-cur] .dp-gauge__link {
+    color: var(--dp-ink);
+  }
+  .d-depth .dp-gauge__marker {
+    top: 14%;
+    left: 0;
+    width: 2px;
+    height: 72%;
+  }
+}
+
 @media (min-width: 900px) {
   .d-depth .dp-gauge__z {
     display: block;
@@ -1150,6 +1468,20 @@ html[data-dp="3d"] .d-depth .dp-gauge {
   .d-depth .dp-gauge__link:hover {
     color: var(--dp-ink);
   }
+  /* Twelve stops don't fit by name: each shows its number, and its name only when current, hovered
+     or focused (the name lifts above the line, clear of its neighbours). */
+  .d-depth .dp-gauge__name {
+    opacity: 0;
+    transition: opacity 250ms var(--dp-ease);
+  }
+  .d-depth .dp-gauge__tick[data-cur] .dp-gauge__name,
+  .d-depth .dp-gauge__link:hover .dp-gauge__name,
+  .d-depth .dp-gauge__link:focus-visible .dp-gauge__name {
+    opacity: 1;
+  }
+  .d-depth .dp-gauge__link {
+    gap: 0.4rem;
+  }
 }
 
 /* ---------- The flight on wide screens ---------- */
@@ -1181,11 +1513,6 @@ html[data-dp="3d"] .d-depth .dp-gauge {
   html[data-dp="3d"] .d-depth .dp-hero:not([data-on]) .dp-hero__cue-line::after {
     animation-play-state: paused;
   }
-  html[data-dp="3d"] .d-depth .dp-xbox {
-    width: min(100%, calc(100svh - var(--dp-top) - var(--dp-hud) - 14rem));
-    margin-bottom: 2.25rem;
-  }
-
   html[data-dp="3d"] .d-depth .dp-case {
     display: grid;
     align-content: center;
@@ -1198,6 +1525,42 @@ html[data-dp="3d"] .d-depth .dp-gauge {
   }
   html[data-dp="3d"] .d-depth .dp-case[data-side="left"] .dp-case__box {
     justify-self: start;
+  }
+
+  /* The reel's: holding its bottom right corner, clear of the gauge (squarer screens leave no
+     margin)… */
+  html[data-dp="3d"] .d-depth .dp-astro--reel {
+    right: -1.25rem;
+    bottom: -2rem;
+    height: min(16svh, 8.5rem);
+  }
+  /* The title's: low in the right-hand corner, below the second line, clear of the gauge. */
+  html[data-dp="3d"] .d-depth .dp-astro--title {
+    right: 4%;
+    bottom: calc(var(--dp-hud) + 2.5rem);
+    height: min(27svh, 18rem);
+  }
+  /* A plane's: over its inner top corner, where the gap between the words and the work opens up. */
+  html[data-dp="3d"] .d-depth .dp-astro--case {
+    top: -30%;
+    height: 47%;
+  }
+  html[data-dp="3d"] .d-depth .dp-case[data-side="right"] .dp-astro--case {
+    left: -18%;
+  }
+  html[data-dp="3d"] .d-depth .dp-case[data-side="left"] .dp-astro--case {
+    right: -18%;
+  }
+}
+/* …and in the margin to its right, just over the frame's edge, where 16:10 and wider leave one. */
+@media (min-width: 900px) and (min-aspect-ratio: 8 / 5) {
+  html[data-dp="3d"] .d-depth .dp-astro--reel {
+    left: calc(100% - 2.25rem);
+    right: auto;
+    top: auto;
+    bottom: -6%;
+    width: min(30%, calc((100vw - 100%) / 2 + 1.5rem));
+    height: auto;
   }
 }
 /* Phones and portrait tablets: a touch tighter so a whole station fits one screen. */
@@ -1219,6 +1582,29 @@ html[data-dp="3d"] .d-depth .dp-gauge {
   }
   html[data-dp="3d"] .d-depth .dp-case .dp-link {
     margin-top: 0.4rem;
+  }
+
+  /* Phones: small, at the edge. Below the reel beside its button; under the title; and holding each
+     plane's outer bottom corner, half off the screen, above the short label line. */
+  html[data-dp="3d"] .d-depth .dp-astro--reel {
+    right: -0.25rem;
+    top: calc(100% + 0.6rem);
+    height: min(15svh, 7.5rem);
+  }
+  html[data-dp="3d"] .d-depth .dp-astro--title {
+    right: 6%;
+    bottom: calc(var(--dp-hud) + 1.5rem);
+    height: min(24svh, 11rem);
+  }
+  html[data-dp="3d"] .d-depth .dp-astro--case {
+    right: -9%;
+    bottom: -6%;
+    height: 48%;
+  }
+  html[data-dp="3d"] .d-depth .dp-case .dp-astro--case {
+    --face: -0.6;
+    --look-y: 0.1;
+    --roll: -5;
   }
 }
 @media (max-height: 760px) and (max-width: 899px) {
@@ -1273,7 +1659,7 @@ html[data-dp="3d"] .d-depth .dp-gauge {
   }
 }
 
-/* ---------- (02) More work ---------- */
+/* ---------- After the flight ---------- */
 
 /* In the flight, the next section rises over the last stretch of the track while the void closes,
    so there is no dead black screen between the corridor and the page. */
@@ -1283,256 +1669,7 @@ html[data-dp="3d"] .d-depth .dp-journey + .dp-sec {
   margin-top: -58svh;
 }
 
-.d-depth .dp-more__all {
-  margin-top: 2rem;
-}
-@media (min-width: 768px) {
-  .d-depth .dp-more__all {
-    display: none;
-  }
-}
-.d-depth .dp-rows {
-  display: flex;
-  gap: 0.75rem;
-  margin: 0 calc(-1 * var(--dp-m));
-  padding: 0 var(--dp-m) 0.5rem;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scroll-snap-type: x mandatory;
-  scroll-padding-inline: var(--dp-m);
-  scrollbar-width: none;
-}
-.d-depth .dp-rows::-webkit-scrollbar {
-  display: none;
-}
-.d-depth .dp-row {
-  flex: 0 0 min(72vw, 19rem);
-  scroll-snap-align: start;
-}
-.d-depth .dp-row__link {
-  position: relative;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  grid-template-areas:
-    "fig fig"
-    "no main"
-    ". metric";
-  gap: 0.25rem 0.75rem;
-}
-.d-depth .dp-row__fig {
-  grid-area: fig;
-  position: relative;
-  display: block;
-  aspect-ratio: 4 / 5;
-  margin-bottom: 0.9rem;
-  overflow: hidden;
-  background: #0d0d0f;
-  outline: 1px solid var(--dp-hair);
-}
-.d-depth .dp-row__no {
-  grid-area: no;
-  padding-top: 0.3rem;
-  font-family: var(--dp-mono);
-  font-size: 0.6875rem;
-  color: var(--dp-4);
-}
-.d-depth .dp-row__main {
-  grid-area: main;
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-.d-depth .dp-row__client {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.6rem;
-  font-family: var(--dp-display);
-  font-size: 1.5rem;
-  font-weight: 500;
-  line-height: 1.1;
-  letter-spacing: -0.03em;
-  transition: transform 500ms var(--dp-ease);
-}
-.d-depth .dp-row__client::before {
-  content: "";
-  flex: none;
-  width: 0.5rem;
-  height: 0.5rem;
-  background: var(--accent);
-  outline: 1px solid var(--dp-hair-2);
-}
-.d-depth .dp-row__ind {
-  font-family: var(--dp-mono);
-  font-size: 0.6875rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--dp-3);
-}
-.d-depth .dp-row__metric {
-  grid-area: metric;
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  margin-top: 0.6rem;
-  padding-top: 0.6rem;
-  border-top: 1px solid var(--dp-hair);
-}
-.d-depth .dp-row__value {
-  font-family: var(--dp-display);
-  font-size: 1.25rem;
-  font-weight: 500;
-  letter-spacing: -0.02em;
-  white-space: nowrap;
-}
-.d-depth .dp-row__label {
-  font-size: 0.8125rem;
-  line-height: 1.35;
-  color: var(--dp-3);
-}
-.d-depth .dp-row__arrow {
-  display: none;
-}
-.d-depth .dp-stack {
-  display: none;
-}
-
-@media (min-width: 1024px) {
-  .d-depth .dp-more__body {
-    display: grid;
-    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-    gap: clamp(2rem, 4vw, 4.5rem);
-    align-items: start;
-  }
-  .d-depth .dp-rows {
-    display: block;
-    margin: 0;
-    padding: 0;
-    overflow: visible;
-    border-bottom: 1px solid var(--dp-hair);
-  }
-  .d-depth .dp-row__link {
-    grid-template-columns: 2.75rem minmax(0, 1.15fr) minmax(0, 1fr) 1.5rem;
-    grid-template-areas: "no main metric arrow";
-    align-items: start;
-    gap: 1.25rem;
-    padding: 1.5rem 0 1.6rem;
-    border-top: 1px solid var(--dp-hair);
-  }
-  /* The active row's top rule draws out in red. */
-  .d-depth .dp-row__link::before {
-    content: "";
-    position: absolute;
-    top: -1px;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: var(--dp-red);
-    transform: scaleX(0);
-    transform-origin: 0 50%;
-    transition: transform 700ms var(--dp-ease);
-  }
-  .d-depth .dp-row[data-on] .dp-row__link::before {
-    transform: scaleX(1);
-  }
-  .d-depth .dp-row__fig {
-    display: none;
-  }
-  .d-depth .dp-row__client {
-    font-size: clamp(1.5rem, 2.1vw, 2rem);
-  }
-  .d-depth .dp-row[data-on] .dp-row__client {
-    transform: translate3d(0.4rem, 0, 0);
-  }
-  .d-depth .dp-row[data-on] .dp-row__no {
-    color: var(--dp-ink);
-  }
-  .d-depth .dp-row__metric {
-    margin: 0;
-    padding: 0.2rem 0 0;
-    border: 0;
-  }
-  .d-depth .dp-row__arrow {
-    display: block;
-    padding-top: 0.3rem;
-    color: var(--dp-3);
-    transition: transform 500ms var(--dp-ease);
-  }
-  .d-depth .dp-row[data-on] .dp-row__arrow {
-    color: var(--dp-ink);
-    transform: translate3d(0.3rem, 0, 0);
-  }
-
-  /* The stack: every screen in depth; the active one in front, those before it flown past. */
-  .d-depth .dp-stack {
-    position: sticky;
-    top: calc(var(--dp-top) + 3rem);
-    display: block;
-    aspect-ratio: 16 / 10;
-    margin-top: 4.5rem;
-    perspective: 1500px;
-    perspective-origin: 50% -40%;
-    cursor: pointer;
-  }
-  .d-depth .dp-stack__card {
-    position: absolute;
-    inset: 0;
-    z-index: calc(20 - var(--r, 0));
-    background: #0d0d0f;
-    transform: translate3d(0, calc(var(--r, 0) * -4.2%), calc(var(--r, 0) * -120px));
-    transform-origin: 50% 0;
-    opacity: calc(1 - var(--r, 0) * 0.17);
-    transition:
-      transform 850ms var(--dp-ease),
-      opacity 600ms var(--dp-ease);
-  }
-  .d-depth .dp-stack__card[data-rel="past"] {
-    z-index: 21;
-    transform: translate3d(0, 9%, 220px);
-    opacity: 0;
-    pointer-events: none;
-  }
-  .d-depth .dp-stack__card::after {
-    content: "";
-    position: absolute;
-    inset: -8px;
-    border: 1px solid var(--accent);
-    opacity: 0;
-    transition: opacity 500ms var(--dp-ease);
-    pointer-events: none;
-  }
-  .d-depth .dp-stack__card[data-rel="0"]::after {
-    opacity: 0.8;
-  }
-  .d-depth .dp-stack__video {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    opacity: 0;
-    transition: opacity 400ms var(--dp-ease);
-  }
-  .d-depth .dp-stack__video[data-playing] {
-    opacity: 1;
-  }
-  .d-depth .dp-stack__tag {
-    position: absolute;
-    left: 0;
-    top: calc(100% + 1rem);
-    font-family: var(--dp-mono);
-    font-size: 0.6875rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--dp-3);
-    opacity: 0;
-    transition: opacity 400ms var(--dp-ease);
-  }
-  .d-depth .dp-stack__card[data-rel="0"] .dp-stack__tag {
-    opacity: 1;
-  }
-}
-
-/* ---------- (03) Clients and awards ---------- */
+/* ---------- (02) Clients and awards ---------- */
 
 .d-depth .dp-logos {
   display: grid;
@@ -1669,7 +1806,7 @@ html[data-dp="3d"] .d-depth .dp-journey + .dp-sec {
   }
 }
 
-/* ---------- (04) Studio and services ---------- */
+/* ---------- (03) Studio and services ---------- */
 
 .d-depth .dp-studio__top {
   display: grid;
@@ -1843,14 +1980,14 @@ html[data-dp="3d"] .d-depth .dp-journey + .dp-sec {
   margin-top: clamp(5rem, 11vw, 9rem);
 }
 .d-depth .dp-contact {
-  padding: 0 var(--dp-m) clamp(4rem, 8vw, 7rem);
+  padding: 0 var(--dp-m) clamp(3rem, 6vw, 5rem);
 }
 .d-depth .dp-gate {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: clamp(3.5rem, 9vw, 8rem) clamp(1rem, 6vw, 6rem);
+  padding: clamp(3.5rem, 9vw, 8rem) clamp(1rem, 6vw, 6rem) clamp(2.5rem, 5vw, 4.5rem);
   text-align: center;
 }
 .d-depth .dp-gate__c {
@@ -1879,6 +2016,56 @@ html[data-dp="3d"] .d-depth .dp-journey + .dp-sec {
   bottom: 0;
   border-width: 0 1px 1px 0;
 }
+/* The astronaut at the bottom of the well. Flat: a still picture above "Next". In the flight: an empty
+   slot the scene fills, beside the question on wide screens, above it on phones. */
+.d-depth .dp-astro-gate {
+  position: relative;
+  width: 6.5rem;
+  aspect-ratio: 614 / 920;
+  margin-bottom: 1.25rem;
+}
+.d-depth .dp-astro-gate__poster {
+  display: block;
+  width: 100%;
+  height: auto;
+  transition: opacity 500ms var(--dp-ease);
+}
+html[data-dp="3d"] .d-depth .dp-astro-gate {
+  --face: -0.45;
+  --look-y: 0.15;
+  --roll: -3;
+  --ah: min(15svh, 8rem);
+  position: absolute;
+  top: 1.5rem;
+  left: 0;
+  right: 0;
+  width: auto;
+  height: var(--ah);
+  margin: 0 auto;
+  aspect-ratio: 0.93;
+}
+html[data-dp="3d"] .d-depth .dp-astro-gate__poster {
+  height: 100%;
+  width: auto;
+  margin: 0 auto;
+}
+html[data-dp="3d"] .d-depth .dp-gate {
+  padding-top: calc(clamp(3.5rem, 9vw, 8rem) + min(15svh, 8rem));
+}
+@media (min-width: 900px) and (min-aspect-ratio: 5 / 4) {
+  html[data-dp="3d"] .d-depth .dp-astro-gate {
+    --face: -0.7;
+    --ah: min(32svh, 19rem, 21vw);
+    top: calc(50% - var(--ah) / 2);
+    left: auto;
+    right: 3%;
+    margin: 0;
+  }
+  html[data-dp="3d"] .d-depth .dp-gate {
+    padding-top: clamp(3.5rem, 9vw, 8rem);
+  }
+}
+
 .d-depth .dp-contact__h {
   max-width: 13ch;
   margin-top: 1.25rem;
@@ -1910,61 +2097,249 @@ html[data-dp="3d"] .d-depth .dp-journey + .dp-sec {
   }
 }
 
-.d-depth .dp-foot__grid {
+/* ---------- The footer: the studio, its links, and the sign-off ---------- */
+.d-depth .dp-foot {
+  container-type: inline-size;
+}
+.d-depth .dp-foot__main {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1.5rem;
-  padding: 2rem var(--dp-m);
+  gap: 2.75rem;
+  padding: clamp(2.5rem, 5vw, 4.5rem) var(--dp-m) clamp(2rem, 4vw, 3.5rem);
   border-top: 1px solid var(--dp-hair);
 }
-.d-depth .dp-foot__col {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+.d-depth .dp-foot__brand {
+  display: grid;
+  align-content: start;
+  gap: 1.1rem;
+  max-width: 26rem;
 }
-.d-depth .dp-foot__link,
-.d-depth .dp-foot__copy {
+.d-depth .dp-foot__logo {
+  width: auto;
+  height: 2.1rem;
+}
+.d-depth .dp-foot__about {
+  font-size: 1.0625rem;
+  line-height: 1.45;
+  color: var(--dp-2);
+  text-wrap: pretty;
+}
+/* The studio's time, live. */
+.d-depth .dp-foot__now {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--dp-3);
+}
+.d-depth .dp-foot__dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--dp-red);
+  box-shadow: 0 0 0 0 rgb(226 31 38 / 0.6);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .d-depth .dp-foot__dot {
+    animation: dp-pulse 2.4s ease-out infinite;
+  }
+}
+@keyframes dp-pulse {
+  70%,
+  100% {
+    box-shadow: 0 0 0 0.45rem rgb(226 31 38 / 0);
+  }
+}
+.d-depth .dp-foot__clock {
+  color: var(--dp-ink);
+  font-variant-numeric: tabular-nums;
+}
+.d-depth .dp-foot__cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2rem 1.5rem;
+}
+.d-depth .dp-foot__label {
+  margin-bottom: 0.75rem;
+  color: var(--dp-4);
+}
+.d-depth .dp-foot__group ul {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* A link: its words, and a hairline drawn in under them on hover. */
+.d-depth .dp-foot__link {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  min-width: 2.75rem;
   min-height: 2.75rem;
-  font-size: 0.9375rem;
-  color: var(--dp-2);
+  font-family: var(--dp-display);
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  color: var(--dp-ink);
 }
-.d-depth .dp-foot__copy {
-  color: var(--dp-3);
+.d-depth .dp-foot__link span {
+  color: var(--dp-red);
+  font-size: 0.8em;
+  transition: transform 300ms var(--dp-ease);
+}
+.d-depth .dp-foot__link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0.55rem;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 450ms var(--dp-ease);
 }
 @media (hover: hover) {
-  .d-depth .dp-foot__link:hover {
-    color: var(--dp-ink);
+  .d-depth .dp-foot__link:hover::after {
+    transform: scaleX(1);
+    transform-origin: left;
   }
-}
-@media (min-width: 768px) {
-  .d-depth .dp-foot__grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-  .d-depth .dp-foot__col--end {
-    align-items: flex-end;
+  .d-depth .dp-foot__link:hover span {
+    transform: translate3d(0.15rem, -0.15rem, 0);
   }
 }
 @media (pointer: fine) {
-  .d-depth .dp-foot__link,
-  .d-depth .dp-foot__copy {
-    min-height: 2rem;
+  .d-depth .dp-foot__link {
+    min-height: 2.25rem;
+  }
+  .d-depth .dp-foot__link::after {
+    bottom: 0.3rem;
   }
 }
+@media (min-width: 900px) {
+  .d-depth .dp-foot__main {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: 3rem;
+  }
+  .d-depth .dp-foot__cols {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* The sign-off: DIGITALLY NEXT from margin to margin (the footer is its container: 6.9 em wide). An
+   outline over the void, filled from the left as you arrive at the bottom of the page (as the
+   preloader filled), DIGITALLY in white and NEXT in red. Filled outright without motion. */
+.d-depth .dp-foot__mark {
+  position: relative;
+  margin: 0 var(--dp-m);
+  font-family: var(--dp-display);
+  font-size: calc((100cqw - 2 * var(--dp-m)) / 6.9);
+  font-weight: 700;
+  line-height: 0.82;
+  letter-spacing: -0.035em;
+  white-space: nowrap;
+  user-select: none;
+}
+.d-depth .dp-foot__mark-layer {
+  display: block;
+}
+.d-depth .dp-foot__mark-x {
+  display: inline-block;
+  width: calc(0.712em * 0.8386);
+  height: 0.712em;
+  margin-inline: 0.01em 0.035em;
+  overflow: visible;
+  vertical-align: baseline;
+}
+/* The outline: a stroke under a void fill hides the variable face's overlapping contours. */
+.d-depth .dp-foot__mark-layer--line {
+  color: var(--dp-void);
+  -webkit-text-stroke: 2px rgb(242 241 238 / 0.3);
+  paint-order: stroke fill;
+}
+.d-depth .dp-foot__mark-layer--line .dp-foot__mark-x path {
+  fill: var(--dp-void);
+  stroke: rgb(242 241 238 / 0.3);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+/* The two layers split the word at one edge (--f, 0…1): the outline right of it, the colour left of
+   it, so no outline rims a filled letter. */
+.d-depth .dp-foot__mark {
+  --f: 1;
+}
+.d-depth .dp-foot__mark-layer--line {
+  clip-path: inset(-0.2em -0.2em -0.2em calc(var(--f) * (100% + 0.4em) - 0.2em));
+}
+.d-depth .dp-foot__mark-layer--fill {
+  position: absolute;
+  inset: 0;
+  clip-path: inset(-0.2em calc((1 - var(--f)) * (100% + 0.4em) - 0.2em) -0.2em -0.2em);
+}
+.d-depth .dp-foot__mark-layer--fill .dp-foot__mark-a {
+  color: var(--dp-ink);
+}
+.d-depth .dp-foot__mark-layer--fill .dp-foot__mark-b {
+  color: var(--dp-red);
+}
+.d-depth .dp-foot__mark-layer--fill .dp-foot__mark-x path {
+  fill: var(--dp-red);
+}
+@property --f {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 1;
+}
+@supports (animation-timeline: view()) {
+  html[data-motion="on"] .d-depth .dp-foot__mark {
+    animation: dp-mark-fill linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 100%;
+  }
+}
+@keyframes dp-mark-fill {
+  from {
+    --f: 0;
+  }
+  to {
+    --f: 1;
+  }
+}
+
 .d-depth .dp-foot__base {
   display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 1.25rem var(--dp-m) calc(1.75rem + env(safe-area-inset-bottom));
-  border-top: 1px solid var(--dp-hair);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.75rem;
+  padding: 1.5rem var(--dp-m) calc(1.75rem + env(safe-area-inset-bottom));
   font-family: var(--dp-mono);
   font-size: 0.6875rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--dp-4);
+}
+.d-depth .dp-foot__small {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.75rem;
+  color: var(--dp-3);
+}
+@media (pointer: fine) {
+  .d-depth .dp-foot__small {
+    min-height: 1.75rem;
+  }
+}
+@media (hover: hover) {
+  .d-depth .dp-foot__small:hover {
+    color: var(--dp-ink);
+  }
+}
+/* Back up the well: in the flight the camera rewinds the whole fall. */
+.d-depth .dp-foot__top {
+  margin-left: auto;
+  color: var(--dp-ink);
+}
+.d-depth .dp-foot__top span {
+  color: var(--dp-red);
 }
 
 /* ---------- Depth reveals (CSS scroll-driven; without support everything simply shows) ---------- */
@@ -1994,6 +2369,10 @@ html[data-dp="3d"] .d-depth .dp-journey + .dp-sec {
       dp-lean-out linear none;
     animation-timeline: view(inline), view(inline);
     animation-range: entry, exit;
+  }
+  /* A card reached by keyboard stands up at once: never a half-faded focus. */
+  html[data-motion="on"] .d-depth .dp-svc__card:focus-within {
+    animation: none;
   }
 }
 @keyframes dp-rise {

@@ -1,4 +1,4 @@
-import Image from "next/image";
+import Image, { getImageProps } from "next/image";
 import type { CSSProperties } from "react";
 import { FlowLink } from "@/components/ui/flow-link";
 import { PageFlow } from "@/components/ui/page-flow";
@@ -7,18 +7,20 @@ import { RECOGNITION } from "@/content/recognition";
 import { REEL } from "@/content/reel";
 import { SERVICES } from "@/content/studio";
 import { CASE_STUDIES, getCaseStudy } from "@/content/work";
-import { toCard } from "@/content/work/cards";
 import { worldData } from "@/content/world";
 import { ReelButton } from "@/features/home/reel-button";
 import { SailIntro } from "@/features/world/ui/sail-intro";
 import { CAREERS_URL, CONTACT_URL, COPYRIGHT_YEAR, FACTS, JOURNAL_URL, MAIN_SITE, NAV, PRIVACY_URL, SOCIALS } from "@/lib/site";
+import type { CaseStudy } from "@/content/types";
 import { AwayFlag } from "./away-flag";
 import { DepthHeader } from "./header";
 import { Journey } from "./journey";
-import { MODE_SCRIPT } from "./mode";
-import { MoreWork, type MoreCard } from "./more-work";
+import { LocalTime } from "./local-time";
+import { LOADER_SCRIPT, MODE_SCRIPT } from "./mode";
+import { Preloader } from "./preloader";
 import { ServicesStrip } from "./services-strip";
 import type { DepthPlane, DepthStop } from "./types";
+import { X_GLYPH } from "./x-glyph";
 import "./depth.css";
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -40,25 +42,111 @@ function lift(hex: string): string {
   return `#${mixed.map((c) => c.toString(16).padStart(2, "0")).join("")}`;
 }
 
+/** The phone gauge's names: a strip of narrow stops (Karan's phone frame, 22 Oct 2026). */
+const SHORT: Record<string, string> = {
+  skelmet: "SKELMET",
+  "know-your-genes": "Genes",
+  hard2soft: "Hard2Soft",
+  "happy-ganga": "Ganga",
+  talentifix: "TalentiFi",
+  "chetan-mangalwedhe": "Chetan",
+  "realty-canvas": "Realty",
+  dnms: "DNMS",
+  leocym: "Leocym",
+  "kyg-network": "KYG Net",
+};
+
+/** The home's work, one list in the sitemap's order (docs/sitemap.md, Karan, 21 Oct 2026). */
+const HOME_ORDER = [
+  "skelmet",
+  "know-your-genes",
+  "hard2soft",
+  "happy-ganga",
+  "talentifix",
+  "chetan-mangalwedhe",
+  "realty-canvas",
+  "dnms",
+  "leocym",
+  "kyg-network",
+];
+
+/** The footer's sign-off: DIGITALLY NEXT across the page, an outline that fills as you arrive (as the
+ *  preloader's did), DIGITALLY in white and NEXT in red as in the logo, the X the mascot's letter. */
+function FootMark() {
+  const layer = (kind: "line" | "fill") => (
+    <span className={`dp-foot__mark-layer dp-foot__mark-layer--${kind}`}>
+      <span className="dp-foot__mark-a">DIGITALLY</span> <span className="dp-foot__mark-b">NE</span>
+      <svg className="dp-foot__mark-x" viewBox={`0 0 ${X_GLYPH.width} ${X_GLYPH.height}`}>
+        <path d={X_GLYPH.d} />
+      </svg>
+      <span className="dp-foot__mark-b">T</span>
+    </span>
+  );
+  return (
+    <p className="dp-foot__mark" aria-hidden>
+      {layer("line")}
+      {layer("fill")}
+    </p>
+  );
+}
+
+/** The hero stills (Cycles, from Blender/DigitallyNext/astronaut/hero). Wide screens: the whole frame. */
+const WIDE = "(min-width: 900px) and (min-aspect-ratio: 5 / 4)";
+/** A transparent pixel: wide screens skip the phone's cut-out. */
+const NOTHING = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+
+function HeroStill() {
+  const common = { alt: "", sizes: "100vw", priority: true, quality: 75 } as const;
+  const wide = getImageProps({ ...common, src: "/models/astronaut/hero-wide-3.webp", width: 2400, height: 1350 }).props;
+  const sky = getImageProps({ ...common, src: "/models/astronaut/hero-sky-3.webp", width: 1260, height: 1800 }).props;
+  return (
+    <picture className="dp-hero__still">
+      <source media={WIDE} srcSet={wide.srcSet} />
+      <img {...sky} alt="" className="dp-hero__img" />
+    </picture>
+  );
+}
+
+/** Phones: the bust, cut out, laid on the helmet's place until the scene takes over (depth.css). */
+function HeroFigure() {
+  const fig = getImageProps({
+    src: "/models/astronaut/hero-bust-3.webp",
+    alt: "",
+    width: 1170,
+    height: 2228,
+    sizes: "(min-width: 600px) 86vw, 100vw",
+    priority: true,
+    quality: 80,
+  }).props;
+  return (
+    <picture>
+      <source media={WIDE} srcSet={NOTHING} />
+      <img {...fig} alt="" className="dp-hero__fig" />
+    </picture>
+  );
+}
+
 /**
- * Draft 7, "Depth". Scroll is a camera moving forward through the work: the tagline in a quiet void
- * with the X standing in it, the reel, then the four flagships hung left and right down a dark
- * corridor, each with its hairline frame in the client's colour and its facts beside it as real HTML.
- * After the last one the void closes and the rest of the home page follows as precise, plain sections.
- * Same content and order as the live home; reduced motion, Data Saver and no-WebGL2 get a stacked page.
+ * Draft 7, "Depth". Scroll is a fall through space, and an astronaut falls with you, the X riding on
+ * its shoulder. The hero is a close-up over Earth's limb, its gold visor holding a desert at sunset
+ * (Karan's reference frame, 21 Oct 2026). Then the reel, then all ten projects hung left and right
+ * down a dark corridor, each with its hairline frame in the client's colour and its facts beside it
+ * as real HTML. The astronaut floats beside each one, never over the words: where it floats is CSS
+ * (the invisible [data-astro] slots; the hero's anchors the helmet). After the last plane it falls on
+ * ahead, small and far behind the plain sections, and comes forward again at the contact gate.
+ * Reduced motion, Data Saver and no-WebGL2 get a stacked page with the astronaut as still pictures.
  */
 export function DepthHome() {
+  const works = HOME_ORDER.map((slug) => getCaseStudy(slug)).filter((s): s is CaseStudy => Boolean(s));
   const clientStudies = CASE_STUDIES.filter((s) => s.slug !== "making-of");
-  const flagships = clientStudies.filter((s) => s.tier === "flagship");
-  const standard = clientStudies.filter((s) => s.tier === "standard");
 
-  // Station coordinates: 0 the void, 1 the reel, 1.5 the section title, 2… the flagships, then out.
+  // Station coordinates: 0 the hero, 1 the reel, 1.5 the section title, 2… the work, then out.
   const FIRST = 2;
-  const exit = FIRST + flagships.length;
+  const exit = FIRST + works.length;
 
   const planes: DepthPlane[] = [
     { key: "reel", at: 1, kind: "reel", src: REEL.poster, w: REEL.width, h: REEL.height, accent: "#f2f1ee", side: 0, video: REEL.src },
-    ...flagships.map(
+    ...works.map(
       (s, i): DepthPlane => ({
         key: s.slug,
         at: FIRST + i,
@@ -73,31 +161,10 @@ export function DepthHome() {
   ];
 
   const stops: DepthStop[] = [
-    { at: 0, id: "top", label: "Intro" },
-    { at: 1, id: "reel", label: "Reel" },
-    ...flagships.map((s, i) => ({ at: FIRST + i, id: `case-${s.slug}`, label: s.client })),
+    { at: 0, id: "top", label: "Intro", short: "Intro" },
+    { at: 1, id: "reel", label: "Reel", short: "Reel" },
+    ...works.map((s, i) => ({ at: FIRST + i, id: `case-${s.slug}`, label: s.client, short: SHORT[s.slug] ?? s.client })),
   ];
-
-  // Section numbers as on home: (01) is Selected work.
-  let n = 1;
-  const moreN = standard.length ? ++n : 0;
-  const clientsN = ++n;
-  const studioN = ++n;
-
-  const more: MoreCard[] = standard.map((study, i) => {
-    const card = toCard(study);
-    return {
-      slug: card.slug,
-      no: pad(flagships.length + i + 1),
-      client: card.client,
-      industry: card.industry,
-      accent: card.accent,
-      metric: card.metric,
-      poster: card.poster,
-      phone: card.posterPhone ?? card.poster,
-      video: card.previewVideo,
-    };
-  });
 
   const facts = [
     { value: FACTS.years, label: "years in digital" },
@@ -107,16 +174,23 @@ export function DepthHome() {
 
   return (
     <div className="d-depth">
-      {/* Picks the layout before the first paint (see mode.ts). */}
-      <script dangerouslySetInnerHTML={{ __html: MODE_SCRIPT }} />
+      {/* Picks the layout, and whether this visit opens with the preloader, before the first paint
+          (see mode.ts). */}
+      <script dangerouslySetInnerHTML={{ __html: MODE_SCRIPT + ";" + LOADER_SCRIPT }} />
+      {/* The one canvas, fixed behind the whole page (journey.tsx puts it here); outside PageFlow so
+          no transformed ancestor can unpin it. */}
+      <div className="dp-sky" data-sky aria-hidden />
+      {/* Before the page in the tree, so its effect has set html[data-loader] when the journey's runs. */}
+      <Preloader />
       <AwayFlag />
       <DepthHeader />
 
       <PageFlow>
         <main id="main" className="dp-main">
           <Journey planes={planes} stops={stops} exit={exit}>
-            {/* ---------- 0 · The void: the tagline, and the X standing in it ---------- */}
+            {/* ---------- 0 · The hero: the astronaut over Earth, the X on its shoulder ---------- */}
             <section id="top" className="dp-st dp-hero" data-at="0" data-kind="hero" tabIndex={-1} aria-labelledby="dp-h1">
+              <HeroStill />
               <div className="dp-hero__copy" data-text>
                 <p className="dp-k dp-hero__label">Design · Development · 3D</p>
                 <h1 id="dp-h1" className="dp-h1">
@@ -125,27 +199,25 @@ export function DepthHome() {
                     tomorrow<span className="dp-stop">.</span>
                   </span>
                 </h1>
-                <div className="dp-hero__foot">
-                  <p className="dp-hero__lead">Websites, stores and platforms, designed and built by the studio inside Digitally Next.</p>
-                  <div className="dp-hero__actions">
-                    <a href={CONTACT_URL} className="dp-btn dp-btn--red">
-                      Start a project <span aria-hidden>↗</span>
-                    </a>
-                    <a href="#work" className="dp-btn" data-go={FIRST}>
-                      See the work <span aria-hidden>↓</span>
-                    </a>
-                  </div>
-                  <div className="dp-hero__sail">
-                    <SailIntro data={worldData()} variant="link" />
-                  </div>
+                <p className="dp-hero__lead">Websites, stores and platforms, designed and built by the studio inside Digitally Next.</p>
+                <div className="dp-hero__actions">
+                  <SailIntro data={worldData()} variant="cta" className="dp-btn dp-btn--red dp-btn--lg" />
+                  <a href="#work" className="dp-btn dp-btn--lg dp-btn--solid" data-go={FIRST}>
+                    See the work <span aria-hidden>↓</span>
+                  </a>
                 </div>
               </div>
-              <div className="dp-xbox" data-xbox aria-hidden>
-                <Image src="/models/dn-x/poster.webp" alt="" width={800} height={800} sizes="(min-width: 900px) 30vw, 40vw" className="dp-xbox__poster" />
+              {/* The astronaut's place: the helmet, and the scene hangs the body from it (scene.ts,
+                  data-anchor). Wide: right of the copy. Phones: the room above the copy, which
+                  .dp-hero__space is, with the bust's still standing on it until the scene is live. */}
+              <div className="dp-hero__space">
+                <span className="dp-astro dp-astro--hero" data-astro="0" data-anchor="helmet" aria-hidden>
+                  <HeroFigure />
+                </span>
               </div>
               <p className="dp-hero__cue dp-k" aria-hidden>
                 <span className="dp-hero__cue-line" />
-                Scroll to move forward
+                Scroll to descend
               </p>
             </section>
 
@@ -161,22 +233,24 @@ export function DepthHome() {
               </div>
               <div className="dp-box dp-reel__box" data-box="reel" style={{ "--ar": `${REEL.width} / ${REEL.height}`, "--arn": REEL.width / REEL.height, "--accent": "#f2f1ee" } as CSSProperties}>
                 <Image src={REEL.poster} alt="" fill sizes="(min-width: 900px) 64vw, 92vw" className="dp-plate dp-cover" />
+                <span className="dp-astro dp-astro--reel" data-astro="1" aria-hidden />
               </div>
               <div className="dp-reel__play">
                 <ReelButton className="dp-reelbtn" />
               </div>
             </section>
 
-            {/* ---------- (01) Selected work: the corridor ---------- */}
+            {/* ---------- (01) The work: the corridor, all ten ---------- */}
             <section id="work" className="dp-works" aria-labelledby="dp-work-title">
               <div className="dp-st dp-title" data-at={FIRST - 0.5} data-kind="title">
-                <p className="dp-k">(01) Selected work</p>
+                <p className="dp-k">(01) The work</p>
                 <h2 id="dp-work-title" className="dp-title__h">
                   Shapes we’ve taken<span className="dp-stop">.</span>
                 </h2>
+                <span className="dp-astro dp-astro--title" data-astro={FIRST - 0.5} aria-hidden />
               </div>
 
-              {flagships.map((study, i) => {
+              {works.map((study, i) => {
                 const side = i % 2 === 0 ? "right" : "left";
                 return (
                   <article
@@ -196,6 +270,7 @@ export function DepthHome() {
                       style={{ "--ar": `${study.poster.width} / ${study.poster.height}`, "--arn": study.poster.width / study.poster.height } as CSSProperties}
                     >
                       <Image src={study.poster.src} alt={study.poster.alt} fill sizes="(min-width: 900px) 52vw, 92vw" className="dp-plate dp-cover" />
+                      <span className="dp-astro dp-astro--case" data-astro={FIRST + i} aria-hidden />
                     </div>
                     <div className="dp-case__text" data-text>
                       <p className="dp-k dp-case__meta">
@@ -241,29 +316,10 @@ export function DepthHome() {
             </section>
           </Journey>
 
-          {/* ---------- (02) More work ---------- */}
-          {moreN ? (
-            <section id="more" className="dp-sec dp-more" aria-labelledby="dp-more-title">
-              <div className="dp-sec__head">
-                <p className="dp-k dp-rise">({pad(moreN)}) More work</p>
-                <h2 id="dp-more-title" className="dp-h2 dp-rise">
-                  Different containers<span className="dp-stop">.</span>
-                </h2>
-                <FlowLink href="/work" className="dp-btn dp-sec__aside">
-                  All work <span aria-hidden>→</span>
-                </FlowLink>
-              </div>
-              <MoreWork cards={more} />
-              <FlowLink href="/work" className="dp-btn dp-btn--block dp-more__all">
-                All work <span aria-hidden>→</span>
-              </FlowLink>
-            </section>
-          ) : null}
-
-          {/* ---------- (03) Clients and awards ---------- */}
+          {/* ---------- (02) Clients and awards ---------- */}
           <section id="clients" className="dp-sec dp-clients" aria-labelledby="dp-clients-title">
             <div className="dp-sec__head">
-              <p className="dp-k dp-rise">({pad(clientsN)}) Clients and awards</p>
+              <p className="dp-k dp-rise">(02) Clients and awards</p>
               <h2 id="dp-clients-title" className="dp-h2 dp-rise">
                 Who we’ve built for<span className="dp-stop">.</span>
               </h2>
@@ -310,11 +366,11 @@ export function DepthHome() {
             </div>
           </section>
 
-          {/* ---------- (04) Studio and services ---------- */}
+          {/* ---------- (03) Studio and services ---------- */}
           <section id="studio" className="dp-sec dp-studio" aria-labelledby="dp-studio-title">
             <div className="dp-studio__top">
               <div>
-                <p className="dp-k dp-rise">({pad(studioN)}) Studio and services</p>
+                <p className="dp-k dp-rise">(03) Studio and services</p>
                 <h2 id="dp-studio-title" className="dp-h2 dp-rise">
                   One studio, six kinds of work<span className="dp-stop">.</span>
                 </h2>
@@ -358,6 +414,10 @@ export function DepthHome() {
             <span className="dp-gate__c dp-gate__c--tr" aria-hidden />
             <span className="dp-gate__c dp-gate__c--bl" aria-hidden />
             <span className="dp-gate__c dp-gate__c--br" aria-hidden />
+            {/* The bottom of the well: the astronaut settles here (a still picture until the scene is live). */}
+            <div className="dp-astro-gate" data-astro-contact aria-hidden>
+              <Image src="/models/astronaut/gate-settled-3.webp" alt="" width={614} height={920} sizes="12rem" className="dp-astro-gate__poster" />
+            </div>
             <p className="dp-k">Next</p>
             <h2 id="dp-contact-title" className="dp-contact__h">
               Have something that needs shaping<span className="dp-stop">?</span>
@@ -374,42 +434,79 @@ export function DepthHome() {
           </div>
         </section>
 
-        <div className="dp-foot__grid">
-          <nav aria-label="Footer" className="dp-foot__col">
-            {NAV.map((item) => (
-              <FlowLink key={item.href} href={item.href} className="dp-foot__link">
-                {item.label}
-              </FlowLink>
-            ))}
+        <div className="dp-foot__main">
+          <div className="dp-foot__brand">
+            <Image src="/brand/logo-white.png" alt="Digitally Next" width={1512} height={321} sizes="190px" className="dp-foot__logo" />
+            <p className="dp-foot__about">
+              The design and development studio inside Digitally Next. {FACTS.years} years, {FACTS.brands} brands, one team in {FACTS.city}.
+            </p>
+            <p className="dp-foot__now dp-k">
+              <span className="dp-foot__dot" aria-hidden />
+              {FACTS.city} <LocalTime /> IST
+            </p>
+          </div>
+          <nav aria-label="Footer" className="dp-foot__cols">
+            <div className="dp-foot__group">
+              <p className="dp-k dp-foot__label" id="dp-foot-studio">
+                Studio
+              </p>
+              <ul aria-labelledby="dp-foot-studio">
+                {NAV.map((item) => (
+                  <li key={item.href}>
+                    <FlowLink href={item.href} className="dp-foot__link">
+                      {item.label}
+                    </FlowLink>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="dp-foot__group">
+              <p className="dp-k dp-foot__label" id="dp-foot-dn">
+                Digitally Next
+              </p>
+              <ul aria-labelledby="dp-foot-dn">
+                <li>
+                  <a href={CAREERS_URL} className="dp-foot__link">
+                    Careers <span aria-hidden>↗</span>
+                  </a>
+                </li>
+                <li>
+                  <a href={JOURNAL_URL} className="dp-foot__link">
+                    Journal <span aria-hidden>↗</span>
+                  </a>
+                </li>
+                <li>
+                  <a href={MAIN_SITE} className="dp-foot__link">
+                    Main site <span aria-hidden>↗</span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+            <div className="dp-foot__group">
+              <p className="dp-k dp-foot__label" id="dp-foot-follow">
+                Follow
+              </p>
+              <ul aria-labelledby="dp-foot-follow">
+                {SOCIALS.map((social) => (
+                  <li key={social.href}>
+                    <a href={social.href} className="dp-foot__link">
+                      {social.label} <span aria-hidden>↗</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </nav>
-          <div className="dp-foot__col">
-            <a href={CAREERS_URL} className="dp-foot__link">
-              Careers <span aria-hidden>↗</span>
-            </a>
-            <a href={JOURNAL_URL} className="dp-foot__link">
-              Journal <span aria-hidden>↗</span>
-            </a>
-            <a href={PRIVACY_URL} className="dp-foot__link">
-              Privacy <span aria-hidden>↗</span>
-            </a>
-          </div>
-          <div className="dp-foot__col">
-            {SOCIALS.map((social) => (
-              <a key={social.href} href={social.href} className="dp-foot__link">
-                {social.label} <span aria-hidden>↗</span>
-              </a>
-            ))}
-          </div>
-          <div className="dp-foot__col dp-foot__col--end">
-            <a href={MAIN_SITE} className="dp-foot__link">
-              Part of Digitally Next <span aria-hidden>↗</span>
-            </a>
-            <span className="dp-foot__copy">© {COPYRIGHT_YEAR} Digitally Next</span>
-          </div>
         </div>
-        <div className="dp-foot__base" aria-hidden>
-          <span>Digitally Next Design</span>
-          <span>{FACTS.city}</span>
+        <FootMark />
+        <div className="dp-foot__base">
+          <span>© {COPYRIGHT_YEAR} Digitally Next</span>
+          <a href={PRIVACY_URL} className="dp-foot__small">
+            Privacy <span aria-hidden>↗</span>
+          </a>
+          <a href="#top" className="dp-foot__small dp-foot__top">
+            Back to the surface <span aria-hidden>↑</span>
+          </a>
         </div>
       </footer>
     </div>

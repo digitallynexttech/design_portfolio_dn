@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import type { WorldData } from "../data";
 import { world } from "../store";
@@ -34,23 +35,58 @@ function prefetchWorld() {
 
 /**
  * The front door: "Set sail" opens the world over the page. The "link" variant is a quiet text link
- * under the home hero's buttons (sound off; the world has its own sound switch); where the browser
- * can't draw the world it renders nothing.
+ * under the home hero's buttons (sound off; the world has its own sound switch). The "cta" variant
+ * is a single "Set sail" button styled by the caller (className). Away from the home page, where the
+ * world can't open, both go to /#sail. Where the browser can't draw the world they render nothing.
  */
-export function SailIntro({ data, variant = "button" }: { data: WorldData; variant?: "button" | "link" }) {
+export function SailIntro({
+  data,
+  variant = "button",
+  className = "",
+}: {
+  data: WorldData;
+  variant?: "button" | "link" | "cta";
+  className?: string;
+}) {
   const supported = useSyncExternalStore(noop, canRun, () => true);
   const [sound, setSound] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     world.setData(data);
   }, [data]);
+
+  const sail = (withSound: boolean) => {
+    if (window.location.pathname === "/") openWorld(withSound);
+    else {
+      world.set({ sound: withSound });
+      router.push("/#sail");
+    }
+  };
+
+  if (variant === "cta") {
+    if (!supported) return null;
+    return (
+      <button
+        type="button"
+        onClick={() => sail(false)}
+        onPointerEnter={prefetchWorld}
+        onPointerDown={prefetchWorld}
+        onTouchStart={prefetchWorld}
+        onFocus={prefetchWorld}
+        className={className}
+      >
+        Set sail <span aria-hidden>→</span>
+      </button>
+    );
+  }
 
   if (variant === "link") {
     if (!supported) return null;
     return (
       <button
         type="button"
-        onClick={() => openWorld(false)}
+        onClick={() => sail(false)}
         onPointerEnter={prefetchWorld}
         onPointerDown={prefetchWorld}
         onTouchStart={prefetchWorld}
@@ -68,7 +104,7 @@ export function SailIntro({ data, variant = "button" }: { data: WorldData; varia
 
   return (
     <div className="flex items-center gap-2" onPointerEnter={prefetchWorld} onPointerDown={prefetchWorld} onTouchStart={prefetchWorld} onFocus={prefetchWorld}>
-      <button type="button" onClick={() => openWorld(sound)} className="btn btn--primary btn--lg sail-button">
+      <button type="button" onClick={() => sail(sound)} className="btn btn--primary btn--lg sail-button">
         <span className="sail-button__wake" aria-hidden />
         Set sail <span aria-hidden>→</span>
       </button>

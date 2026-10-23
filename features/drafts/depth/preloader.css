@@ -1,0 +1,196 @@
+/* ---------- The preloader (preloader.tsx; mode.ts decides, before the first paint) ----------
+   html[data-loader] while it is up; [data-loader-state="reveal"] once the hero's copy may start
+   arriving under it. Without the attribute (script off, reduced motion, a second visit) it is never
+   drawn. */
+
+.d-depth .dp-loader {
+  display: none;
+}
+html[data-loader] {
+  overflow: hidden;
+}
+/* Centred by the grid, not by a translate: a -50% translate lands the words on half pixels, and a
+   fixed layer's text there is resampled soft. */
+html[data-loader] .d-depth .dp-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  cursor: progress;
+  -webkit-user-select: none;
+  user-select: none;
+}
+html[data-loader-state] .d-depth .dp-loader {
+  pointer-events: none;
+  cursor: auto;
+}
+
+/* The hero's copy waits under it, then arrives as it lifts. */
+html[data-loader]:not([data-loader-state]) .d-depth :is(.dp-h1__line, .dp-hero__label, .dp-hero__lead, .dp-hero__actions, .dp-hero__fig) {
+  animation-play-state: paused;
+}
+
+/* ---------- The sheet: one red rect, with the X cut out of it as it lifts ---------- */
+.d-depth .dp-loader__sheet {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.d-depth .dp-loader [data-sheet] {
+  fill: var(--dp-red);
+}
+
+/* ---------- The face: the wordmark, the tagline and the number, what is loading ---------- */
+.d-depth .dp-loader__face {
+  position: relative;
+  display: grid;
+  gap: 0.7rem;
+  width: max-content;
+}
+.d-depth .dp-loader__word {
+  position: relative;
+  margin: 0;
+  font-family: var(--dp-display);
+  font-size: clamp(1.6rem, 9vw, 7.25rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  white-space: nowrap;
+}
+.d-depth .dp-loader__layer {
+  display: block;
+}
+.d-depth .dp-loader__layer > * {
+  display: inline-block;
+}
+.d-depth .dp-loader__sp {
+  width: 0.24em;
+}
+/* An outline that fills from the left with what has arrived (--p, 0…1). The headline face is
+   variable, so its glyphs are overlapping contours: stroked alone, every overlap shows. The stroke
+   goes under a red fill instead, which hides the inner half and every overlap: 2px reads as one
+   crisp pixel, near-white so it stays sharp on the red rather than a pink haze.
+   The two layers split the word at the same edge: the white left of it, the outline right of it, so
+   no outline is left as a pale rim round a white letter. Both reach a quarter em past the box: the
+   last letter's outline and the X's serifs overhang it. */
+.d-depth .dp-loader__layer--line {
+  color: var(--dp-red);
+  -webkit-text-stroke: 2px rgb(255 255 255 / 0.82);
+  paint-order: stroke fill;
+  clip-path: inset(-0.25em -0.25em -0.25em calc(var(--p, 0) * (100% + 0.5em) - 0.25em));
+}
+.d-depth .dp-loader__layer--fill {
+  position: absolute;
+  inset: 0;
+  color: #fff;
+  clip-path: inset(-0.25em calc((1 - var(--p, 0)) * (100% + 0.5em) - 0.25em) -0.25em -0.25em);
+}
+/* Revealing: the letters move on their own, so nothing may clip them. */
+.d-depth .dp-loader[data-stage] .dp-loader__layer--fill {
+  clip-path: none;
+}
+/* The X: the mascot's own letter (x-glyph.ts), at the font's cap height. */
+.d-depth .dp-loader__x {
+  width: calc(0.712em * 0.8386);
+  height: 0.712em;
+  margin-inline: 0.01em 0.035em;
+  overflow: visible;
+  vertical-align: baseline;
+}
+.d-depth .dp-loader__layer--line .dp-loader__x path {
+  fill: none;
+  stroke: rgb(255 255 255 / 0.82);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+.d-depth .dp-loader__layer--fill .dp-loader__x path {
+  fill: #fff;
+}
+/* The X is a window now. */
+.d-depth .dp-loader[data-stage="hole"] .dp-loader__x {
+  visibility: hidden;
+}
+
+.d-depth .dp-loader__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+/* The tagline is the progress: Think (downloading), Act (building), Disrupt (the reveal). */
+.d-depth .dp-loader__tag {
+  display: flex;
+  gap: 1em;
+  margin: 0;
+  font-family: var(--dp-mono);
+  font-size: clamp(0.625rem, 0.9vw, 0.8125rem);
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.d-depth .dp-loader__tag [data-word] {
+  position: relative;
+  opacity: 0.5;
+  transition: opacity 300ms ease;
+}
+.d-depth .dp-loader__tag [data-on="1"] {
+  opacity: 1;
+}
+.d-depth .dp-loader__tag [data-on="2"] {
+  opacity: 0.82;
+}
+.d-depth .dp-loader__tag [data-on="1"]::after {
+  content: "";
+  position: absolute;
+  right: 0.35em;
+  bottom: -0.5em;
+  left: 0;
+  height: 1px;
+  background: currentColor;
+  transform-origin: left;
+  animation: dp-loader-under 1.2s ease-in-out infinite alternate;
+}
+@keyframes dp-loader-under {
+  from {
+    transform: scaleX(0.15);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.d-depth .dp-loader__count {
+  margin: 0;
+  font-family: var(--dp-display);
+  font-size: clamp(1.25rem, 2.6vw, 2.1rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+/* Three digits' room from the start: "0" to "100" never moves the row. */
+.d-depth .dp-loader__count [data-count] {
+  display: inline-block;
+  min-width: 3ch;
+  text-align: right;
+}
+.d-depth .dp-loader__count small {
+  margin-left: 0.06em;
+  font-size: 0.55em;
+  opacity: 0.8;
+}
+/* What is arriving right now, and how much of it. */
+.d-depth .dp-loader__now {
+  min-height: 1.3em;
+  margin: 0;
+  font-family: var(--dp-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.85);
+}

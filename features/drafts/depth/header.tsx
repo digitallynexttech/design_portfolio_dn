@@ -7,7 +7,8 @@ import { CAREERS_URL, CONTACT_URL, NAV } from "@/lib/site";
 
 /**
  * The draft's own header: the logo, the three pages and "Start a project". On phones the pages move
- * into a native modal dialog (focus held inside, Escape closes it), opened from a 44 px "Menu".
+ * into a native modal dialog (focus held inside, Escape closes it), opened from a 44 px menu button
+ * (three lines, named "Menu").
  */
 export function DepthHeader() {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -41,8 +42,8 @@ export function DepthHeader() {
           Start a project <span aria-hidden>↗</span>
         </a>
       </nav>
-      <button ref={opener} type="button" className="dp-top__menu" aria-haspopup="dialog" onClick={() => setOpen(true)}>
-        Menu
+      <button ref={opener} type="button" className="dp-top__menu" aria-haspopup="dialog" aria-label="Menu" onClick={() => setOpen(true)}>
+        <span className="dp-top__bars" aria-hidden />
       </button>
 
       <dialog

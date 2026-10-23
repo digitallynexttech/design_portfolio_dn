@@ -28,4 +28,6 @@ export type DepthStop = {
   /** The overlay it jumps to (also the anchor in the stacked layout). */
   id: string;
   label: string;
+  /** A short name for the phone gauge, where every stop is named in a narrow strip. */
+  short: string;
 };
