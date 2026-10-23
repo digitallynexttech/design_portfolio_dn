@@ -21,6 +21,12 @@ const nextConfig: NextConfig = {
   // Allow development access from your local network IP
   allowedDevOrigins: ["192.168.29.103"],
 
+  experimental: {
+    // `next dev` and `next build` remind us when the installed Next.js has a published
+    // security advisory, and `next upgrade --agent` defaults to the security policy.
+    agentUpgrade: "security",
+  },
+
   // Every page is fully prerendered with its metadata already in <head>. By default Next
   // still sends crawlers and link-preview bots (Bingbot, Applebot, Lighthouse, Slack, WhatsApp,
   // X, LinkedIn, Facebook...) past the static copy to a fresh server render, one function call
