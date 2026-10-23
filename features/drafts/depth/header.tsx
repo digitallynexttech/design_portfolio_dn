@@ -8,12 +8,48 @@ import { CAREERS_URL, CONTACT_URL, NAV } from "@/lib/site";
 /**
  * The draft's own header: the logo, the three pages and "Start a project". On phones the pages move
  * into a native modal dialog (focus held inside, Escape closes it), opened from a 44 px menu button
- * (three lines, named "Menu").
+ * (three lines, named "Menu"). Scrolling on down the page it slides up out of view, and scrolling
+ * back up brings it down again (Karan, 23 Oct 2026); it is always there near the top and while its
+ * menu is open.
  */
 export function DepthHeader() {
+  const bar = useRef<HTMLElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const el = bar.current;
+    if (!el) return;
+    // a few px either way is a hand on the wheel, not a direction
+    const STEP = 8;
+    const TOP = 80;
+    let last = window.scrollY;
+    let raf = 0;
+    const read = () => {
+      raf = 0;
+      const y = window.scrollY;
+      if (y < TOP || open) {
+        el.removeAttribute("data-hidden");
+        last = y;
+      } else if (y - last > STEP) {
+        el.setAttribute("data-hidden", "");
+        last = y;
+      } else if (last - y > STEP) {
+        el.removeAttribute("data-hidden");
+        last = y;
+      }
+    };
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(read);
+    };
+    read();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(raf);
+    };
+  }, [open]);
 
   useEffect(() => {
     const d = dialog.current;
@@ -28,7 +64,7 @@ export function DepthHeader() {
   };
 
   return (
-    <header className="dp-top">
+    <header ref={bar} className="dp-top">
       <FlowLink href="/" direction="back" aria-label="Digitally Next Design, home" className="dp-top__logo">
         <Image src="/brand/logo-white.png" alt="" width={1512} height={321} sizes="208px" loading="eager" />
       </FlowLink>

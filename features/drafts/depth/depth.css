@@ -60,6 +60,8 @@ html:has(.d-depth):not(.dp-away) ::selection {
   --dp-m: clamp(1rem, 3.4vw, 3rem);
   --dp-gap: clamp(0.75rem, 1.6vw, 1.5rem);
   --dp-top: 3.75rem;
+  /* the header's own margin above it (Karan, 23 Oct 2026) */
+  --dp-top-gap: clamp(0.5rem, 1.1vw, 1rem);
   --dp-hud: 3.5rem;
   --dp-seg: 92svh;
   --dp-display: var(--font-headline), "Helvetica Neue", Arial, sans-serif;
@@ -302,7 +304,7 @@ html:has(.d-depth):not(.dp-away) ::selection {
 
 .d-depth .dp-top {
   position: fixed;
-  inset: 0 0 auto;
+  inset: var(--dp-top-gap) 0 auto;
   z-index: 50;
   display: flex;
   align-items: center;
@@ -310,12 +312,27 @@ html:has(.d-depth):not(.dp-away) ::selection {
   gap: 1.5rem;
   height: var(--dp-top);
   padding: 0 var(--dp-m);
+  transition:
+    transform 550ms var(--dp-ease),
+    opacity 400ms var(--dp-ease);
 }
-/* Solid over the page; in the flight it stays clear until the void is behind you. */
+/* Scrolling on down the page it slides up out of view; scrolling back up brings it down again
+   (header.tsx). Never while a key has focus in it. */
+.d-depth .dp-top[data-hidden]:not(:focus-within) {
+  transform: translate3d(0, calc(-100% - var(--dp-top-gap) - 1.75rem), 0);
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .d-depth .dp-top {
+    transition: opacity 200ms linear;
+  }
+}
+/* Solid over the page; in the flight it stays clear until the void is behind you. (Both layers
+   reach up over the margin above it.) */
 .d-depth .dp-top::before {
   content: "";
   position: absolute;
-  inset: 0;
+  inset: calc(-1 * var(--dp-top-gap)) 0 0;
   z-index: -1;
   background: var(--dp-void);
   border-bottom: 1px solid var(--dp-hair);
@@ -330,7 +347,7 @@ html[data-dp="3d"] .d-depth:not([data-past]) .dp-top::before {
 .d-depth .dp-top::after {
   content: "";
   position: absolute;
-  inset: 0 0 -1.75rem;
+  inset: calc(-1 * var(--dp-top-gap)) 0 -1.75rem;
   z-index: -2;
   background: linear-gradient(to bottom, rgb(7 7 8 / 0.78) 0%, rgb(7 7 8 / 0.5) 55%, rgb(7 7 8 / 0));
   opacity: 0;
