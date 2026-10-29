@@ -2,9 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist_Mono } from "next/font/google";
 import { JsonLd } from "@/components/ui/json-ld";
 import { ServiceWorker } from "@/components/ui/service-worker";
-import { SiteFooter } from "@/components/ui/site-footer";
-import { SiteHeader } from "@/components/ui/site-header";
-import { StageRoot } from "@/features/stage/stage-root";
+import { SiteFooter, SiteHeader } from "@/features/drafts/depth/site-chrome";
 import { WorldRoot } from "@/features/world/ui/world-root";
 import { MAIN_SITE, SITE_URL, SOCIALS } from "@/lib/site";
 import "./globals.css";
@@ -94,7 +92,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             sameAs: SOCIALS.map((s) => s.href),
           }}
         />
-        <StageRoot />
         <SiteHeader />
         {children}
         <SiteFooter />

@@ -1,0 +1,46 @@
+/* =====================================================================================
+   The astronaut on /work, /about, the 404 and offline (astro-figure.tsx). A canvas laid over the
+   page in the free box place.ts finds (its left/top/width/height set inline), over nothing but
+   space: the page's own content paints over it if they ever meet. Not shown until placed (or with
+   no script, or where there is no room).
+   ===================================================================================== */
+
+.s3-host {
+  position: relative;
+}
+.s3.s3a {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+}
+.s3.s3a:not([data-placed]) {
+  display: none;
+}
+
+/* The still (404, offline): the settled astronaut, until the live one is in, or if it never is. */
+.s3a__still {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+/* The 404's can be flung round (with motion only); vertical swipes still scroll the page. */
+@media (prefers-reduced-motion: no-preference) {
+  .s3a--fling[data-s3="live"] .s3__gl {
+    pointer-events: auto;
+    cursor: grab;
+    touch-action: pan-y;
+  }
+  .s3a--fling[data-held] .s3__gl {
+    cursor: grabbing;
+  }
+}
+
+/* /work: the shaft's figure in the shaft, the head's everywhere else (html[data-wa], shaft.tsx). */
+html:not([data-wa="shaft"]) .s3.s3a--shaft,
+html[data-wa="shaft"] .s3.s3a--workhead {
+  display: none;
+}

@@ -24,6 +24,9 @@ export type WorkCardData = {
   posterPhone?: Poster;
   /** The study's lead metric (sourced in its content file; the source is never sent here). */
   metric?: { value: string; label: string };
+  /** Its two lead metrics and its palette (background, text, accent), for the home-style case rows. */
+  metrics?: { value: string; label: string }[];
+  palette?: string[];
   previewVideo?: string;
 };
 
@@ -95,7 +98,7 @@ export function WorkCard({
   );
 
   const frame = [
-    "relative overflow-hidden rounded-2xl bg-ink-2 aspect-[16/10]",
+    "relative overflow-hidden bg-ink-2 aspect-[16/10]",
     large ? "lg:aspect-[21/9]" : "",
     phonePoster ? "max-md:aspect-[1170/1992]" : "",
   ].join(" ");
@@ -119,7 +122,7 @@ export function WorkCard({
     <FlowLink
       href={`/work/${study.slug}`}
       direction="deeper"
-      className="group flex h-full flex-col rounded-2xl"
+      className="group flex h-full flex-col"
       aria-labelledby={titleId}
       aria-describedby={lineId}
       // Committed before the link navigates, so the outgoing snapshot already carries the name.
@@ -152,7 +155,7 @@ export function WorkCard({
         {compact ? null : (
           <span
             aria-hidden
-            className="pointer-events-none absolute bottom-4 left-4 translate-y-[calc(100%+1.25rem)] rounded-full px-4 py-2 text-sm font-medium opacity-0 shadow-lg shadow-black/30 transition-[translate,opacity] duration-500 ease-flow group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100 md:bottom-5 md:left-5"
+            className="pointer-events-none absolute bottom-4 left-4 translate-y-[calc(100%+1.25rem)] rounded-[2px] px-4 py-2 text-sm font-medium opacity-0 shadow-lg shadow-black/30 transition-[translate,opacity] duration-500 ease-flow group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100 md:bottom-5 md:left-5"
             style={{ background: study.accent, color: study.onAccent }}
           >
             Read the case →
@@ -167,7 +170,7 @@ export function WorkCard({
           </p>
           <Heading
             id={titleId}
-            className={`mt-2 font-display font-semibold tracking-tight ${compact ? "text-xl md:text-2xl" : large ? "text-3xl md:text-4xl" : "text-2xl md:text-3xl"}`}
+            className={`mt-2 font-display font-medium tracking-tight ${compact ? "text-xl md:text-2xl" : large ? "text-3xl md:text-4xl" : "text-2xl md:text-3xl"}`}
           >
             {study.client}
             <span className="stop">.</span>
@@ -181,13 +184,13 @@ export function WorkCard({
           <div className={large ? "mt-auto lg:mt-0 lg:self-end" : "mt-auto"}>
             {study.metric ? (
               <p className="mt-5 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-t border-paper/10 pt-4">
-                <span className="font-display text-2xl font-semibold tracking-tight md:text-3xl">{study.metric.value}</span>
+                <span className="font-display text-2xl font-medium tracking-tight md:text-3xl">{study.metric.value}</span>
                 <span className="text-sm text-(--text-2)">{study.metric.label}</span>
               </p>
             ) : null}
             <ul className="mt-4 hidden flex-wrap gap-1.5 md:flex" aria-label="Disciplines">
               {study.disciplines.map((d) => (
-                <li key={d} className="rounded-full border border-paper/15 px-2.5 py-0.5 text-xs text-(--text-2)">
+                <li key={d} className="rounded-[2px] border border-paper/15 px-2.5 py-0.5 text-xs text-(--text-2)">
                   {d}
                 </li>
               ))}

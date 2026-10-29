@@ -1,0 +1,475 @@
+/* =====================================================================================
+   /services: "Spacewalk" (spacewalk.tsx, climber.ts, mode.ts). The Depth home's system: void, paper,
+   red only for the clips behind you and "you are here", hairlines, square corners, no shadows. Every
+   rule under .sh. Modes on html[data-sh]: walk (900 px and up, with motion: the tether down the
+   middle, the stations either side, the astronaut's readout), slim (smaller, with motion: the tether
+   down the left edge), static (reduced motion: the tether drawn whole, the astronaut at the hatch).
+   No attribute (no script): a plain hairline where the tether goes.
+   ===================================================================================== */
+
+.sh {
+  /* the stations apart, and the space under the hatch before the first one */
+  --sh-gap: clamp(4.5rem, 14vw, 6rem);
+  --sh-hatch-pad: clamp(3rem, 8vw, 5rem);
+  /* phones: where the tether runs (from the content's left edge), and where the stations start */
+  --sh-x: 0.7rem;
+  --sh-rail: 2.9rem;
+  /* the astronaut's width, and the room it needs to hang in at the airlock */
+  --sh-aw: 2.6rem;
+  --sh-dock: 0rem;
+}
+@media (min-width: 900px) {
+  .sh {
+    --sh-gap: clamp(7rem, 13vw, 12rem);
+    --sh-hatch-pad: clamp(4rem, 7vw, 6rem);
+    --sh-gut: clamp(6.5rem, 10vw, 10rem);
+    --sh-aw: clamp(5.5rem, 7.5vw, 8rem);
+    --sh-dock: calc(var(--sh-aw) * 1.51 * 0.82 + 2.5rem);
+  }
+}
+
+.sh .sh-walk {
+  position: relative;
+  padding: 0 var(--dp-m) clamp(4rem, 9vw, 7rem);
+  overflow-x: clip;
+}
+
+/* ---------- The tether ---------- */
+
+.sh .sh-tether {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.sh .sh-tether path {
+  fill: none;
+}
+/* The route ahead, dotted; the line paid out, solid. */
+.sh .sh-tether__ghost {
+  stroke: var(--dp-hair-2);
+  stroke-width: 1;
+  stroke-dasharray: 2 7;
+}
+.sh .sh-tether__line {
+  stroke: var(--dp-2);
+  stroke-width: 1.5;
+}
+
+/* The hatch it is made fast to. */
+.sh .sh-hatch {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+  padding-top: var(--sh-hatch-pad);
+  margin-bottom: var(--sh-gap);
+}
+.sh .sh-hatch__box {
+  position: relative;
+  z-index: 1;
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 1px solid var(--dp-ink);
+  background: var(--dp-void);
+}
+/* (the astronaut's readout says it when it shows: wide screens with motion) */
+html[data-sh="walk"] .sh .sh-hatch__k {
+  display: none;
+}
+@media (min-width: 900px) {
+  /* (beside the hatch, on the side the line does not drift to) */
+  .sh .sh-hatch__k {
+    position: absolute;
+    top: calc(var(--sh-hatch-pad) + 0.15rem);
+    left: calc(50% + var(--sh-aw) * 0.5 + 1rem);
+  }
+}
+@media (max-width: 899.98px) {
+  .sh .sh-hatch {
+    align-items: flex-start;
+  }
+  .sh .sh-hatch__box {
+    margin-left: calc(var(--sh-x) - 0.45rem);
+  }
+  .sh .sh-hatch__k {
+    position: absolute;
+    top: calc(var(--sh-hatch-pad) - 0.1rem);
+    left: var(--sh-rail);
+  }
+}
+
+/* No script: a plain hairline down the tether's way, station by station (not through the airlock). */
+.sh .sh-walk:not([data-drawn]) .sh-hatch::after,
+.sh .sh-walk:not([data-drawn]) .sh-station:not(.sh-station--airlock)::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  width: 1px;
+  background: var(--dp-hair-2);
+}
+.sh .sh-walk:not([data-drawn]) .sh-hatch::after {
+  top: calc(var(--sh-hatch-pad) + 0.9rem);
+  bottom: calc(-1 * var(--sh-gap));
+}
+.sh .sh-walk:not([data-drawn]) .sh-station:not(.sh-station--airlock)::before {
+  top: 0;
+  bottom: calc(-1 * var(--sh-gap));
+}
+@media (max-width: 899.98px) {
+  .sh .sh-walk:not([data-drawn]) .sh-hatch::after,
+  .sh .sh-walk:not([data-drawn]) .sh-station:not(.sh-station--airlock)::before {
+    left: var(--sh-x);
+  }
+}
+
+/* ---------- The astronaut ---------- */
+
+.sh .sh-astro {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  width: var(--sh-aw);
+  pointer-events: none;
+}
+/* Until the line is drawn (and with no script): hanging from the hatch. */
+.sh .sh-walk:not([data-drawn]) .sh-astro {
+  top: calc(var(--sh-hatch-pad) + 0.45rem);
+  left: 50%;
+  translate: -50% -20%;
+}
+@media (max-width: 899.98px) {
+  .sh .sh-walk:not([data-drawn]) .sh-astro {
+    left: calc(var(--dp-m) + var(--sh-x));
+  }
+}
+.sh .sh-walk[data-drawn] .sh-astro {
+  will-change: transform;
+}
+.sh .sh-astro__body {
+  display: block;
+  transform-origin: 50% 20%;
+  transition: transform 700ms var(--dp-ease);
+}
+.sh .sh-astro__img {
+  display: block;
+  width: 100%;
+  height: auto;
+  transform-origin: 50% 20%;
+}
+/* Weightless: a slow sway on the end of the line (with motion only). */
+html:is([data-sh="walk"], [data-sh="slim"]) .sh .sh-astro__img {
+  animation: sh-drift 7s ease-in-out infinite alternate;
+}
+@keyframes sh-drift {
+  from {
+    transform: translate3d(0, -3px, 0) rotate(-2.5deg);
+  }
+  to {
+    transform: translate3d(0, 4px, 0) rotate(2.5deg);
+  }
+}
+
+/* The live astronaut (climber.ts): a transparent canvas round the tip, shown once the model is in; the
+   still keeps its box (the readout and the line's attach point are measured from it). */
+.sh .sh-astro__gl {
+  position: absolute;
+  display: none;
+  max-width: none;
+  pointer-events: none;
+}
+.sh .sh-astro[data-gl] .sh-astro__gl {
+  display: block;
+}
+.sh .sh-astro[data-gl] .sh-astro__img {
+  visibility: hidden;
+  animation: none;
+}
+/* (the live figure swings wide of the still's box: its readout stands further off) */
+html[data-sh="walk"] .sh .sh-astro[data-gl] .sh-astro__read {
+  left: calc(100% + 3.5rem);
+}
+html[data-sh="walk"] .sh .sh-astro[data-gl][data-side="l"] .sh-astro__read {
+  right: calc(100% + 3.5rem);
+  left: auto;
+}
+
+/* What it reads: line paid out, and the station it last passed (wide screens with motion). */
+.sh .sh-astro__read {
+  display: none;
+}
+html[data-sh="walk"] .sh .sh-astro__read {
+  position: absolute;
+  top: 10%;
+  left: calc(100% + 0.6rem);
+  display: grid;
+  gap: 0.3rem;
+  width: max-content;
+  padding-left: 0.6rem;
+  border-left: 1px solid var(--dp-hair-2);
+  color: var(--dp-ink);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+html[data-sh="walk"] .sh .sh-astro[data-side="l"] .sh-astro__read {
+  right: calc(100% + 0.6rem);
+  left: auto;
+  padding: 0 0.6rem 0 0;
+  border-right: 1px solid var(--dp-hair-2);
+  border-left: 0;
+  text-align: right;
+}
+.sh .sh-astro__at {
+  max-width: 15rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--dp-3);
+}
+
+/* ---------- The stations ---------- */
+
+/* (over the astronaut: the clips hook on to its harness, and no line of text is ever behind it) */
+.sh .sh-stations {
+  position: relative;
+  z-index: 3;
+}
+.sh .sh-station {
+  position: relative;
+  scroll-margin-top: calc(var(--header-h) + 1.5rem);
+}
+.sh .sh-station + .sh-station {
+  margin-top: var(--sh-gap);
+}
+
+/* The clip: a square on the line, its number in it; red once you are past it, ringed while you are at it. */
+.sh .sh-clip {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid var(--dp-hair-2);
+  background: var(--dp-void);
+  outline: 1px solid transparent;
+  outline-offset: 4px;
+  transition:
+    background-color 400ms var(--dp-ease),
+    border-color 400ms var(--dp-ease),
+    outline-color 400ms var(--dp-ease);
+}
+.sh .sh-clip__no {
+  font-family: var(--dp-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  color: var(--dp-ink);
+}
+.sh .sh-station[data-passed] .sh-clip {
+  border-color: var(--dp-red);
+  background: var(--dp-red);
+}
+.sh .sh-station[data-current] .sh-clip {
+  outline-color: var(--dp-red);
+}
+
+/* The station's number, big and hollow, in the empty side the line goes slack in (wide screens). */
+.sh .sh-numeral {
+  display: none;
+}
+
+.sh .sh-kicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.sh .sh-kicker__no {
+  color: var(--dp-ink);
+}
+.sh .sh-kicker__here {
+  display: none;
+  color: var(--dp-red);
+}
+.sh .sh-station[data-current] .sh-kicker__here {
+  display: inline;
+}
+.sh .sh-title {
+  max-width: 16ch;
+  margin-top: 0.9rem;
+  font-size: clamp(2.125rem, 4.2vw, 4rem);
+}
+.sh .sh-line {
+  max-width: 40ch;
+  margin-top: 1rem;
+  font-size: clamp(1.125rem, 1.5vw, 1.4375rem);
+  line-height: 1.35;
+  color: var(--dp-2);
+  text-wrap: pretty;
+}
+.sh .sh-text {
+  max-width: 46ch;
+  margin-top: clamp(1.5rem, 3vw, 2.25rem);
+  font-size: clamp(1.0625rem, 1.25vw, 1.1875rem);
+  line-height: 1.5;
+  color: var(--dp-2);
+}
+.sh .sh-spec {
+  max-width: none;
+  margin-top: clamp(1.5rem, 3vw, 2.25rem);
+}
+.sh .sh-spec .dp-spec__row {
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  padding: 0.75rem 0;
+  font-size: 0.9375rem;
+}
+.sh .sh-list {
+  display: grid;
+  gap: 0.25rem;
+}
+.sh .sh-proof {
+  margin-top: clamp(2.25rem, 4.5vw, 3.25rem);
+}
+.sh .sh-proof > .dp-k {
+  margin-bottom: 1.25rem;
+}
+/* Proof cards as many a row as the station's width takes (a half of the page on wide screens). */
+@media (min-width: 640px) {
+  .sh .sh-proof .dn-cards {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+  }
+}
+.sh .sh-steps {
+  margin-top: clamp(2rem, 4vw, 3rem);
+}
+
+/* Phones: the line down the left edge, each station beside it. */
+@media (max-width: 899.98px) {
+  .sh .sh-station {
+    padding-left: var(--sh-rail);
+  }
+  .sh .sh-clip {
+    position: absolute;
+    top: -0.3rem;
+    left: var(--sh-x);
+    width: 1.75rem;
+    height: 1.75rem;
+    translate: -50% 0;
+  }
+  .sh .sh-clip__no {
+    font-size: 0.625rem;
+  }
+  .sh .sh-station[data-current] .sh-clip {
+    outline-offset: 3px;
+  }
+  /* The cards' rail starts at the station's edge (not under the line) and runs off the right. */
+  .sh .sh-proof .dn-cards {
+    margin-left: 0;
+    padding-left: 0;
+    scroll-padding-inline: 0 var(--dp-m);
+  }
+  .sh .sh-proof .dn-cards > li {
+    width: min(76vw, 21rem);
+  }
+}
+
+/* Wide screens: the line down the middle, the stations either side of it in turn. */
+@media (min-width: 900px) {
+  .sh .sh-directory {
+    display: none;
+  }
+  .sh .sh-station {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--sh-gut) minmax(0, 1fr);
+    align-items: start;
+  }
+  .sh .sh-clip {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: center;
+    margin-top: -0.55rem;
+  }
+  .sh .sh-station[data-side="l"] .sh-station__in {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .sh .sh-station[data-side="r"] .sh-station__in {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .sh .sh-numeral {
+    grid-row: 1;
+    align-self: end;
+    display: block;
+    font-family: var(--dp-display);
+    font-size: clamp(8rem, 17vw, 17rem);
+    font-weight: 500;
+    line-height: 0.8;
+    letter-spacing: -0.06em;
+    color: transparent;
+    -webkit-text-stroke: 1px var(--dp-hair-2);
+    user-select: none;
+  }
+  .sh .sh-station[data-side="l"] .sh-numeral {
+    grid-column: 3;
+    justify-self: end;
+  }
+  .sh .sh-station[data-side="r"] .sh-numeral {
+    grid-column: 1;
+    justify-self: start;
+  }
+  /* The airlock: the line ends on its clip and the astronaut docks under it; the steps go full width. */
+  .sh .sh-station--airlock .sh-numeral {
+    display: none;
+  }
+  .sh .sh-station--airlock .sh-station__in {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    padding-top: var(--sh-dock);
+  }
+}
+
+/* ---------- Each station rises in as you reach it (with motion) ---------- */
+
+html:is([data-sh="walk"], [data-sh="slim"]) .sh .sh-station__in {
+  opacity: 0;
+  transform: translate3d(0, 2rem, 0);
+  transition:
+    opacity 700ms var(--dp-ease),
+    transform 1000ms var(--dp-ease);
+}
+/* (on wide screens, in from the side of the line it hangs off) */
+html[data-sh="walk"] .sh .sh-station[data-side="l"] .sh-station__in {
+  transform: translate3d(-1.5rem, 1.25rem, 0);
+}
+html[data-sh="walk"] .sh .sh-station[data-side="r"] .sh-station__in {
+  transform: translate3d(1.5rem, 1.25rem, 0);
+}
+html:is([data-sh="walk"], [data-sh="slim"]) .sh .sh-station[data-open] .sh-station__in {
+  opacity: 1;
+  transform: none;
+}
+/* Already passed, landed on or holding focus: open at once. */
+.sh .sh-station[data-instant] .sh-station__in {
+  transition: none !important;
+}
+
+/* The process's proof links run to two lines on phones: a real underline under each line (the
+   shared .dp-link draws one line at the box's foot, which would cross the second line). */
+.sh .dn-step__proof::after {
+  display: none;
+}
+.sh .dn-step__proof > span {
+  text-decoration: underline;
+  text-decoration-color: var(--dp-hair-2);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.3em;
+  transition: text-decoration-color 300ms var(--dp-ease);
+}
+@media (hover: hover) {
+  .sh .dn-step__proof:hover > span {
+    text-decoration-color: var(--dp-ink);
+  }
+}

@@ -46,7 +46,7 @@
   text-wrap: balance;
 }
 
-/* Focus wears the client's colour (the site teal can vanish on a light theme). */
+/* Focus wears the client's colour (the site's paper ring can vanish on a light theme). */
 .study :focus-visible {
   outline-color: var(--c-accent);
 }
@@ -72,15 +72,6 @@ html:not([data-header="hidden"]) .chapter-nav {
 /* The bar's slot in the flow plus the header above it: content starts below both. */
 .chapter-nav + main {
   margin-top: var(--header-h, 3.625rem);
-}
-/* The /work filter bar sits mid-page, so it moves by its sticky offset (a transform would shift it
-   even before it sticks). */
-.work-filter {
-  top: 0;
-  transition: top var(--dur-4, 520ms) var(--ease-flow, cubic-bezier(0.16, 1, 0.3, 1));
-}
-html:not([data-header="hidden"]) .work-filter {
-  top: var(--header-h, 3.625rem);
 }
 /* Chapters past the edge of a narrow bar fade out rather than being cut. */
 .chapter-nav__list[data-fade="end"] {
@@ -122,23 +113,13 @@ html:not([data-header="hidden"]) .work-filter {
   object-fit: cover;
 }
 
-/* Filtering /work: cards flow to their new places. */
-::view-transition-group(.work-reflow) {
-  animation-duration: 520ms;
-  animation-timing-function: var(--ease-flow, cubic-bezier(0.16, 1, 0.3, 1));
-}
-
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(.poster-morph),
   ::view-transition-old(.poster-morph),
-  ::view-transition-new(.poster-morph),
-  ::view-transition-group(.work-reflow),
-  ::view-transition-old(.work-reflow),
-  ::view-transition-new(.work-reflow) {
+  ::view-transition-new(.poster-morph) {
     animation-duration: 0s !important;
   }
-  .chapter-nav,
-  .work-filter {
+  .chapter-nav {
     transition: none;
   }
 }

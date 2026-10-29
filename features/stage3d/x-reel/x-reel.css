@@ -1,0 +1,31 @@
+/* =====================================================================================
+   Reel: the X sat on the frame's top hairline (the stage's ::after, 10 px out from the video), near
+   its left end, under the title (x-reel.tsx). Its box: 0.72 X-heights above the seat, 0.5 below
+   (the legs, over the edge), 1.45 across; the seat line at 0.72 / 1.22 of its height. The stage
+   leaves the room above the line for it, so it never sits over the title. Not in short landscape,
+   where the title moves beside the video and every pixel of height is the reel's.
+   ===================================================================================== */
+
+.reel-page .reel__stage:has(> .xr) {
+  --xr-h: clamp(5.75rem, 8.5vw, 9rem);
+}
+.reel-page .reel__top > .reel__stage:has(> .xr) {
+  margin-top: max(2rem, calc(var(--xr-h) * 0.59 + 10px + 0.35rem));
+}
+.reel-page .xr {
+  position: absolute;
+  z-index: 2;
+  top: calc(-10px - var(--xr-h) * 0.5902);
+  left: clamp(0.5rem, 5%, 3rem);
+  width: calc(var(--xr-h) * 1.1885);
+  height: var(--xr-h);
+  pointer-events: none;
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .reel-page .xr {
+    display: none;
+  }
+  .reel-page .reel__top > .reel__stage:has(> .xr) {
+    margin-top: 0;
+  }
+}

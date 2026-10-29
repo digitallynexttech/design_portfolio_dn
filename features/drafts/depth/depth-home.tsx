@@ -2,45 +2,25 @@ import Image, { getImageProps } from "next/image";
 import type { CSSProperties } from "react";
 import { FlowLink } from "@/components/ui/flow-link";
 import { PageFlow } from "@/components/ui/page-flow";
-import { CLIENTS } from "@/content/clients";
-import { RECOGNITION } from "@/content/recognition";
 import { REEL } from "@/content/reel";
 import { SERVICES } from "@/content/studio";
 import { CASE_STUDIES, getCaseStudy } from "@/content/work";
 import { worldData } from "@/content/world";
 import { ReelButton } from "@/features/home/reel-button";
 import { SailIntro } from "@/features/world/ui/sail-intro";
-import { CAREERS_URL, CONTACT_URL, COPYRIGHT_YEAR, FACTS, JOURNAL_URL, MAIN_SITE, NAV, PRIVACY_URL, SOCIALS } from "@/lib/site";
+import { FACTS } from "@/lib/site";
 import type { CaseStudy } from "@/content/types";
 import { AwayFlag } from "./away-flag";
+import { ClientLogos, RecognitionList } from "./clients";
+import { DepthFooter } from "./footer";
 import { DepthHeader } from "./header";
 import { Journey } from "./journey";
-import { LocalTime } from "./local-time";
+import { lift, pad } from "./lift";
 import { LOADER_SCRIPT, MODE_SCRIPT } from "./mode";
 import { Preloader } from "./preloader";
 import { ServicesStrip } from "./services-strip";
 import type { DepthPlane, DepthStop } from "./types";
-import { X_GLYPH } from "./x-glyph";
 import "./depth.css";
-
-const pad = (n: number) => String(n).padStart(2, "0");
-
-/**
- * A client colour as a hairline on the void: dark accents (Know Your Genes' deep teal) are lifted
- * toward paper until a 1 px line reads; bright ones are left exactly as they are.
- */
-function lift(hex: string): string {
-  const v = parseInt(hex.slice(1), 16);
-  const rgb = [(v >> 16) & 255, (v >> 8) & 255, v & 255];
-  const lin = rgb.map((c) => {
-    const x = c / 255;
-    return x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
-  });
-  const luminance = 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
-  if (luminance >= 0.08) return hex;
-  const mixed = rgb.map((c, i) => Math.round(c + ([242, 241, 238][i] - c) * 0.38));
-  return `#${mixed.map((c) => c.toString(16).padStart(2, "0")).join("")}`;
-}
 
 /** The phone gauge's names: a strip of narrow stops (Karan's phone frame, 22 Oct 2026). */
 const SHORT: Record<string, string> = {
@@ -70,27 +50,6 @@ const HOME_ORDER = [
   "kyg-network",
 ];
 
-/** The footer's sign-off: DIGITALLY NEXT across the page, an outline that fills as you arrive (as the
- *  preloader's did), DIGITALLY in white and NEXT in red as in the logo, the X the mascot's letter. */
-function FootMark() {
-  const layer = (kind: "line" | "fill") => (
-    <span className={`dp-foot__mark-layer dp-foot__mark-layer--${kind}`}>
-      <span className="dp-foot__mark-a">DIGITALLY</span> <span className="dp-foot__mark-b">NE</span>
-      {/* In the flight the 3D X jumps into this place (x-hop.ts) and becomes the letter. */}
-      <svg className="dp-foot__mark-x" viewBox={`0 0 ${X_GLYPH.width} ${X_GLYPH.height}`} data-x-slot={kind === "fill" ? "" : undefined}>
-        <path d={X_GLYPH.d} />
-      </svg>
-      <span className="dp-foot__mark-b">T</span>
-    </span>
-  );
-  return (
-    <p className="dp-foot__mark" aria-hidden>
-      {layer("line")}
-      {layer("fill")}
-    </p>
-  );
-}
-
 /** The hero stills (Cycles, from Blender/DigitallyNext/astronaut/hero). Wide screens: the whole frame. */
 const WIDE = "(min-width: 900px) and (min-aspect-ratio: 5 / 4)";
 /** A transparent pixel: wide screens skip the phone's cut-out. */
@@ -98,7 +57,7 @@ const NOTHING = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAA
 
 function HeroStill() {
   const common = { alt: "", sizes: "100vw", priority: true, quality: 75 } as const;
-  const wide = getImageProps({ ...common, src: "/models/astronaut/hero-wide-7.webp", width: 2400, height: 1350 }).props;
+  const wide = getImageProps({ ...common, src: "/models/astronaut/hero-wide-8.webp", width: 2400, height: 1350 }).props;
   const sky = getImageProps({ ...common, src: "/models/astronaut/hero-sky-3.webp", width: 1260, height: 1800 }).props;
   return (
     <picture className="dp-hero__still">
@@ -111,7 +70,7 @@ function HeroStill() {
 /** Phones: the bust, cut out, laid on the helmet's place until the scene takes over (depth.css). */
 function HeroFigure() {
   const fig = getImageProps({
-    src: "/models/astronaut/hero-bust-7.webp",
+    src: "/models/astronaut/hero-bust-8.webp",
     alt: "",
     width: 1170,
     height: 2228,
@@ -325,46 +284,9 @@ export function DepthHome() {
                 Who we’ve built for<span className="dp-stop">.</span>
               </h2>
             </div>
-            <ul className="dp-logos" aria-label="Clients">
-              {CLIENTS.map((client, i) => {
-                const aspect = client.logo.width / client.logo.height;
-                // Optical sizing: wide marks get less height, square ones more, so all weigh the same.
-                const h = Math.round(Math.min(44, Math.max(16, 27 * Math.sqrt(2.4 / aspect))));
-                return (
-                  <li key={client.name} className="dp-logo dp-rise" style={{ "--i": i % 9 } as CSSProperties}>
-                    <Image
-                      src={client.logo.src}
-                      alt={client.name}
-                      width={client.logo.width}
-                      height={client.logo.height}
-                      sizes={`${Math.ceil(h * aspect * 2)}px`}
-                      className="dp-logo__img"
-                      style={{ height: h, width: "auto" }}
-                    />
-                    <span className="dp-logo__name" aria-hidden>
-                      {client.name}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
+            <ClientLogos />
 
-            <div className="dp-recog">
-              <h3 className="dp-k dp-recog__k">Recognition</h3>
-              <ul className="dp-recog__list">
-                {RECOGNITION.map((item) => (
-                  <li key={item.title} className="dp-recog__row dp-rise">
-                    <span className={`dp-recog__mark${item.plate ? " dp-recog__mark--plate" : ""}`}>
-                      {item.image ? (
-                        <Image src={item.image.src} alt="" width={item.image.width} height={item.image.height} sizes="160px" className="dp-recog__img" />
-                      ) : null}
-                    </span>
-                    <span className="dp-recog__title">{item.title}</span>
-                    <span className="dp-recog__detail">{item.detail}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <RecognitionList />
           </section>
 
           {/* ---------- (03) Studio and services ---------- */}
@@ -407,111 +329,8 @@ export function DepthHome() {
         </main>
       </PageFlow>
 
-      {/* ---------- Contact, and the footer ---------- */}
-      <footer className="dp-foot">
-        <section className="dp-contact" aria-labelledby="dp-contact-title">
-          <div className="dp-gate">
-            <span className="dp-gate__c dp-gate__c--tl" aria-hidden />
-            <span className="dp-gate__c dp-gate__c--tr" aria-hidden />
-            <span className="dp-gate__c dp-gate__c--bl" aria-hidden />
-            <span className="dp-gate__c dp-gate__c--br" aria-hidden />
-            {/* The bottom of the well: the astronaut settles here (a still picture until the scene is live). */}
-            <div className="dp-astro-gate" data-astro-contact aria-hidden>
-              <Image src="/models/astronaut/gate-settled-7.webp" alt="" width={610} height={920} sizes="12rem" className="dp-astro-gate__poster" />
-            </div>
-            <p className="dp-k">Next</p>
-            <h2 id="dp-contact-title" className="dp-contact__h">
-              Have something that needs shaping<span className="dp-stop">?</span>
-            </h2>
-            <p className="dp-contact__line">Tell us what you’re making. We’ll take its shape.</p>
-            <div className="dp-contact__actions">
-              <a href={CONTACT_URL} className="dp-btn dp-btn--red dp-btn--lg">
-                Start a project <span aria-hidden>↗</span>
-              </a>
-              <a href={CAREERS_URL} className="dp-btn dp-btn--lg dp-btn--perch">
-                Join the studio <span aria-hidden>↗</span>
-                {/* Where the X lands and stands, on the button's top edge (x-hop.ts). */}
-                <span className="dp-x-perch" data-x-perch aria-hidden />
-              </a>
-            </div>
-          </div>
-        </section>
-
-        <div className="dp-foot__main">
-          <div className="dp-foot__brand">
-            <Image src="/brand/logo-white.png" alt="Digitally Next" width={1512} height={321} sizes="190px" className="dp-foot__logo" />
-            <p className="dp-foot__about">
-              The design and development studio inside Digitally Next. {FACTS.years} years, {FACTS.brands} brands, one team in {FACTS.city}.
-            </p>
-            <p className="dp-foot__now dp-k">
-              <span className="dp-foot__dot" aria-hidden />
-              {FACTS.city} <LocalTime /> IST
-            </p>
-          </div>
-          <nav aria-label="Footer" className="dp-foot__cols">
-            <div className="dp-foot__group">
-              <p className="dp-k dp-foot__label" id="dp-foot-studio">
-                Studio
-              </p>
-              <ul aria-labelledby="dp-foot-studio">
-                {NAV.map((item) => (
-                  <li key={item.href}>
-                    <FlowLink href={item.href} className="dp-foot__link">
-                      {item.label}
-                    </FlowLink>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="dp-foot__group">
-              <p className="dp-k dp-foot__label" id="dp-foot-dn">
-                Digitally Next
-              </p>
-              <ul aria-labelledby="dp-foot-dn">
-                <li>
-                  <a href={CAREERS_URL} className="dp-foot__link">
-                    Careers <span aria-hidden>↗</span>
-                  </a>
-                </li>
-                <li>
-                  <a href={JOURNAL_URL} className="dp-foot__link">
-                    Journal <span aria-hidden>↗</span>
-                  </a>
-                </li>
-                <li>
-                  <a href={MAIN_SITE} className="dp-foot__link">
-                    Main site <span aria-hidden>↗</span>
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div className="dp-foot__group">
-              <p className="dp-k dp-foot__label" id="dp-foot-follow">
-                Follow
-              </p>
-              <ul aria-labelledby="dp-foot-follow">
-                {SOCIALS.map((social) => (
-                  <li key={social.href}>
-                    <a href={social.href} className="dp-foot__link">
-                      {social.label} <span aria-hidden>↗</span>
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </nav>
-        </div>
-        <FootMark />
-        <div className="dp-foot__base">
-          <span>© {COPYRIGHT_YEAR} Digitally Next</span>
-          <a href={PRIVACY_URL} className="dp-foot__small">
-            Privacy <span aria-hidden>↗</span>
-          </a>
-          <a href="#top" className="dp-foot__small dp-foot__top">
-            Back to the surface <span aria-hidden>↑</span>
-          </a>
-        </div>
-      </footer>
+      {/* ---------- Contact, and the footer (footer.tsx, shared with the other pages) ---------- */}
+      <DepthFooter astronaut />
     </div>
   );
 }

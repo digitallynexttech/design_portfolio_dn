@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { DepthHome } from "@/features/drafts/depth/depth-home";
 
-// The home page: Depth (Karan, 23 Oct 2026), the fall through space with the astronaut and the X. The
-// previous home is at /drafts/depth.
+// The home page: Depth (Karan, 23 Oct 2026), the fall through space with the astronaut and the X.
+// (The earlier home drafts were deleted on 26 Oct 2026; they live in git history.)
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };

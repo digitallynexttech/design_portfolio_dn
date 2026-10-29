@@ -24,6 +24,8 @@ export function toCard(study: CaseStudy): WorkCardData {
     posterPhone: study.posterPhone,
     // The study's lead number, already sourced in its content file. The source stays server-side.
     metric: metric ? { value: metric.value, label: metric.label } : undefined,
+    metrics: study.metrics.slice(0, 2).map((m) => ({ value: m.value, label: m.label })),
+    palette: [study.theme.bg, study.theme.text, study.theme.accent],
     previewVideo: study.previewVideo ?? (PREVIEWS.has(study.slug) ? `/work/${study.slug}/preview.mp4` : undefined),
   };
 }

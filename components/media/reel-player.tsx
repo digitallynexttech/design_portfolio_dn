@@ -23,18 +23,21 @@ function chapterAt(chapters: ReelData["chapters"], time: number): number {
 /**
  * The silent showreel with its text alternative: a "Now" pill in the current client's colour that links to the
  * case study, and an ordered chapter list (jump to any site, or read what each one is). Until it first plays, one
- * teal play button sits over the poster; after that the native controls take over, so the player stays fully
+ * red play button sits over the poster; after that the native controls take over, so the player stays fully
  * keyboard accessible. The reel has no audio track.
  */
 export function ReelPlayer({
   reel,
   head,
+  stage: extra,
   autoPlay = false,
   className = "",
 }: {
   reel: ReelData;
   /** Rendered above the video, inside the same column (the page title, or a label in the pop-up). */
   head?: ReactNode;
+  /** Rendered in the video's stage, beside its frame (the /reel page's X, sat on the frame's edge). */
+  stage?: ReactNode;
   autoPlay?: boolean;
   className?: string;
 }) {
@@ -94,6 +97,7 @@ export function ReelPlayer({
       <div ref={top} className="reel__top">
         {head ? <div className="reel__head">{head}</div> : null}
         <div ref={stage} className="reel__stage">
+          {extra}
           <div className="reel__frame">
             <video
               ref={video}
@@ -119,7 +123,7 @@ export function ReelPlayer({
               <track kind="chapters" src={reel.chaptersTrack} srcLang="en" label="Sites" default />
             </video>
             {started ? null : (
-              // The whole poster is the tap area; the teal circle is what shows.
+              // The whole poster is the tap area; the red circle is what shows.
               <button type="button" className="reel__play" onClick={start} aria-label={`Play the reel, ${reel.length}`}>
                 <span className="reel__play-dot" aria-hidden>
                   {/* Centred on the triangle's centroid, not its box, so it sits optically in the middle. */}
@@ -197,7 +201,7 @@ export function ReelPopup({ reel, className = "" }: { reel: ReelData; className?
         aria-haspopup="dialog"
         className={`btn gap-2.5 pl-2.5 text-paper ${className}`}
       >
-        <span aria-hidden className="grid size-6 place-items-center rounded-full bg-teal text-[0.55rem] text-ink">
+        <span aria-hidden className="grid size-6 place-items-center rounded-[1px] bg-accent text-[0.55rem] text-white">
           ▶
         </span>
         Play reel <span className="font-mono text-xs text-(--text-3)">{reel.length}</span>

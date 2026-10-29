@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { notFound } from "next/navigation";
 import { ChapterNav } from "@/components/case-study/chapter-nav";
 import { CASE_STUDIES, chapterHref, chapterMinutes, chaptersFor, getCaseStudy } from "@/content/work";
+import { ReadingWalker } from "@/features/stage3d/reading-walker/reading-walker";
 import { WaterPause } from "@/features/water/water-pause";
 import { clientFontVariables, fontFamily } from "@/lib/client-fonts";
 
@@ -50,6 +51,9 @@ export default async function StudyLayout({ children, params }: LayoutProps<"/wo
       <WaterPause />
       <ChapterNav client={study.client} items={items} />
       {children}
+      {/* The X reads along with you, overview and chapters alike (after the page, so the chapter
+          bar stays right before it: `.chapter-nav + main`). */}
+      <ReadingWalker />
     </div>
   );
 }

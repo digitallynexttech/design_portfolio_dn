@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { FlowLink } from "@/components/ui/flow-link";
 import { CAREERS_URL, CONTACT_URL, NAV } from "@/lib/site";
@@ -9,10 +10,14 @@ import { CAREERS_URL, CONTACT_URL, NAV } from "@/lib/site";
  * The draft's own header: the logo, the three pages and "Start a project". On phones the pages move
  * into a native modal dialog (focus held inside, Escape closes it), opened from a 44 px menu button
  * (three lines, named "Menu"). Scrolling on down the page it slides up out of view, and scrolling
- * back up brings it down again (Karan, 23 Oct 2026); it is always there near the top and while its
- * menu is open.
+ * back up brings it down again (Karan, 23 Oct 2026); it is always there near the top, while its
+ * menu is open and while a key has focus in it. Every page has it (Karan, 26 Oct 2026: the home's
+ * theme everywhere): the others in .dn-theme (site-chrome.tsx), where it marks the page you're on
+ * and keeps still through page transitions (`transitionName`). html[data-header] says whether it
+ * shows, for the case studies' chapter bar, which sits under it (work.css).
  */
-export function DepthHeader() {
+export function DepthHeader({ transitionName }: { transitionName?: string }) {
+  const pathname = usePathname();
   const bar = useRef<HTMLElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
@@ -26,27 +31,34 @@ export function DepthHeader() {
     const TOP = 80;
     let last = window.scrollY;
     let raf = 0;
+    const show = (on: boolean) => {
+      el.toggleAttribute("data-hidden", !on);
+      document.documentElement.dataset.header = on ? "shown" : "hidden";
+    };
     const read = () => {
       raf = 0;
       const y = window.scrollY;
       if (y < TOP || open) {
-        el.removeAttribute("data-hidden");
+        show(true);
         last = y;
       } else if (y - last > STEP) {
-        el.setAttribute("data-hidden", "");
+        show(false);
         last = y;
       } else if (last - y > STEP) {
-        el.removeAttribute("data-hidden");
+        show(true);
         last = y;
       }
     };
+    const onFocus = () => show(true);
     const onScroll = () => {
       if (!raf) raf = requestAnimationFrame(read);
     };
     read();
     window.addEventListener("scroll", onScroll, { passive: true });
+    el.addEventListener("focusin", onFocus);
     return () => {
       window.removeEventListener("scroll", onScroll);
+      el.removeEventListener("focusin", onFocus);
       cancelAnimationFrame(raf);
     };
   }, [open]);
@@ -58,19 +70,21 @@ export function DepthHeader() {
     if (!open && d.open) d.close();
   }, [open]);
 
+  const current = (href: string) => (pathname === href || pathname.startsWith(`${href}/`) ? "page" : undefined);
+
   const close = () => {
     setOpen(false);
     opener.current?.focus({ preventScroll: true });
   };
 
   return (
-    <header ref={bar} className="dp-top">
+    <header ref={bar} className="dp-top" style={transitionName ? { viewTransitionName: transitionName } : undefined}>
       <FlowLink href="/" direction="back" aria-label="Digitally Next Design, home" className="dp-top__logo">
         <Image src="/brand/logo-white.png" alt="" width={1512} height={321} sizes="208px" loading="eager" />
       </FlowLink>
       <nav aria-label="Main" className="dp-top__nav">
         {NAV.map((item) => (
-          <FlowLink key={item.href} href={item.href} className="dp-top__link">
+          <FlowLink key={item.href} href={item.href} className="dp-top__link" aria-current={current(item.href)}>
             {item.label}
           </FlowLink>
         ))}
@@ -100,7 +114,7 @@ export function DepthHeader() {
           </div>
           <nav aria-label="Site" className="dp-menu__nav">
             {NAV.map((item) => (
-              <FlowLink key={item.href} href={item.href} onClick={() => setOpen(false)} className="dp-menu__link">
+              <FlowLink key={item.href} href={item.href} onClick={() => setOpen(false)} className="dp-menu__link" aria-current={current(item.href)}>
                 {item.label}
               </FlowLink>
             ))}

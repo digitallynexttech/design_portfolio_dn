@@ -111,11 +111,12 @@ type PagerLink = { href: string; label: string; kicker: string; minutes?: number
 
 /**
  * End-of-chapter hand-off: there is always a next place to go (flow rule 4). `next` is left out only
- * where the page already ends on one (the outcome chapter's next-project teaser).
+ * where the page already ends on one (the outcome chapter's next-project teaser). It and the teaser
+ * carry data-reading-end: where the read ends, for the reading walker (features/stage3d).
  */
 export function ChapterPager({ prev, next }: { prev?: PagerLink; next?: PagerLink }) {
   return (
-    <nav aria-label="Chapter" className="mt-24 grid gap-4 border-t border-(--c-line) pt-10 md:grid-cols-2">
+    <nav aria-label="Chapter" data-reading-end className="mt-24 grid gap-4 border-t border-(--c-line) pt-10 md:grid-cols-2">
       {prev ? (
         <FlowLink href={prev.href} direction="back" className="group rounded-2xl p-5 transition-colors hover:bg-(--c-surface)">
           <span className="label">← {prev.kicker}</span>
@@ -144,7 +145,7 @@ export function ChapterPager({ prev, next }: { prev?: PagerLink; next?: PagerLin
 /** The next study's poster, which morphs into that study's exhibit on the way there. */
 export function NextStudyTeaser({ study }: { study: CaseStudy }) {
   return (
-    <FlowLink href={`/work/${study.slug}`} direction="forward" className="group relative mt-24 block overflow-hidden rounded-3xl">
+    <FlowLink href={`/work/${study.slug}`} direction="forward" data-reading-end className="group relative mt-24 block overflow-hidden rounded-3xl">
       <ViewTransition name={`poster-${study.slug}`} share="poster-morph" default="none">
         <Image
           src={study.poster.src}

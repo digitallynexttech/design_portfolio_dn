@@ -1,26 +1,28 @@
 @import "tailwindcss";
-/* Area stylesheets, one owner each: the particle forms and hero, home sections, work and case
-   studies, and the other pages. Site-wide tokens and rules stay in this file. */
-@import "./styles/forms.css";
-@import "./styles/home.css";
+/* Area stylesheets, one owner each: the home's Set sail pieces, work and case studies, and the other
+   pages. Site-wide tokens and rules stay in this file (the home and the shared chrome: depth.css). */
+@import "./styles/sail.css";
 @import "./styles/work.css";
 @import "./styles/pages.css";
 
-/* Brand tokens. One red, one teal; water is tinted teal, red marks energy and calls to action. */
+/* Brand tokens: the Depth home's, on every page (Karan, 26 Oct 2026: "the current home page theme is
+   final, make the other pages similarly"; its spec heads features/drafts/depth/depth.css). The void,
+   paper, and brand red as the only accent (Tailwind's `accent`; --accent itself is the home's name for
+   a client's colour, so the site's red is plain --red). Teal belongs to the archived water draft alone. */
 :root {
-  --ink: #0a0a0a;
-  --ink-2: #111214;
-  --paper: #fafaf8;
+  --ink: #070708;
+  --ink-2: #0f0f11;
+  --paper: #f2f1ee;
   --red: #e21f26;
   --teal: #0ec8c5;
   --mute: #8a8f98;
-  --line: rgb(250 250 248 / 0.14);
+  /* Hairlines only: 1 px at 12-24% paper. */
+  --line: rgb(242 241 238 / 0.12);
 
-  /* Text roles over the water: body copy never drops below 72% (contrast holds on the brightest
-     caustics). Use as text-(--text-2). */
+  /* Text roles, as the home's (--dp-2, --dp-3). Use as text-(--text-2). */
   --text-1: var(--paper);
-  --text-2: color-mix(in oklab, var(--paper) 84%, transparent);
-  --text-3: color-mix(in oklab, var(--paper) 72%, transparent);
+  --text-2: rgb(242 241 238 / 0.8);
+  --text-3: rgb(242 241 238 / 0.64);
 
   /* Motion tokens (PLAN §4.2). Flow fills fast and settles; drain starts slow and leaves fast;
      tide is the even swell for things that go both ways. */
@@ -36,8 +38,9 @@
 
   /* Landscape phones put the notch in the gutter; the gutter grows to clear it. */
   --gutter: max(clamp(1rem, 4vw, 3rem), env(safe-area-inset-left), env(safe-area-inset-right));
-  /* The fixed header's height. Sticky bars sit under it while html[data-header="shown"]. */
-  --header-h: 3.625rem;
+  /* The fixed header's height with its margin above (depth.css: --dp-top, --dp-top-gap). Sticky bars
+     sit under it while html[data-header="shown"]. */
+  --header-h: calc(3.75rem + clamp(0.5rem, 1.1vw, 1rem));
 
   /* Page transitions blur only where a fine pointer suggests a screen that can afford it. */
   --vt-blur: 0px;
@@ -54,6 +57,7 @@
   --color-paper: var(--paper);
   --color-red: var(--red);
   --color-teal: var(--teal);
+  --color-accent: var(--red);
   --color-mute: var(--mute);
   --font-display: var(--font-headline);
   --font-sans: var(--font-text);
@@ -65,23 +69,23 @@
    and as plain variables for the area stylesheets. `static` keeps every variable in :root. */
 @theme static {
   /* Type: hero beats, page titles, section titles, sub-sections, card titles, intros, small print,
-     mono labels, micro captions. */
+     mono labels, micro captions. Display sizes set at the home's weight (500) and tracking. */
   --text-hero: clamp(3.25rem, 12.5vw, 12.5rem);
   --text-hero--line-height: 0.92;
-  --text-hero--letter-spacing: -0.035em;
+  --text-hero--letter-spacing: -0.045em;
   --text-d1: clamp(3.25rem, 10vw, 9rem);
   --text-d1--line-height: 0.9;
-  --text-d1--letter-spacing: -0.035em;
+  --text-d1--letter-spacing: -0.045em;
   /* Home only: the (02) Selected work title, and the studio's opening statement. */
   --text-showpiece: clamp(2.75rem, 8vw, 7.5rem);
   --text-showpiece--line-height: 0.92;
-  --text-showpiece--letter-spacing: -0.035em;
+  --text-showpiece--letter-spacing: -0.045em;
   --text-statement: clamp(2.25rem, 5.6vw, 5.25rem);
   --text-statement--line-height: 1.02;
-  --text-statement--letter-spacing: -0.03em;
+  --text-statement--letter-spacing: -0.04em;
   --text-d2: clamp(2.25rem, 5vw, 4.5rem);
   --text-d2--line-height: 0.98;
-  --text-d2--letter-spacing: -0.03em;
+  --text-d2--letter-spacing: -0.035em;
   --text-d3: clamp(1.625rem, 3.4vw, 3rem);
   --text-d3--line-height: 1.05;
   --text-d3--letter-spacing: -0.02em;
@@ -107,10 +111,11 @@
   --spacing-stack: clamp(3rem, 6vw, 5rem);
   --spacing-page-top: clamp(7.5rem, 12vw, 9rem);
 
-  --radius-pill: 999px;
-  --radius-card: 1.5rem;
-  --radius-inner: 1rem;
-  --radius-sheet: 1.75rem;
+  /* Square corners, 2 px on controls (the home's). The names stay from the rounded first theme. */
+  --radius-pill: 2px;
+  --radius-card: 0px;
+  --radius-inner: 0px;
+  --radius-sheet: 0px;
 
   /* The smallest tap area on a touch screen (PLAN §14.2). */
   --target-min: 2.75rem;
@@ -227,12 +232,12 @@ body {
 }
 
 ::selection {
-  background: var(--teal);
-  color: var(--ink);
+  background: var(--red);
+  color: #fff;
 }
 
 :focus-visible {
-  outline: 2px solid var(--teal);
+  outline: 2px solid var(--paper);
   outline-offset: 3px;
   /* Outlines appear at once; a transitioning outline colour reads as a flash. */
   transition: none;
@@ -255,32 +260,19 @@ body {
   translate: none;
 }
 
-/* Headings end with a teal full stop (brand rule). */
+/* Headings end with a red full stop (brand rule). */
 .stop {
-  color: var(--teal);
-}
-
-/* Without the water canvas (no WebGL, reduced motion, save-data) the page keeps a quiet backdrop.
-   Sized to the large viewport, like the canvas, so a phone's toolbar never resizes it. */
-.water-fallback {
-  position: fixed;
-  inset: 0 0 auto;
-  height: 100lvh;
-  z-index: -1;
-  background:
-    radial-gradient(120% 70% at 50% 110%, rgb(14 200 197 / 0.22), transparent 60%),
-    radial-gradient(80% 50% at 15% 0%, rgb(14 200 197 / 0.08), transparent 70%),
-    var(--ink);
+  color: var(--red);
 }
 
 /* ---------- Buttons ---------- */
 
-/* One button for the whole site. Ghost by default; on hover a fill rises from the bottom like
-   water filling a glass, its leading edge curved like a meniscus. Variants set the colours through
-   --btn-fill (the rising water) and --btn-on-fill (the label once filled). */
+/* One button for the whole site, the home's: a hairline, square (2 px), and on hover a fill that rises
+   behind the label from the bottom edge. Variants set the colours through --btn-fill (the rising
+   fill) and --btn-on-fill (the label once filled). */
 @layer components {
   .btn {
-    --btn-fill: color-mix(in oklab, currentColor 14%, transparent);
+    --btn-fill: color-mix(in oklab, currentColor 10%, transparent);
     --btn-on-fill: currentColor;
     position: relative;
     isolation: isolate;
@@ -289,11 +281,11 @@ body {
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    min-height: 2.875rem;
+    min-height: 3rem;
     padding: 0 1.25rem;
-    border: 1px solid color-mix(in oklab, currentColor 28%, transparent);
+    border: 1px solid color-mix(in oklab, currentColor 24%, transparent);
     border-radius: var(--radius-pill);
-    font-size: 0.875rem;
+    font-size: 0.9375rem;
     font-weight: 500;
     line-height: 1.2;
     white-space: nowrap;
@@ -309,10 +301,9 @@ body {
     position: absolute;
     z-index: -1;
     top: 100%;
-    left: -10%;
-    width: 120%;
-    height: 170%;
-    border-radius: 50% 50% 0 0 / 30% 30% 0 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     background: var(--btn-fill);
     pointer-events: none;
     transition: translate var(--dur-4) var(--ease-flow);
@@ -342,14 +333,14 @@ body {
   }
 
   .btn--primary {
-    --btn-fill: color-mix(in oklab, var(--red), var(--ink) 24%);
-    --btn-on-fill: var(--paper);
+    --btn-fill: rgb(0 0 0 / 0.2);
+    --btn-on-fill: #fff;
     background: var(--red);
-    border-color: transparent;
-    color: var(--paper);
+    border-color: var(--red);
+    color: #fff;
   }
   .btn--solid {
-    --btn-fill: var(--teal);
+    --btn-fill: rgb(7 7 8 / 0.14);
     --btn-on-fill: var(--ink);
     background: var(--paper);
     border-color: transparent;
@@ -371,8 +362,8 @@ body {
     }
   }
   .btn--lg {
-    min-height: 3.375rem;
-    padding: 0 1.75rem;
+    min-height: 3.5rem;
+    padding: 0 1.6rem;
     font-size: 1rem;
   }
 
@@ -395,7 +386,7 @@ body {
   }
   @media (hover: hover) {
     .chip:hover {
-      border-color: var(--teal);
+      border-color: color-mix(in oklab, currentColor 55%, transparent);
     }
   }
 
@@ -643,70 +634,9 @@ body {
   border-color: var(--teal);
 }
 
-/* ---------- Header ---------- */
-
-/* The header follows the page's scheme on light case studies. */
-.site-header {
-  color: var(--paper);
-}
-body:has(.study[data-scheme="light"]) {
-  --chrome-auto: var(--paper);
-}
-body:has(.study[data-scheme="light"]) .site-header {
-  color: var(--ink);
-}
-/* A permanent scrim, so the links read over any water, poster or client page. Pages may set
-   --chrome-bg to their own background colour. Its own element under the header (see
-   site-header.tsx), so the glass can blur the page rather than only the header. */
-.site-header-glass {
-  --scrim: var(--chrome-bg, var(--chrome-auto, var(--ink)));
-  position: fixed;
-  inset: 0 0 auto;
-  height: calc(var(--header-h) + 1.75rem);
-  z-index: 39;
-  pointer-events: none;
-  background: linear-gradient(
-    to bottom,
-    color-mix(in oklab, var(--scrim) 88%, transparent),
-    color-mix(in oklab, var(--scrim) 60%, transparent) 55%,
-    transparent
-  );
-  /* Glass: whatever slides under the header blurs, so the logo always reads; the blur fades out
-     towards the bottom edge with the scrim. Plain backdrop-filter only (Lightning CSS drops it
-     when the -webkit- form sits beside it). */
-  backdrop-filter: blur(var(--chrome-blur)) saturate(140%);
-  mask-image: linear-gradient(to bottom, #000 55%, transparent);
-}
-.site-header__cta {
-  --btn-fill: var(--red);
-  --btn-on-fill: var(--paper);
-  min-height: 2.375rem;
-  padding: 0 1rem;
-}
-@media (pointer: coarse) {
-  .site-header__cta {
-    min-height: var(--target-min);
-  }
-}
-/* On light case studies the header's text is ink, and the site teal is too faint on linen: focus
-   rings there are ink (15:1 or better). Not currentColor: a focused button's label turns paper. */
-body:has(.study[data-scheme="light"]) .site-header :focus-visible {
-  outline-color: var(--ink);
-}
-@media (hover: hover) {
-  .site-header__cta:hover {
-    border-color: var(--red);
-  }
-}
-.logo-on-light {
-  display: none;
-}
-body:has(.study[data-scheme="light"]) .site-header .logo-on-dark {
-  display: none;
-}
-body:has(.study[data-scheme="light"]) .site-header .logo-on-light {
-  display: block;
-}
+/* ---------- Header ----------
+   Every page wears the Depth home's header and footer (features/drafts/depth/site-chrome.tsx); their
+   rules are in depth.css, under .dn-theme. */
 
 /* ---------- Reduced motion ---------- */
 

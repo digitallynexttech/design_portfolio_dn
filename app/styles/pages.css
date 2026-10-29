@@ -1,115 +1,6 @@
 /* pages styles. Plain CSS (no @apply); imported from app/globals.css. Unlayered, so these rules win over
    Tailwind utilities on the same element. */
 
-/* ---------- Services ---------- */
-
-/* The index in the header: a chip scroller on phones, wrapping chips on tablets, a numbered list on desktop. */
-.services-nav {
-  display: flex;
-  gap: 0.5rem;
-  margin-inline: calc(var(--gutter) * -1);
-  padding-inline: var(--gutter);
-  scroll-padding-inline: var(--gutter);
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
-}
-.services-nav::-webkit-scrollbar {
-  display: none;
-}
-@media (min-width: 768px) {
-  .services-nav {
-    flex-wrap: wrap;
-    margin-inline: 0;
-    padding-inline: 0;
-    overflow: visible;
-  }
-  .services-nav > ol {
-    flex-wrap: wrap;
-  }
-}
-@media (min-width: 1024px) {
-  .services-nav {
-    display: block;
-  }
-}
-
-/* Proof under each service: a snap row up to 1023px that runs to the row's edges (two cards and the edge of a
-   third on tablets), then one row of equal cards (three slots, so cards keep the same size from service to
-   service). The bleed matches .service-row's padding. */
-.proof-row {
-  display: flex;
-  gap: 0.75rem;
-  margin-inline: -1.5rem;
-  padding-inline: 1.5rem;
-  scroll-padding-inline: 1.5rem;
-  scroll-snap-type: x mandatory;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
-}
-.proof-row::-webkit-scrollbar {
-  display: none;
-}
-.proof-row > li {
-  flex: 0 0 min(78%, 20rem);
-  min-width: 0;
-  scroll-snap-align: start;
-}
-@media (min-width: 768px) {
-  .proof-row {
-    gap: 1.25rem;
-    margin-inline: -3rem;
-    padding-inline: 3rem;
-    scroll-padding-inline: 3rem;
-  }
-  .proof-row > li {
-    flex-basis: min(46%, 20rem);
-  }
-}
-@media (min-width: 1024px) {
-  .proof-row {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1.75rem;
-    margin-inline: 0;
-    padding-inline: 0;
-    overflow: visible;
-  }
-}
-
-/* Arriving from the index (or from home's "Proof inside"): a teal bar pours down the row's inside edge. */
-.service-row,
-.process-section {
-  position: relative;
-}
-.service-row::before,
-.process-section::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 3px;
-  background: var(--teal);
-  transform: scaleY(0);
-  transform-origin: top;
-  pointer-events: none;
-}
-.process-section::before {
-  left: calc(var(--gutter) * -0.5);
-}
-.service-row:target::before,
-.process-section:target::before {
-  transform: scaleY(1);
-  animation: target-pour 900ms var(--ease-flow) both;
-}
-@keyframes target-pour {
-  from {
-    transform: scaleY(0);
-  }
-}
-
 /* ---------- About ---------- */
 
 /* Phones see the portrait shot, so each source keeps its own crop. */
@@ -119,17 +10,6 @@
 @media (min-width: 768px) {
   .team-photo img {
     object-position: var(--wide);
-  }
-}
-
-/* Hovering a person spotlights them; names are not links, so nothing pretends to be one. */
-@media (hover: hover) {
-  .people-list > li {
-    transition: opacity 400ms var(--ease-flow);
-  }
-  .people-list:hover > li:not(:hover),
-  .people-list:has(:focus-visible) > li:not(:focus-within) {
-    opacity: 0.4;
   }
 }
 
@@ -156,6 +36,10 @@
 .reel__head {
   grid-area: head;
 }
+/* (The player's stage is the frame's positioning box; the pages' hairline frame hangs on it.) */
+.reel__stage {
+  position: relative;
+}
 .reel__top > .reel__stage {
   grid-area: stage;
   margin-top: 2rem;
@@ -181,7 +65,7 @@
   position: relative;
   aspect-ratio: 16 / 9;
   overflow: hidden;
-  border-radius: 1.5rem;
+  border-radius: 0;
   background: var(--ink-2);
 }
 .reel__video {
@@ -190,7 +74,7 @@
   height: 100%;
 }
 
-/* Before the first play: one teal play button over the poster (the whole poster takes the tap; the circle is
+/* Before the first play: one red play button over the poster (the whole poster takes the tap; the circle is
    what shows), instead of the native 16px triangle sitting on the poster's own copy. */
 .reel__play {
   position: absolute;
@@ -208,13 +92,12 @@
   width: 4.5rem;
   height: 4.5rem;
   border-radius: var(--radius-pill);
-  background: var(--teal);
-  color: var(--ink);
-  box-shadow: 0 0.75rem 2rem rgb(0 0 0 / 0.35);
+  background: var(--red);
+  color: #fff;
   transition: scale var(--dur-2) var(--ease-flow);
 }
 .reel__play:focus-visible .reel__play-dot {
-  outline: 2px solid var(--teal);
+  outline: 2px solid var(--red);
   outline-offset: 4px;
 }
 @media (hover: hover) {
@@ -236,7 +119,7 @@
   margin-top: 0.75rem;
   padding-inline: 1rem;
   overflow: hidden;
-  border-radius: 999px;
+  border-radius: 2px;
   font-size: 0.875rem;
   font-weight: 500;
   white-space: nowrap;
@@ -319,7 +202,7 @@
   align-items: center;
   justify-content: center;
   min-height: 2.75rem;
-  border-radius: 999px;
+  border-radius: 2px;
   border: 1px solid rgb(250 250 248 / 0.2);
   font-family: var(--font-geist-mono);
   font-size: 0.875rem;
@@ -330,12 +213,12 @@
     color 400ms var(--ease-flow);
 }
 .reel__time:hover {
-  border-color: var(--teal);
+  border-color: var(--red);
 }
 .reel__chapter[aria-current="true"] .reel__time {
   color: var(--ink);
-  background: var(--teal);
-  border-color: var(--teal);
+  background: var(--red);
+  border-color: var(--red);
 }
 .reel__client {
   font-weight: 600;
@@ -365,7 +248,7 @@
   transition: color 0.2s;
 }
 .reel__study:hover {
-  color: var(--teal);
+  color: var(--red);
 }
 @media (min-width: 640px) {
   .reel__study {
@@ -417,107 +300,4 @@
 /* The footer's CTA links out to pages that can't load without a connection. */
 body:has(main[data-offline]) .footer-cta {
   display: none;
-}
-
-/* ---------- Footer: the X in its window ---------- */
-
-/* A square of glass beside the heading's first line, sized in the heading's em; the X lives inside
-   it (the canvas is clipped to the pane). No backdrop-filter: the water canvas behind redraws every
-   frame, and a blur over it would cost every frame too. */
-.mascot-window {
-  position: relative;
-  display: inline-block;
-  flex: none;
-  width: 11rem;
-  aspect-ratio: 1;
-  cursor: pointer;
-}
-
-@media (width >= 48rem) {
-  .mascot-window {
-    width: 2.35em;
-  }
-}
-
-.mascot-window__pane {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  border-radius: 1.25rem;
-  border: 1px solid color-mix(in oklab, var(--paper) 14%, transparent);
-  background:
-    radial-gradient(75% 65% at 50% 40%, color-mix(in oklab, var(--teal) 18%, transparent), transparent 72%),
-    color-mix(in oklab, var(--paper) 6%, transparent);
-  box-shadow:
-    inset 0 1px 0 color-mix(in oklab, var(--paper) 12%, transparent),
-    0 1.5rem 3.5rem -1.5rem rgb(0 0 0 / 0.6);
-}
-
-.mascot-window__poster,
-.mascot-window__canvas {
-  position: absolute;
-  inset: 0;
-  display: block;
-  width: 100%;
-  height: 100%;
-  transition: opacity var(--dur-5) var(--ease-flow);
-}
-
-.mascot-window__poster {
-  object-fit: contain;
-}
-
-.mascot-window__canvas {
-  opacity: 0;
-}
-
-.mascot-window[data-ready] .mascot-window__canvas {
-  opacity: 1;
-}
-
-.mascot-window[data-ready] .mascot-window__poster {
-  opacity: 0;
-}
-
-/* The speech bubble, like a comic: paper on the water, a little tail, a slow bob. */
-.mascot-window__bubble {
-  position: absolute;
-  bottom: calc(100% + 0.75rem);
-  left: 50%;
-  translate: -50% 0;
-  z-index: 1;
-  padding: 0.5rem 0.875rem;
-  border-radius: var(--radius-pill);
-  background: var(--paper);
-  color: var(--ink);
-  font: 500 0.875rem/1.3 var(--font-sans);
-  letter-spacing: normal;
-  white-space: nowrap;
-  box-shadow: 0 0.5rem 1.5rem -0.5rem rgb(0 0 0 / 0.5);
-  animation: mascot-bubble 4s ease-in-out infinite;
-}
-
-.mascot-window__bubble::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  width: 0.625rem;
-  height: 0.625rem;
-  border-radius: 2px;
-  background: inherit;
-  translate: -50% -55%;
-  rotate: 45deg;
-}
-
-@keyframes mascot-bubble {
-  50% {
-    transform: translateY(-0.25rem);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .mascot-window__bubble {
-    animation: none;
-  }
 }

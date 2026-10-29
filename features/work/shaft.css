@@ -1,0 +1,396 @@
+/* =====================================================================================
+   /work: "The Shaft" (shaft.tsx). The Depth home's system: void, paper, red only for the
+   stop and "you are here", hairlines, square corners, no shadows. Every rule under .wa.
+   Default (no script, reduced motion: html[data-wa="static"]): still rows. html[data-wa="drop"]:
+   phones, one column rising out of the depth. html[data-wa="shaft"]: the sticky shaft.
+   ===================================================================================== */
+
+.wa {
+  --wa-seg: 92svh;
+}
+
+/* ---------- The filter ---------- */
+
+.wa .wa-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin-top: clamp(2.5rem, 6vw, 4rem);
+  padding: 0.85rem var(--dp-m);
+  border-top: 1px solid var(--dp-hair);
+  border-bottom: 1px solid var(--dp-hair);
+  scroll-margin-top: calc(var(--dp-top) + var(--dp-top-gap));
+}
+.wa .wa-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.wa .wa-chips .dn-chip {
+  min-height: 2.75rem;
+}
+.wa .wa-count {
+  white-space: nowrap;
+}
+/* Phones: the chips in one row that swipes, edge to edge. */
+@media (max-width: 639.98px) {
+  .wa .wa-filter {
+    padding-inline: 0;
+  }
+  .wa .wa-chips {
+    flex-wrap: nowrap;
+    width: 100%;
+    padding: 0 var(--dp-m);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+  .wa .wa-chips > li {
+    flex: none;
+  }
+  .wa .wa-count {
+    padding: 0 var(--dp-m);
+  }
+}
+
+/* ---------- The studies: still rows (the default) ---------- */
+
+.wa .wa-track {
+  padding: clamp(3rem, 7vw, 5rem) var(--dp-m) 0;
+}
+.wa .wa-rings,
+.wa .wa-readout,
+.wa .wa-rail,
+.wa .wa-cue {
+  display: none;
+}
+.wa .wa-item + .wa-item {
+  margin-top: clamp(4rem, 9vw, 7rem);
+}
+.wa .wa-study {
+  display: grid;
+  gap: 1.75rem;
+}
+.wa .wa-box {
+  width: 100%;
+}
+.wa .wa-hit {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.wa .wa-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+}
+.wa .wa-no {
+  color: var(--dp-ink);
+}
+.wa .wa-client {
+  margin-top: 0.6rem;
+  font-family: var(--dp-display);
+  font-size: clamp(2.25rem, 4.2vw, 4.25rem);
+  font-weight: 500;
+  line-height: 0.95;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+.wa .wa-line {
+  max-width: 32ch;
+  margin-top: 0.85rem;
+  font-size: clamp(1.0625rem, 1.3vw, 1.25rem);
+  line-height: 1.4;
+  color: var(--dp-2);
+  text-wrap: pretty;
+}
+.wa .wa-metrics {
+  max-width: 30rem;
+}
+.wa .wa-spec {
+  max-width: 30rem;
+}
+.wa .wa-go {
+  margin-top: 0.85rem;
+}
+@media (hover: hover) {
+  .wa .wa-study:has(.wa-hit:hover, .wa-go:hover) .dp-box::after {
+    opacity: 1;
+  }
+}
+@media (min-width: 900px) {
+  .wa .wa-study {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--dp-gap);
+    align-items: center;
+  }
+  .wa .wa-item[data-side="right"] .wa-panel {
+    grid-column: 6 / 13;
+    grid-row: 1;
+  }
+  .wa .wa-item[data-side="right"] .wa-facts {
+    grid-column: 1 / 5;
+    grid-row: 1;
+  }
+  .wa .wa-item[data-side="left"] .wa-panel {
+    grid-column: 1 / 8;
+    grid-row: 1;
+  }
+  .wa .wa-item[data-side="left"] .wa-facts {
+    grid-column: 9 / 13;
+    grid-row: 1;
+  }
+}
+
+/* ---------- Phones and upright tablets: the drop ----------
+   A hairline runs down the left margin, the shaft's wall; each poster comes up out of the depth as it
+   reaches the middle of the screen. Without scroll-driven animations the rows simply stand still. */
+
+html[data-wa="drop"] .wa .wa-track {
+  position: relative;
+}
+html[data-wa="drop"] .wa .wa-track::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--dp-m) / 2);
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, var(--dp-hair-2) 6%, var(--dp-hair-2) 94%, transparent);
+}
+@supports (animation-timeline: view()) {
+  html[data-wa="drop"] .wa .wa-box {
+    animation: wa-rise linear forwards;
+    animation-timeline: view();
+    animation-range: entry 0% cover 48%;
+  }
+  html[data-wa="drop"] .wa .wa-facts__in {
+    animation: wa-facts linear forwards;
+    animation-timeline: view();
+    animation-range: entry 0% entry 90%;
+  }
+}
+@keyframes wa-rise {
+  from {
+    opacity: 0.18;
+    transform: perspective(900px) translate3d(0, 14vh, -320px) rotateX(16deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes wa-facts {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 1.5rem, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------- Wide screens: the shaft ---------- */
+
+html[data-wa="shaft"] .wa .wa-track {
+  position: relative;
+  /* the fall runs from 0.6 of a station before the first to 0.15 past the last (shaft.tsx) */
+  height: calc(100svh + (var(--n) - 0.25) * var(--wa-seg));
+  padding: 0;
+}
+html[data-wa="shaft"] .wa .wa-stage {
+  --wa-pw: min(40vw, 44rem);
+  --wa-fw: min(31vw, 27rem);
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+  background: radial-gradient(42% 46% at 50% 50%, rgb(242 241 238 / 0.045), transparent 70%);
+}
+html[data-wa="shaft"] .wa .wa-rings {
+  display: block;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+html[data-wa="shaft"] .wa .wa-vanish {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: rgb(242 241 238 / 0.09);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+html[data-wa="shaft"] .wa .wa-vanish path {
+  vector-effect: non-scaling-stroke;
+}
+html[data-wa="shaft"] .wa .wa-ring {
+  position: absolute;
+  inset: 6% 4%;
+  border: 1px solid var(--dp-hair-2);
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+/* Every study fills the stage: its poster and its facts are centred on the shaft's axis and moved
+   from there by the driver (so the vanishing point is the screen's centre). */
+html[data-wa="shaft"] .wa .wa-list,
+html[data-wa="shaft"] .wa .wa-item,
+html[data-wa="shaft"] .wa .wa-study,
+html[data-wa="shaft"] .wa .wa-panel,
+html[data-wa="shaft"] .wa .wa-facts {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  pointer-events: none;
+}
+html[data-wa="shaft"] .wa .wa-study {
+  display: block;
+}
+html[data-wa="shaft"] .wa .wa-panel,
+html[data-wa="shaft"] .wa .wa-facts {
+  display: grid;
+  place-items: center;
+}
+html[data-wa="shaft"] .wa .wa-box {
+  width: var(--wa-pw);
+  opacity: 0;
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+}
+html[data-wa="shaft"] .wa .wa-facts__in {
+  width: var(--wa-fw);
+  opacity: 0;
+  will-change: transform, opacity;
+}
+/* Only the study in front of you takes the pointer. */
+html[data-wa="shaft"] .wa .wa-item[data-current] .wa-box,
+html[data-wa="shaft"] .wa .wa-item[data-current] .wa-facts__in {
+  pointer-events: auto;
+}
+html[data-wa="shaft"] .wa .wa-item[data-current] .dp-box::after {
+  opacity: 1;
+}
+html[data-wa="shaft"] .wa .wa-client {
+  font-size: clamp(2rem, 3.3vw, 3.5rem);
+}
+html[data-wa="shaft"] .wa .wa-line {
+  font-size: clamp(1rem, 1.15vw, 1.1875rem);
+}
+html[data-wa="shaft"] .wa .wa-metrics {
+  margin-top: 1.2rem;
+}
+html[data-wa="shaft"] .wa .wa-metrics .dp-metric__value {
+  font-size: clamp(1.4rem, 2vw, 2rem);
+}
+
+/* The instruments: depth and station bottom left, the stations up the right, the cue at the start. */
+html[data-wa="shaft"] .wa .wa-readout {
+  display: grid;
+  gap: 0.3rem;
+  position: absolute;
+  left: var(--dp-m);
+  bottom: clamp(1.25rem, 3vh, 2rem);
+  color: var(--dp-3);
+  font-variant-numeric: tabular-nums;
+}
+html[data-wa="shaft"] .wa .wa-readout [data-wa-depth],
+html[data-wa="shaft"] .wa .wa-readout [data-wa-station] {
+  color: var(--dp-ink);
+}
+html[data-wa="shaft"] .wa .wa-cue {
+  display: flex;
+  gap: 0.5rem;
+  position: absolute;
+  left: 50%;
+  bottom: clamp(1.25rem, 3vh, 2rem);
+  translate: -50% 0;
+  color: var(--dp-2);
+}
+html[data-wa="shaft"] .wa .wa-cue span {
+  color: var(--dp-red);
+}
+html[data-wa="shaft"] .wa .wa-rail {
+  display: block;
+  position: absolute;
+  top: calc(var(--dp-top) + var(--dp-top-gap) + 4vh);
+  bottom: 14vh;
+  right: calc(var(--dp-m) - 1rem);
+  width: 2.75rem;
+}
+html[data-wa="shaft"] .wa .wa-rail__line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: var(--dp-hair-2);
+}
+html[data-wa="shaft"] .wa .wa-rail__tick {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--k) * 100%);
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  translate: -50% -50%;
+  cursor: pointer;
+}
+html[data-wa="shaft"] .wa .wa-rail__tick span {
+  display: block;
+  width: 0.625rem;
+  height: 1px;
+  background: var(--dp-hair-2);
+  transition:
+    width 300ms var(--dp-ease),
+    background-color 300ms var(--dp-ease);
+}
+@media (hover: hover) {
+  html[data-wa="shaft"] .wa .wa-rail__tick:hover span {
+    width: 1.25rem;
+    background: var(--dp-ink);
+  }
+}
+html[data-wa="shaft"] .wa .wa-rail__marker {
+  position: absolute;
+  top: -0.5rem;
+  left: -0.5625rem;
+  width: 1.125rem;
+  height: 1rem;
+  border-top: 2px solid var(--dp-red);
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* Short wide windows (1280 × 720, 1024 × 768): a little smaller, so a study and its facts fit. */
+@media (max-height: 800px) {
+  html[data-wa="shaft"] .wa .wa-stage {
+    --wa-pw: min(38vw, 40rem);
+  }
+  html[data-wa="shaft"] .wa .wa-client {
+    font-size: clamp(1.875rem, 3vw, 3rem);
+  }
+  html[data-wa="shaft"] .wa .wa-line {
+    margin-top: 0.6rem;
+  }
+  html[data-wa="shaft"] .wa .wa-metrics {
+    margin-top: 0.85rem;
+  }
+  html[data-wa="shaft"] .wa .wa-spec {
+    margin-top: 0.85rem;
+  }
+}
+
+/* Archive below the shaft: the home's section spacing. */
+html[data-wa="shaft"] .wa .wa-shaft + .dp-sec {
+  padding-top: clamp(4rem, 8vw, 7rem);
+}

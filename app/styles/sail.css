@@ -1,0 +1,73 @@
+/* The home's Set sail pieces (features/world/ui/sail-intro.tsx): the quiet link, the button's wake
+   and the sound switch. Imported from app/globals.css. */
+
+/* The third way in, quieter than the two buttons: open the world. */
+.sail-link {
+  margin-top: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text-2);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--paper) 30%, transparent);
+  text-underline-offset: 0.35em;
+  transition:
+    color 250ms var(--ease-flow),
+    text-decoration-color 250ms var(--ease-flow);
+}
+.sail-link:hover {
+  color: var(--paper);
+  text-decoration-color: var(--red);
+}
+.sail-link span {
+  transition: transform 400ms var(--ease-flow);
+}
+.sail-link:hover span {
+  transform: translateX(3px);
+}
+
+/* Set sail is a .btn btn--primary btn--lg (its fill, focus and press); it adds a red glow and a
+   wake that runs across it, under the label and over the fill. */
+.sail-button {
+  box-shadow: 0 12px 34px rgb(226 31 38 / 0.35);
+}
+.sail-button__wake {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.32), transparent);
+  transform: translateX(-100%);
+  animation: sail-wake 3.2s var(--ease-flow) infinite;
+}
+@keyframes sail-wake {
+  60%,
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.sail-sound {
+  display: grid;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 999px;
+  color: rgb(250 250 248 / 0.75);
+  background: rgb(10 10 10 / 0.35);
+  box-shadow: inset 0 0 0 1px rgb(250 250 248 / 0.28);
+  backdrop-filter: blur(10px);
+  transition:
+    color 250ms var(--ease-flow),
+    box-shadow 250ms var(--ease-flow);
+}
+.sail-sound:hover,
+.sail-sound[aria-pressed="true"] {
+  color: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--red);
+}
+.sail-sound[aria-pressed="true"] {
+  color: var(--red);
+}

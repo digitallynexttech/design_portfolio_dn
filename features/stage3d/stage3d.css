@@ -1,0 +1,34 @@
+/* =====================================================================================
+   The pages' 3D elements (use-three.ts): a wrapper `.s3` with a canvas `.s3__gl` and, optionally, a
+   still `.s3__still` shown until the scene is live (and kept where WebGL or the model fails).
+   Decorative unless an element says otherwise: no pointer events on the canvas by default.
+   ===================================================================================== */
+
+.s3 {
+  position: relative;
+}
+.s3__gl {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 600ms var(--dp-ease, ease);
+}
+.s3[data-s3="live"] .s3__gl {
+  opacity: 1;
+}
+.s3__still {
+  transition: opacity 600ms var(--dp-ease, ease);
+}
+.s3[data-s3="live"] .s3__still {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .s3__gl,
+  .s3__still {
+    transition: none;
+  }
+}

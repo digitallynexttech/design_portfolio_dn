@@ -5,8 +5,8 @@
 
 /** Each download, in KB as served (public/…). */
 const SIZES = {
-  desktop: { engine: 180, draco: 270, astronaut: 2778, x: 226, weave: 29, visor: 384, "earth-day": 703, "earth-extra": 302 },
-  phone: { engine: 180, draco: 270, astronaut: 1286, x: 226, weave: 29, visor: 384, "earth-day": 221, "earth-extra": 302 },
+  desktop: { engine: 180, draco: 270, astronaut: 2778, x: 280, weave: 29, visor: 384, "earth-day": 703, "earth-extra": 302 },
+  phone: { engine: 180, draco: 270, astronaut: 1286, x: 280, weave: 29, visor: 384, "earth-day": 221, "earth-extra": 302 },
 };
 export type LoadKey = keyof typeof SIZES.desktop;
 /** The build after the downloads: the corridor compiled, the astronaut compiled, Earth up, a first frame drawn. */

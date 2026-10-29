@@ -1,0 +1,86 @@
+/* =====================================================================================
+   The reading walker (reading-walker.tsx): a band low on every case-study page, a hairline rail and
+   the 3D X on it. It wears the study's own colours (--c-bg, --c-line, --c-text from the case
+   study's layout), so it reads on light themes and dark. Decorative: no pointer events anywhere.
+   Shown (data-on) between the exhibit and the page's end; otherwise it steps down off the screen.
+   ===================================================================================== */
+
+.xw {
+  --xw-x: 3.6rem;                     /* the X's height */
+  --xw-w: calc(var(--xw-x) * 1.475);  /* its canvas: room for its shoes and a wave */
+  --xw-h: calc(var(--xw-x) * 1.18);
+  --xw-gap: 0.75rem;                  /* the rail above the screen's bottom edge */
+  --xw-l: max(var(--gutter), 4.5rem); /* clear of the dev tools' badge bottom-left */
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 25;
+  height: calc(var(--xw-h) + var(--xw-gap) + env(safe-area-inset-bottom));
+  pointer-events: none;
+  transform: translate3d(0, calc(100% + 1rem), 0);
+  transition: transform 550ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.xw[data-on] {
+  transform: none;
+}
+/* The page's own background under it, up over the X's head, then a fade: a line scrolling down
+   into the band goes before it reaches the X, so nothing ever reads through it. */
+.xw::before {
+  content: "";
+  position: absolute;
+  inset: -1.5rem 0 0;
+  background: linear-gradient(
+    to top,
+    var(--c-bg) 0,
+    var(--c-bg) calc(var(--xw-gap) + env(safe-area-inset-bottom) + var(--xw-x) * 1.04),
+    transparent
+  );
+}
+.xw__rail {
+  position: absolute;
+  right: var(--gutter);
+  bottom: calc(var(--xw-gap) + env(safe-area-inset-bottom));
+  left: var(--xw-l);
+  height: 1px;
+  background: var(--c-line);
+}
+/* What has been read, in the page's ink. */
+.xw__fill {
+  position: absolute;
+  inset: 0;
+  background: var(--c-text);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+/* The X: its feet on the rail, moved along it by translate (reading-walker.tsx). */
+.xw .xw__walker {
+  position: absolute;
+  bottom: calc(var(--xw-gap) + env(safe-area-inset-bottom) + 1px);
+  left: var(--xw-l);
+  width: var(--xw-w);
+  height: var(--xw-h);
+  will-change: transform;
+}
+
+/* While the band shows, whatever a key moves to stops above it, not under it. */
+html:has(.xw[data-on]) {
+  scroll-padding-bottom: calc(var(--xw-h) + var(--xw-gap) + 1rem);
+}
+
+@media (max-width: 899.98px) {
+  .xw {
+    --xw-x: 2.75rem;
+    --xw-gap: 0.6rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .xw {
+    transition: none;
+  }
+}
+@media print {
+  .xw {
+    display: none;
+  }
+}

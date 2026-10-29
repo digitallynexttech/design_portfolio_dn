@@ -1,0 +1,28 @@
+/* =====================================================================================
+   The error page: the X knocked over on a hairline floor (x-spill.tsx). Its box is 3 X-heights
+   across and 1.45 up, the floor (its bottom hairline) at its foot. Wide screens: in the room to the
+   right of the head, level with its actions. Under 900 px: under the actions, the column's width.
+   ===================================================================================== */
+
+.dn-theme.xs-host {
+  position: relative;
+}
+.dn-theme .xs {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 1.45;
+  max-width: 26rem;
+  margin-top: 2.5rem;
+  border-bottom: 1px solid var(--dp-hair-2);
+  pointer-events: none;
+}
+@media (min-width: 900px) {
+  .dn-theme .xs {
+    position: absolute;
+    right: var(--dp-m);
+    bottom: 22svh;
+    width: clamp(18rem, 30vw, 30rem);
+    max-width: none;
+    margin-top: 0;
+  }
+}

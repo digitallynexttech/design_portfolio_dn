@@ -1,8 +1,6 @@
 import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import Image, { getImageProps } from "next/image";
-import { ClientWall } from "@/components/proof/client-wall";
-import { Recognition } from "@/components/proof/recognition";
 import { FlowLink } from "@/components/ui/flow-link";
 import { PageFlow } from "@/components/ui/page-flow";
 import { LEADERSHIP, TEAM, creditsFor, type Person } from "@/content/team";
@@ -11,6 +9,8 @@ import {
   STUDIO_PHOTOS,
   TEAM_PHOTO_PORTRAIT,
 } from "@/content/studio";
+import { ClientLogos, RecognitionList } from "@/features/drafts/depth/clients";
+import { AboutAstronaut } from "@/features/stage3d/astro/astro-figure";
 import { FACTS } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -64,7 +64,7 @@ function TeamPhoto() {
   } as CSSProperties;
 
   return (
-    <picture className="team-photo relative mt-10 block aspect-[4/5] overflow-hidden bg-ink-2 md:mx-(--gutter) md:mt-14 md:aspect-[16/8] md:rounded-3xl">
+    <picture className="team-photo dp-box dn-photo">
       <source media="(min-width: 768px)" srcSet={wideSet} sizes="calc(100vw - 6rem)" />
       <source srcSet={tallSet} sizes="100vw" />
       {/* eslint-disable-next-line jsx-a11y/alt-text -- getImageProps supplies alt, src, srcSet and sizes */}
@@ -79,109 +79,81 @@ function TeamPhoto() {
   );
 }
 
+/** Built from the home's pieces (Karan, 26 Oct 2026): the page head, a framed photo, hairline columns
+ *  and rows, and the home's own clients grid and recognition list. */
 export default function AboutPage() {
   const [, ...studio] = STUDIO_PHOTOS;
 
   return (
     <PageFlow>
-      <main id="main" className="pt-page-top pb-24">
-        <header>
-          <div className="px-(--gutter)">
-            <p className="label">(04) About</p>
-            <h1 className="mt-4 max-w-6xl font-display text-d1 font-semibold">
-              A studio that takes your shape<span className="stop">.</span>
-            </h1>
-          </div>
-          <TeamPhoto />
-          <div className="mt-12 grid max-w-5xl gap-8 px-(--gutter) text-lg text-paper/75 md:mt-16 lg:grid-cols-2">
-            <p>
-              We are the design and development studio inside Digitally Next -{" "}
-              {FACTS.years} years and {FACTS.brands} brands in, working from{" "}
-              {FACTS.city}. Designers, developers and motion artists in one
-              room, building websites, stores, platforms and 3D for brands in
-              India and beyond.
-            </p>
-            <p>
-              We don&apos;t have a house style. Like water, we take the shape of
-              what each client needs - a garage glow for a helmet brand, an
-              editorial calm for a DNA lab, an operating system for our own
-              company. Digitally Next is led by {LEADERSHIP.name},{" "}
-              {LEADERSHIP.title}.
-            </p>
-          </div>
+      <main id="main" className="dn-theme dn-page s3-host">
+        <header className="dn-page__head">
+          <p className="dp-k">(04) About</p>
+          <h1 className="dp-title__h">
+            A studio that takes your shape<span className="dp-stop">.</span>
+          </h1>
         </header>
+        {/* The astronaut at ease beside the title; the X on its shoulder waves at the team photo. */}
+        <AboutAstronaut />
+        <TeamPhoto />
+        <div className="dn-intro">
+          <p>
+            We are the design and development studio inside Digitally Next - {FACTS.years} years and {FACTS.brands} brands in,
+            working from {FACTS.city}. Designers, developers and motion artists in one room, building websites, stores,
+            platforms and 3D for brands in India and beyond.
+          </p>
+          <p>
+            We don&apos;t have a house style. Like water, we take the shape of what each client needs - a garage glow for a
+            helmet brand, an editorial calm for a DNA lab, an operating system for our own company. Digitally Next is led by{" "}
+            {LEADERSHIP.name}, {LEADERSHIP.title}.
+          </p>
+        </div>
 
-        <section aria-labelledby="principles" className="mt-section px-(--gutter)">
-          <h2 id="principles" className="label">
-            How we think
-          </h2>
-          <ul className="mt-8 grid gap-10 md:grid-cols-2 xl:grid-cols-4">
+        <section aria-labelledby="principles" className="dp-sec">
+          <div className="dp-sec__head">
+            <h2 id="principles" className="dp-k">
+              How we think
+            </h2>
+          </div>
+          <ul className="dn-steps dn-steps--4">
             {PRINCIPLES.map((principle) => (
-              <li key={principle.title} className="reveal">
-                <h3 className="font-display text-d3 font-semibold">
+              <li key={principle.title} className="dn-step">
+                <h3 className="dn-step__title">
                   {principle.title}
-                  <span className="stop">.</span>
+                  <span className="dp-stop">.</span>
                 </h3>
-                <p className="mt-4 max-w-[40ch] text-paper/70">
-                  {principle.body}
-                </p>
+                <p className="dn-step__body">{principle.body}</p>
               </li>
             ))}
           </ul>
         </section>
 
-        <section aria-labelledby="people" className="mt-section px-(--gutter)">
-          <h2
-            id="people"
-            className="font-display text-d2 font-semibold"
-          >
-            The people<span className="stop">.</span>
-          </h2>
+        <section aria-labelledby="people" className="dp-sec">
+          <div className="dp-sec__head">
+            <h2 id="people" className="dp-h2">
+              The people<span className="dp-stop">.</span>
+            </h2>
+          </div>
           {GROUPS.map((group) => {
             const people = TEAM.filter((p) => p.group === group.key);
             const makers = group.key !== "Studio";
             return (
-              <div key={group.key} className="mt-16">
-                <h3 className="label">
-                  {makers ? `${group.key} · ${group.title}` : group.title} -{" "}
-                  {group.note}
+              <div key={group.key} className="dn-group">
+                <h3 className="dp-k">
+                  {makers ? `${group.key} · ${group.title}` : group.title} - {group.note}
                 </h3>
-                <ul
-                  className={`people-list mt-6 grid border-t border-paper/10 ${makers ? "" : "md:grid-cols-2 md:gap-x-10"}`}
-                >
+                <ul className={makers ? "dn-people" : "dn-people dn-people--quiet"}>
                   {people.map((p) => {
                     const shipped = creditsFor(p.id);
                     return (
-                      <li
-                        key={p.id}
-                        className={`grid content-start gap-2 border-b border-paper/10 py-6 ${
-                          makers
-                            ? "lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.6fr)] lg:items-baseline lg:gap-6"
-                            : ""
-                        }`}
-                      >
-                        <p
-                          className={`font-display font-semibold tracking-tight ${
-                            makers
-                              ? "text-4xl md:text-5xl xl:text-6xl"
-                              : "text-2xl md:text-3xl"
-                          }`}
-                        >
-                          {p.name}
-                        </p>
-                        <p className="text-paper/60">{p.title}</p>
+                      <li key={p.id} className="dn-person">
+                        <p className="dn-person__name">{p.name}</p>
+                        <p className="dn-person__role">{p.title}</p>
                         {shipped.length ? (
-                          <ul
-                            className="flex flex-wrap gap-2"
-                            aria-label={`Projects ${p.name} worked on`}
-                          >
+                          <ul className="dn-person__work" aria-label={`Projects ${p.name} worked on`}>
                             {shipped.map((study) => (
                               <li key={study.slug}>
-                                <FlowLink
-                                  href={`/work/${study.slug}`}
-                                  direction="deeper"
-                                  className="chip whitespace-nowrap text-(--text-2)"
-                                >
+                                <FlowLink href={`/work/${study.slug}`} direction="deeper" className="dn-tag">
                                   {study.client}
                                 </FlowLink>
                               </li>
@@ -197,54 +169,49 @@ export default function AboutPage() {
           })}
         </section>
 
-        <section aria-labelledby="inside" className="mt-section px-(--gutter)">
-          <h2 id="inside" className="label">
-            Inside the studio
-          </h2>
-          <ul className="mt-8 grid grid-cols-2 gap-x-3 gap-y-6 md:grid-cols-3 md:gap-x-4 md:gap-y-8">
+        <section aria-labelledby="inside" className="dp-sec">
+          <div className="dp-sec__head">
+            <h2 id="inside" className="dp-k">
+              Inside the studio
+            </h2>
+          </div>
+          <ul className="dn-shots">
             {studio.map((photo) => (
-              <li key={photo.src} className="reveal">
+              <li key={photo.src}>
                 <figure>
-                  <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-ink-2">
+                  <div className="dp-box" style={{ "--ar": "4 / 3" } as CSSProperties}>
                     <Image
                       src={photo.src}
                       alt=""
                       fill
                       sizes="(min-width: 768px) 31vw, 47vw"
-                      className="object-cover"
+                      className="dp-plate dp-cover"
                       style={{ objectPosition: photo.position }}
                     />
                   </div>
-                  <figcaption className="mt-2.5 text-xs text-paper/60 md:text-sm">
-                    {photo.alt}
-                  </figcaption>
+                  <figcaption className="dn-shots__caption">{photo.alt}</figcaption>
                 </figure>
               </li>
             ))}
           </ul>
+          <p className="dn-onward">
+            <FlowLink href="/services#process" className="dp-link dn-onward__link">
+              <span>
+                How we work: six steps, each with proof <span aria-hidden>→</span>
+              </span>
+            </FlowLink>
+          </p>
         </section>
 
-        <p className="mt-stack px-(--gutter)">
-          <FlowLink
-            href="/services#process"
-            className="flex min-h-11 w-fit items-center font-display text-2xl font-semibold tracking-tight transition-colors hover:text-teal md:text-3xl"
-          >
-            <span>
-              How we work: six steps, each with proof <span aria-hidden>→</span>
-            </span>
-          </FlowLink>
-        </p>
-
-        <section aria-labelledby="proof" className="mt-section px-(--gutter)">
-          <h2 id="proof" className="label">
-            Clients &amp; recognition
-          </h2>
-          <div className="mt-8">
-            <ClientWall />
+        <section aria-labelledby="proof" className="dp-sec">
+          <div className="dp-sec__head">
+            <p className="dp-k">Clients and awards</p>
+            <h2 id="proof" className="dp-h2">
+              Who we&apos;ve built for<span className="dp-stop">.</span>
+            </h2>
           </div>
-          <div className="mt-12">
-            <Recognition />
-          </div>
+          <ClientLogos />
+          <RecognitionList />
         </section>
       </main>
     </PageFlow>
